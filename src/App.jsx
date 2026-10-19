@@ -41,10 +41,10 @@ import {
 
 const CONTACT_EMAIL = 'scrimmageproductions@gmail.com';
 const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
-// Web3Forms routes submissions to the inbox that owns the access key.
-// Generate a free key for scrimmageproductions@gmail.com at https://web3forms.com
-// and paste it here. Until then, submissions fall back to a pre-filled email.
-const WEB3FORMS_ACCESS_KEY = 'YOUR_WEB3FORMS_ACCESS_KEY';
+// Web3Forms routes submissions to the inbox that owns the access key (scrimmageproductions@gmail.com).
+// This key is public by design: it can only send to that inbox. If it is ever removed or set back
+// to a YOUR_ placeholder, submissions fall back to a pre-filled email.
+const WEB3FORMS_ACCESS_KEY = '50f8f02c-b73b-48fc-b143-c16c183fb208';
 const KEY_CONFIGURED = !WEB3FORMS_ACCESS_KEY.startsWith('YOUR_');
 
 const NAV_LINKS = [
@@ -206,40 +206,43 @@ const SERVICES = {
       {
         icon: Filter,
         title: 'Friction & Conversion Funnel Analysis',
-        summary: 'Find exactly where prospects and new clients stall, and what each leak is costing you.',
+        summary:
+          'Identify where traffic drops off, map friction in your client onboarding, and patch leakages in your sales pipelines.',
         deliverables: [
-          'Inbound and outbound funnel drop-off mapping',
-          'Client onboarding friction points, ranked by impact',
-          'Leakage report with prioritized fixes',
-          'Follow-up and nurture automation recommendations',
+          'End-to-end funnel leakage report',
+          'Onboarding friction and drop-off mapping',
+          'CRM state and pipeline hygiene review',
+          'Revised conversion architecture playbook',
         ],
-        stack: ['Analytics', 'CRM', 'Zapier / Make', 'Webhooks'],
+        stack: ['Funnel Analytics', 'CRM', 'Strategy'],
         interest: 'Funnel Teardown',
       },
       {
         icon: Globe,
         title: 'On-Site Opportunity Teardown',
-        summary: 'A frank critique of your website through the eyes of a buyer who is ready to leave.',
+        summary:
+          'A comprehensive critique of your digital presence to uncover missing lead capture mechanics, ambiguous value propositions, and UX barriers.',
         deliverables: [
-          'Missing lead capture mechanics, ranked by effort',
-          'Value proposition clarity and messaging review',
-          'UX barriers on mobile and desktop',
-          'Annotated teardown with a prioritized fix list',
+          'UX and navigation barrier identification',
+          'Lead capture mechanics and CTA review',
+          'Value proposition clarity check',
+          'Actionable conversion rate optimization (CRO) roadmap',
         ],
-        stack: ['UX Review', 'CRO', 'Analytics', 'Lead Capture'],
+        stack: ['CRO', 'UX / UI', 'Lead Capture'],
         interest: 'Funnel Teardown',
       },
       {
         icon: Ear,
-        title: 'Executive Diagnostic & "Listen First" Advisory',
-        summary: 'We listen, diagram the chaos, and separate root causes from symptoms.',
+        title: 'Executive Diagnostic & Advisory',
+        summary:
+          'Tailored problem-solving sessions. We listen, diagram your operational chaos, identify the root causes (not just symptoms), and architect the fix.',
         deliverables: [
-          'Tailored problem-solving sessions with leadership',
-          'Operational chaos diagrammed into a clear system map',
-          'Root-cause analysis, not symptom patching',
-          'Actionable implementation playbook with owners and order',
+          '1-on-1 executive discovery and listening sessions',
+          'Operational friction diagramming',
+          'Root-cause isolation vs. symptom treating',
+          'Custom implementation and sequence playbook',
         ],
-        stack: ['Process Mapping', 'Ops Strategy', 'Automation Readiness'],
+        stack: ['Executive Advisory', 'Architecture', 'Operations'],
         interest: 'General Diagnostic Advisory',
       },
     ],
@@ -594,7 +597,7 @@ function Hero() {
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3.5 text-[15px]">
-              Schedule Diagnostic Session
+              Book Strategy Audit
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
             </PrimaryButton>
             <GhostButton onClick={() => scrollToId('services')} className="px-6 py-3.5 text-[15px]">
@@ -881,7 +884,7 @@ function Diagnostic({ onRequest }) {
               <button
                 onClick={() => onRequest(b.interest, `My biggest bottleneck is ${b.label.toLowerCase()}. ${b.symptom}`)}
                 className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-cyan-300 hover:text-cyan-200">
-                Or book a full diagnostic session <ArrowRight className="h-4 w-4" />
+                Book Strategy Audit <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </GlassCard>
@@ -1149,7 +1152,7 @@ function RoiCalculator() {
               That is capacity you can redirect to sales, delivery and strategy, without adding headcount.
             </p>
             <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full">
-              Validate these numbers in a Strategy Audit <ArrowRight className="h-4 w-4" />
+              Book Strategy Audit <ArrowRight className="h-4 w-4" />
             </PrimaryButton>
           </GlassCard>
         </div>
