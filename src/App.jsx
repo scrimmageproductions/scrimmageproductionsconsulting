@@ -1505,8 +1505,10 @@ function Footer() {
 /*  Loading sequence                                                   */
 /* ------------------------------------------------------------------ */
 
+// Timeline: the S fills, holds at peak glow while it charges, then bursts to reveal the site.
 const LOAD_MS = 2500;
-const FADE_MS = 600;
+const CHARGE_MS = 350;
+const BURST_MS = 1000;
 
 // Pixel silhouette of the "S" used by the loader (7 x 10 grid).
 const S_LOADER = [
@@ -1550,8 +1552,46 @@ function LoaderGlyph({ lit }) {
   );
 }
 
-function LoadingScreen({ fading }) {
+// Lit pixels of the S become shards that fly outward from the glyph's center on burst.
+const LOADER_SHARDS = S_LOADER.flatMap((row, y) =>
+  row.split('').flatMap((v, x) => {
+    if (v !== '#') return [];
+    const vx = x - 3;
+    const vy = y - 4.5;
+    const len = Math.hypot(vx, vy) || 1;
+    const jitter = (x * 37 + y * 17) % 7;
+    const dist = 38 + jitter * 6; // vmax
+    return [
+      {
+        key: `${x}-${y}`,
+        left: `${(x / 7) * 100}%`,
+        top: `${(y / 10) * 100}%`,
+        dx: `${((vx / len) * dist).toFixed(1)}vmax`,
+        dy: `${((vy / len) * dist).toFixed(1)}vmax`,
+        rot: `${(((x * 53 + y * 29) % 9) - 4) * 40}deg`,
+        scale: (1.8 + (jitter % 4) * 0.5).toFixed(2),
+        delay: `${jitter * 12}ms`,
+      },
+    ];
+  }),
+);
+
+// Free sparks scattered around the burst for extra energy.
+const LOADER_SPARKS = Array.from({ length: 28 }, (_, i) => {
+  const angle = ((i * 360) / 28 + ((i * 47) % 11)) * (Math.PI / 180);
+  const dist = 22 + ((i * 31) % 9) * 5; // vmax
+  return {
+    key: i,
+    dx: `${(Math.cos(angle) * dist).toFixed(1)}vmax`,
+    dy: `${(Math.sin(angle) * dist).toFixed(1)}vmax`,
+    size: 3 + (i % 4),
+    delay: `${(i % 5) * 18}ms`,
+  };
+});
+
+function LoadingScreen({ phase }) {
   const [pct, setPct] = useState(0);
+  const bursting = phase === 'burst';
 
   useEffect(() => {
     const start = performance.now();
@@ -1570,20 +1610,76 @@ function LoadingScreen({ fading }) {
       role="status"
       aria-live="polite"
       aria-label={`Loading Scrimmage Productions, ${pct}%`}
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#04090e] transition-opacity ease-out ${
-        fading ? 'pointer-events-none opacity-0' : 'opacity-100'
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden ${
+        bursting ? 'pointer-events-none' : ''
       }`}
-      style={{ transitionDuration: `${FADE_MS}ms` }}>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(6,182,212,0.10),transparent_70%)]" />
-      <div className={`relative h-40 w-28 sm:h-48 sm:w-[134px] ${pct === 100 ? 'sp-loader-glow' : ''}`}>
-        <LoaderGlyph lit={false} />
-        <div className="sp-fill absolute inset-x-0 bottom-0 overflow-hidden" style={{ animationDuration: `${LOAD_MS}ms` }}>
-          <div className="absolute inset-x-0 bottom-0 h-40 sm:h-48">
-            <LoaderGlyph lit />
-          </div>
+      style={{ '--sp-burst': `${BURST_MS}ms` }}>
+      {/* Backdrop: drops away during the burst to reveal the site behind it */}
+      <div
+        className={`absolute inset-0 bg-[#04090e] bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(6,182,212,0.10),transparent_70%)] ${
+          bursting ? 'sp-backdrop-out' : ''
+        }`}
+      />
+
+      <div className="relative">
+        <div
+          className={`relative h-40 w-28 sm:h-48 sm:w-[134px] ${phase === 'charge' ? 'sp-charge' : ''} ${
+            bursting ? 'sp-core-out' : ''
+          }`}>
+          {!bursting && (
+            <>
+              <LoaderGlyph lit={false} />
+              <div className="sp-fill absolute inset-x-0 bottom-0 overflow-hidden" style={{ animationDuration: `${LOAD_MS}ms` }}>
+                <div className="absolute inset-x-0 bottom-0 h-40 sm:h-48">
+                  <LoaderGlyph lit />
+                </div>
+              </div>
+            </>
+          )}
         </div>
+
+        {bursting && (
+          <div className="absolute inset-0" aria-hidden="true">
+            {/* Flash + shockwaves, centered on the glyph */}
+            <span className="sp-flash absolute left-1/2 top-1/2 h-[220vmax] w-[220vmax] rounded-full bg-[radial-gradient(circle,rgba(224,242,254,0.95)_0%,rgba(56,189,248,0.55)_12%,rgba(6,182,212,0.18)_30%,transparent_55%)]" />
+            <span className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border-2 border-cyan-300 shadow-[0_0_40px_rgba(6,182,212,0.9),inset_0_0_30px_rgba(56,189,248,0.6)]" />
+            <span
+              className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-sky-200/80"
+              style={{ animationDelay: '110ms' }}
+            />
+
+            {/* The S itself breaks apart */}
+            {LOADER_SHARDS.map((sh) => (
+              <span
+                key={sh.key}
+                className="sp-shard absolute p-[3px]"
+                style={{
+                  left: sh.left,
+                  top: sh.top,
+                  width: `${100 / 7}%`,
+                  height: '10%',
+                  '--dx': sh.dx,
+                  '--dy': sh.dy,
+                  '--r': sh.rot,
+                  '--s': sh.scale,
+                  animationDelay: sh.delay,
+                }}>
+                <span className="block h-full w-full rounded-[3px] bg-cyan-400 shadow-[0_0_14px_rgba(6,182,212,0.95)] ring-1 ring-sky-100/80" />
+              </span>
+            ))}
+
+            {LOADER_SPARKS.map((sp) => (
+              <span
+                key={sp.key}
+                className="sp-spark absolute left-1/2 top-1/2 rounded-full bg-sky-100 shadow-[0_0_10px_3px_rgba(56,189,248,0.8)]"
+                style={{ width: sp.size, height: sp.size, '--dx': sp.dx, '--dy': sp.dy, animationDelay: sp.delay }}
+              />
+            ))}
+          </div>
+        )}
       </div>
-      <div className="relative mt-10 flex flex-col items-center gap-2">
+
+      <div className={`relative mt-10 flex flex-col items-center gap-2 ${bursting ? 'sp-label-out' : ''}`}>
         <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">Scrimmage Productions</span>
         <span className="font-mono text-xs tabular-nums text-slate-500">{String(pct).padStart(3, '0')}%</span>
       </div>
@@ -1609,9 +1705,37 @@ const GLOBAL_CSS = `
   .sp-fade-in { animation: sp-fade-in .45s ease-out both; }
   .sp-pop { animation: sp-pop .5s cubic-bezier(.2,.9,.3,1.3) both; }
   @keyframes sp-fill { from { height: 0%; } to { height: 100%; } }
-  @keyframes sp-loader-glow { 0% { filter: drop-shadow(0 0 0 rgba(6,182,212,0)); } 100% { filter: drop-shadow(0 0 18px rgba(6,182,212,.85)) drop-shadow(0 0 40px rgba(56,189,248,.45)); } }
   .sp-fill { height: 0%; animation-name: sp-fill; animation-timing-function: cubic-bezier(.45,.05,.35,1); animation-fill-mode: forwards; }
-  .sp-loader-glow { animation: sp-loader-glow .35s ease-out forwards; }
+  /* Charge: peak glow with a tight pulse just before the burst */
+  @keyframes sp-charge {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(6,182,212,0)); }
+    55% { transform: scale(1.14); filter: drop-shadow(0 0 22px rgba(6,182,212,.95)) drop-shadow(0 0 50px rgba(56,189,248,.55)) brightness(1.25); }
+    75% { transform: scale(1.08) rotate(-1.5deg); }
+    100% { transform: scale(1.18) rotate(1deg); filter: drop-shadow(0 0 30px rgba(224,242,254,.95)) drop-shadow(0 0 70px rgba(56,189,248,.7)) brightness(1.5); }
+  }
+  .sp-charge { animation: sp-charge ${CHARGE_MS}ms cubic-bezier(.3,.7,.4,1) forwards; }
+  /* Burst */
+  @keyframes sp-core-out { from { transform: scale(1.18); opacity: 1; } to { transform: scale(6); opacity: 0; } }
+  @keyframes sp-flash { 0% { transform: translate(-50%,-50%) scale(.05); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+  @keyframes sp-shock { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(14); opacity: 0; } }
+  @keyframes sp-shard {
+    0% { transform: translate(0,0) rotate(0) scale(1); opacity: 1; filter: brightness(1.8); }
+    12% { transform: translate(calc(var(--dx) * .04), calc(var(--dy) * .04)) scale(1.35); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(var(--s)); opacity: 0; filter: brightness(1); }
+  }
+  @keyframes sp-spark { 0% { transform: translate(-50%,-50%); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3); opacity: 0; } }
+  @keyframes sp-backdrop-out { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes sp-label-out { to { opacity: 0; transform: translateY(14px); letter-spacing: .6em; } }
+  @keyframes sp-reveal { from { transform: scale(1.05); filter: blur(8px) brightness(1.5); } to { transform: none; filter: none; } }
+  .sp-core-out { animation: sp-core-out 260ms cubic-bezier(.5,0,.75,0) forwards; }
+  .sp-flash { animation: sp-flash 650ms cubic-bezier(.1,.7,.3,1) forwards; }
+  .sp-shock { animation: sp-shock 850ms cubic-bezier(.1,.75,.25,1) both; }
+  .sp-shard { animation: sp-shard 900ms cubic-bezier(.12,.8,.3,1) both; will-change: transform, opacity; }
+  .sp-spark { animation: sp-spark 800ms cubic-bezier(.15,.85,.35,1) both; }
+  .sp-backdrop-out { animation: sp-backdrop-out 620ms ease-out forwards; }
+  .sp-label-out { animation: sp-label-out 300ms ease-in forwards; }
+  /* backwards fill only: no lingering transform/filter, which would break position:fixed children */
+  .sp-reveal { animation: sp-reveal 900ms cubic-bezier(.16,.84,.3,1) 80ms backwards; }
   .sp-input {
     border-radius: .75rem; border: 1px solid rgba(6,182,212,.22); background: rgba(4,9,14,.7);
     padding: .75rem 1rem; color: #f8fafc; font-size: .9rem; outline: none;
@@ -1628,6 +1752,8 @@ const GLOBAL_CSS = `
     html { scroll-behavior: auto; }
     .sp-marquee, .sp-silk, .sp-pixel, .sp-fade-in, .sp-pop { animation: none !important; }
     .sp-fill { animation-duration: 1ms !important; }
+    .sp-charge, .sp-core-out, .sp-reveal { animation: none !important; }
+    .sp-flash, .sp-shock, .sp-shard, .sp-spark { display: none; }
   }
 `;
 
@@ -1637,21 +1763,21 @@ const GLOBAL_CSS = `
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [isFading, setIsFading] = useState(false);
+  const [loadPhase, setLoadPhase] = useState('fill'); // fill | charge | burst
   const [active, setActive] = useState('');
   const [prefill, setPrefill] = useState(null);
 
-  // Hold the loader until the "S" fill completes, then fade it out and unmount it.
+  // Loader timeline: fill the S, charge at peak glow, burst, then unmount once the burst has cleared.
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    const fade = setTimeout(() => setIsFading(true), LOAD_MS + 250);
-    const done = setTimeout(() => {
-      setIsLoading(false);
+    const charge = setTimeout(() => setLoadPhase('charge'), LOAD_MS);
+    const burst = setTimeout(() => {
+      setLoadPhase('burst');
       document.body.style.overflow = '';
-    }, LOAD_MS + 250 + FADE_MS);
+    }, LOAD_MS + CHARGE_MS);
+    const done = setTimeout(() => setIsLoading(false), LOAD_MS + CHARGE_MS + BURST_MS);
     return () => {
-      clearTimeout(fade);
-      clearTimeout(done);
+      [charge, burst, done].forEach(clearTimeout);
       document.body.style.overflow = '';
     };
   }, []);
@@ -1678,18 +1804,20 @@ export default function App() {
   return (
     <div className="relative min-h-screen font-sans text-slate-400 antialiased selection:bg-cyan-400/30 selection:text-white">
       <style>{GLOBAL_CSS}</style>
-      {isLoading && <LoadingScreen fading={isFading} />}
+      {isLoading && <LoadingScreen phase={loadPhase} />}
       <OceanBackdrop />
-      <NavBar active={active} />
-      <main>
-        <Hero />
-        <Services onRequest={requestAudit} />
-        <Diagnostic onRequest={requestAudit} />
-        <Playbook />
-        <RoiCalculator />
-        <Contact prefill={prefill} />
-      </main>
-      <Footer />
+      <div className={loadPhase === 'burst' ? 'sp-reveal' : undefined}>
+        <NavBar active={active} />
+        <main>
+          <Hero />
+          <Services onRequest={requestAudit} />
+          <Diagnostic onRequest={requestAudit} />
+          <Playbook />
+          <RoiCalculator />
+          <Contact prefill={prefill} />
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }
