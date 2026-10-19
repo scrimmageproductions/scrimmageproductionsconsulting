@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -366,13 +366,64 @@ function Eyebrow({ icon: Icon, children }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Scroll reveal                                                      */
+/* ------------------------------------------------------------------ */
+
+// False while the intro loader is on screen, so nothing reveals behind it.
+const RevealReadyContext = createContext(true);
+
+const REVEAL_OBSERVER_OPTIONS = { threshold: 0.15, rootMargin: '0px 0px -40px 0px' };
+
+// Reduced-motion users, and browsers without IntersectionObserver, get content shown immediately.
+const revealStartsVisible = () =>
+  typeof window === 'undefined' ||
+  !('IntersectionObserver' in window) ||
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+function Reveal({ as: Tag = 'div', delay = 0, className = '', style, children, ...rest }) {
+  const ref = useRef(null);
+  const ready = useContext(RevealReadyContext);
+  const [instant] = useState(revealStartsVisible);
+  const [shown, setShown] = useState(instant);
+
+  useEffect(() => {
+    if (shown || !ready) return undefined;
+    const el = ref.current;
+    if (!el) return undefined;
+    // Reveal once, then stop observing so it never re-hides on scroll-up.
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setShown(true);
+        io.disconnect();
+      }
+    }, REVEAL_OBSERVER_OPTIONS);
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ready, shown]);
+
+  const motion = instant
+    ? 'opacity-100 translate-y-0'
+    : `transition-all duration-700 ease-out ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-7'}`;
+
+  return (
+    <Tag
+      ref={ref}
+      className={`${motion} ${className}`}
+      style={!instant && delay ? { ...style, transitionDelay: `${delay}ms` } : style}
+      {...rest}>
+      {children}
+    </Tag>
+  );
+}
+
 function SectionHeader({ eyebrow, icon, title, sub, center = true }) {
   return (
-    <div className={`mb-12 max-w-3xl ${center ? 'mx-auto text-center' : ''}`}>
+    <Reveal className={`mb-12 max-w-3xl ${center ? 'mx-auto text-center' : ''}`}>
       <Eyebrow icon={icon}>{eyebrow}</Eyebrow>
       <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">{title}</h2>
       {sub && <p className="mt-4 text-base leading-relaxed text-slate-400 sm:text-lg">{sub}</p>}
-    </div>
+    </Reveal>
   );
 }
 
@@ -605,7 +656,7 @@ function Hero() {
             </GhostButton>
           </div>
 
-          <dl className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Reveal as="dl" className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {HERO_METRICS.map(({ icon: Icon, value, label }) => (
               <div key={label} className="rounded-xl border border-cyan-500/15 bg-[rgba(13,26,38,0.55)] px-4 py-3 backdrop-blur-xl">
                 <dt className="flex items-center gap-2 text-lg font-semibold text-slate-50">
@@ -615,7 +666,7 @@ function Hero() {
                 <dd className="mt-0.5 text-xs text-slate-400">{label}</dd>
               </div>
             ))}
-          </dl>
+          </Reveal>
         </div>
 
         <HeroConsole />
@@ -751,7 +802,7 @@ function Diagnostic({ onRequest }) {
           sub="Pick your biggest bottleneck. You will see the play we would run, and a rough estimate of the hours it gives back."
         />
 
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <Reveal className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           {/* Options */}
           <div role="radiogroup" aria-label="Biggest bottleneck" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             {BOTTLENECKS.map((opt) => {
@@ -888,7 +939,7 @@ function Diagnostic({ onRequest }) {
               </button>
             </div>
           </GlassCard>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -941,41 +992,40 @@ function Services({ onRequest }) {
           {pillar.cards.map((c, i) => {
             const Icon = c.icon;
             return (
-              <GlassCard
-                key={c.title}
-                className="sp-fade-in group flex flex-col p-6 sm:p-7"
-                style={{ animationDelay: `${i * 80}ms` }}>
-                <span className="grid h-12 w-12 place-items-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 transition group-hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]">
-                  <Icon className="h-6 w-6" />
-                </span>
-                <h3 className="mt-5 text-xl font-semibold text-slate-50">{c.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">{c.summary}</p>
-
-                <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/70">Deliverables</p>
-                <ul className="mt-3 space-y-2.5">
-                  {c.deliverables.map((d) => (
-                    <li key={d} className="flex gap-2.5 text-sm text-slate-300">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-                      {d}
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mb-7 mt-6 flex flex-wrap gap-1.5">
-                  {c.stack.map((s) => (
-                    <StackBadge key={s}>{s}</StackBadge>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => onRequest(c.interest, `I'm interested in: ${c.title}.`)}
-                  className="mt-auto flex items-center justify-between gap-2 border-t border-cyan-500/15 pt-5 text-sm font-semibold text-cyan-300 transition hover:text-cyan-100">
-                  Request Audit
-                  <span className="grid h-8 w-8 place-items-center rounded-lg border border-cyan-500/30 transition group-hover:border-cyan-300/60 group-hover:bg-cyan-500/15">
-                    <ArrowRight className="h-4 w-4" />
+              <Reveal key={c.title} delay={i * 100} className="h-full">
+                <GlassCard className="group flex h-full flex-col p-6 sm:p-7">
+                  <span className="grid h-12 w-12 place-items-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 transition group-hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]">
+                    <Icon className="h-6 w-6" />
                   </span>
-                </button>
-              </GlassCard>
+                  <h3 className="mt-5 text-xl font-semibold text-slate-50">{c.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{c.summary}</p>
+
+                  <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/70">Deliverables</p>
+                  <ul className="mt-3 space-y-2.5">
+                    {c.deliverables.map((d) => (
+                      <li key={d} className="flex gap-2.5 text-sm text-slate-300">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mb-7 mt-6 flex flex-wrap gap-1.5">
+                    {c.stack.map((s) => (
+                      <StackBadge key={s}>{s}</StackBadge>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => onRequest(c.interest, `I'm interested in: ${c.title}.`)}
+                    className="mt-auto flex items-center justify-between gap-2 border-t border-cyan-500/15 pt-5 text-sm font-semibold text-cyan-300 transition hover:text-cyan-100">
+                    Request Audit
+                    <span className="grid h-8 w-8 place-items-center rounded-lg border border-cyan-500/30 transition group-hover:border-cyan-300/60 group-hover:bg-cyan-500/15">
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </button>
+                </GlassCard>
+              </Reveal>
             );
           })}
         </div>
@@ -1004,8 +1054,8 @@ function Playbook() {
             aria-hidden="true"
             className="absolute left-0 right-0 top-[52px] hidden h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent lg:block"
           />
-          {METHOD_STEPS.map(({ n, icon: Icon, title, tag, body, points }) => (
-            <li key={n} className="relative">
+          {METHOD_STEPS.map(({ n, icon: Icon, title, tag, body, points }, i) => (
+            <Reveal as="li" key={n} delay={i * 100} className="relative">
               <GlassCard className="h-full p-6 sm:p-7">
                 <div className="flex items-center justify-between">
                   <span className="relative grid h-14 w-14 place-items-center rounded-2xl border border-cyan-400/40 bg-[#04090e] text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.3)]">
@@ -1026,7 +1076,7 @@ function Playbook() {
                   ))}
                 </ul>
               </GlassCard>
-            </li>
+            </Reveal>
           ))}
         </ol>
       </div>
@@ -1091,70 +1141,74 @@ function RoiCalculator() {
         />
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <GlassCard className="space-y-8 p-6 sm:p-8">
-            <Slider id="roi-people" label="Team members doing repetitive work" icon={Users} value={people} min={1} max={50} onChange={setPeople} />
-            <Slider
-              id="roi-hours"
-              label="Manual hours per person, per week"
-              icon={Clock}
-              value={hours}
-              min={1}
-              max={30}
-              onChange={setHours}
-              format={(v) => `${v} hrs`}
-            />
-            <Slider
-              id="roi-rate"
-              label="Loaded hourly cost per person"
-              icon={DollarSign}
-              value={rate}
-              min={20}
-              max={250}
-              step={5}
-              onChange={setRate}
-              format={(v) => `$${v}`}
-            />
-            <p className="flex items-start gap-2 rounded-xl border border-cyan-500/15 bg-[#04090e]/60 p-4 text-xs leading-relaxed text-slate-400">
-              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-              Calculated in your browser. Nothing you enter here is stored or sent anywhere.
-            </p>
-          </GlassCard>
-
-          <GlassCard className="flex flex-col p-6 sm:p-8">
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Estimated annual value recovered</span>
-            <p className="mt-3 bg-gradient-to-r from-emerald-300 to-cyan-200 bg-clip-text text-5xl font-semibold tracking-tight text-transparent sm:text-6xl">
-              {fmtMoney(r.annualValue)}
-            </p>
-            <div className="mt-5 h-2 overflow-hidden rounded-full bg-cyan-500/10" aria-hidden="true">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)] transition-all duration-500"
-                style={{ width: `${Math.max(pct, 3)}%` }}
+          <Reveal className="h-full">
+            <GlassCard className="h-full space-y-8 p-6 sm:p-8">
+              <Slider id="roi-people" label="Team members doing repetitive work" icon={Users} value={people} min={1} max={50} onChange={setPeople} />
+              <Slider
+                id="roi-hours"
+                label="Manual hours per person, per week"
+                icon={Clock}
+                value={hours}
+                min={1}
+                max={30}
+                onChange={setHours}
+                format={(v) => `${v} hrs`}
               />
-            </div>
+              <Slider
+                id="roi-rate"
+                label="Loaded hourly cost per person"
+                icon={DollarSign}
+                value={rate}
+                min={20}
+                max={250}
+                step={5}
+                onChange={setRate}
+                format={(v) => `$${v}`}
+              />
+              <p className="flex items-start gap-2 rounded-xl border border-cyan-500/15 bg-[#04090e]/60 p-4 text-xs leading-relaxed text-slate-400">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+                Calculated in your browser. Nothing you enter here is stored or sent anywhere.
+              </p>
+            </GlassCard>
+          </Reveal>
 
-            <dl className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {[
-                { label: 'Hours back / week', value: Math.round(r.weeklyHours).toLocaleString(), icon: Clock },
-                { label: 'Hours back / year', value: Math.round(r.annualHours).toLocaleString(), icon: BarChart3 },
-                { label: 'Full-time equivalents', value: r.fte.toFixed(1), icon: Users },
-              ].map(({ label, value, icon: Icon }) => (
-                <div key={label} className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
-                  <dt className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Icon className="h-3.5 w-3.5 text-emerald-400" />
-                    {label}
-                  </dt>
-                  <dd className="mt-1 text-2xl font-semibold text-emerald-300">{value}</dd>
-                </div>
-              ))}
-            </dl>
+          <Reveal delay={100} className="h-full">
+            <GlassCard className="flex h-full flex-col p-6 sm:p-8">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Estimated annual value recovered</span>
+              <p className="mt-3 bg-gradient-to-r from-emerald-300 to-cyan-200 bg-clip-text text-5xl font-semibold tracking-tight text-transparent sm:text-6xl">
+                {fmtMoney(r.annualValue)}
+              </p>
+              <div className="mt-5 h-2 overflow-hidden rounded-full bg-cyan-500/10" aria-hidden="true">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)] transition-all duration-500"
+                  style={{ width: `${Math.max(pct, 3)}%` }}
+                />
+              </div>
 
-            <p className="mb-8 mt-6 text-sm text-slate-400">
-              That is capacity you can redirect to sales, delivery and strategy, without adding headcount.
-            </p>
-            <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full">
-              Book Strategy Audit <ArrowRight className="h-4 w-4" />
-            </PrimaryButton>
-          </GlassCard>
+              <dl className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Hours back / week', value: Math.round(r.weeklyHours).toLocaleString(), icon: Clock },
+                  { label: 'Hours back / year', value: Math.round(r.annualHours).toLocaleString(), icon: BarChart3 },
+                  { label: 'Full-time equivalents', value: r.fte.toFixed(1), icon: Users },
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+                    <dt className="flex items-center gap-1.5 text-xs text-slate-400">
+                      <Icon className="h-3.5 w-3.5 text-emerald-400" />
+                      {label}
+                    </dt>
+                    <dd className="mt-1 text-2xl font-semibold text-emerald-300">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <p className="mb-8 mt-6 text-sm text-slate-400">
+                That is capacity you can redirect to sales, delivery and strategy, without adding headcount.
+              </p>
+              <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full">
+                Book Strategy Audit <ArrowRight className="h-4 w-4" />
+              </PrimaryButton>
+            </GlassCard>
+          </Reveal>
         </div>
       </div>
     </section>
@@ -1271,162 +1325,166 @@ function Contact({ prefill }) {
             title="Describe the friction. We will scope the fix."
             sub="Every engagement starts with listening. Share your operational challenges and we will come back within one business day with next steps."
           />
-          <ul className="space-y-4">
-            {[
-              { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
-              { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
-              { icon: Shield, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
-            ].map(({ icon: Icon, title, body }) => (
-              <li key={title} className="flex gap-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 text-cyan-300">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block font-semibold text-slate-100">{title}</span>
-                  <span className="text-sm text-slate-400">{body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="mt-8 inline-flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-200 transition hover:border-cyan-400/60">
-            <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
-          </a>
+          <Reveal delay={100}>
+            <ul className="space-y-4">
+              {[
+                { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
+                { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
+                { icon: Shield, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
+              ].map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex gap-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 text-cyan-300">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block font-semibold text-slate-100">{title}</span>
+                    <span className="text-sm text-slate-400">{body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="mt-8 inline-flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-200 transition hover:border-cyan-400/60">
+              <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
+            </a>
+          </Reveal>
         </div>
 
-        <GlassCard className="relative p-6 sm:p-8">
-          {status === 'success' || status === 'fallback' ? (
-            <div className="sp-fade-in flex min-h-[420px] flex-col items-center justify-center text-center">
-              <span className="sp-pop grid h-20 w-20 place-items-center rounded-full border border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_40px_rgba(16,185,129,0.35)]">
-                <CheckCircle2 className="h-10 w-10 text-emerald-300" />
-              </span>
-              <h3 className="mt-6 text-2xl font-semibold text-slate-50">
-                {status === 'success' ? 'Message received.' : 'Almost there.'}
-              </h3>
-              <p className="mt-3 max-w-sm text-slate-400">
-                {status === 'success'
-                  ? 'Your request is in our inbox. Expect a reply within one business day with times for your Strategy Audit.'
-                  : 'Your email app opened with everything pre-filled. Hit send and we will reply within one business day.'}
-              </p>
-              <GhostButton onClick={() => setStatus('idle')} className="mt-8">
-                Send another message
-              </GhostButton>
-            </div>
-          ) : (
-            <form onSubmit={onSubmit} noValidate className="space-y-5">
-              <input
-                type="checkbox"
-                name="botcheck"
-                checked={form.botcheck}
-                onChange={update('botcheck')}
-                className="hidden"
-                tabIndex={-1}
-                autoComplete="off"
-              />
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field id="name" label="Full Name" error={errors.name}>
-                  <input
-                    id="name"
-                    value={form.name}
-                    onChange={update('name')}
-                    autoComplete="name"
-                    placeholder="Jordan Rivera"
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? 'name-err' : undefined}
-                    className={inputCls('name')}
-                  />
-                </Field>
-                <Field id="email" label="Business Email" error={errors.email}>
-                  <input
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={update('email')}
-                    autoComplete="email"
-                    placeholder="jordan@company.com"
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? 'email-err' : undefined}
-                    className={inputCls('email')}
-                  />
-                </Field>
+        <Reveal delay={150} className="h-full">
+          <GlassCard className="relative h-full p-6 sm:p-8">
+            {status === 'success' || status === 'fallback' ? (
+              <div className="sp-fade-in flex min-h-[420px] flex-col items-center justify-center text-center">
+                <span className="sp-pop grid h-20 w-20 place-items-center rounded-full border border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_40px_rgba(16,185,129,0.35)]">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-300" />
+                </span>
+                <h3 className="mt-6 text-2xl font-semibold text-slate-50">
+                  {status === 'success' ? 'Message received.' : 'Almost there.'}
+                </h3>
+                <p className="mt-3 max-w-sm text-slate-400">
+                  {status === 'success'
+                    ? 'Your request is in our inbox. Expect a reply within one business day with times for your Strategy Audit.'
+                    : 'Your email app opened with everything pre-filled. Hit send and we will reply within one business day.'}
+                </p>
+                <GhostButton onClick={() => setStatus('idle')} className="mt-8">
+                  Send another message
+                </GhostButton>
               </div>
-              <Field id="company" label="Company Name / Website" error={errors.company}>
+            ) : (
+              <form onSubmit={onSubmit} noValidate className="space-y-5">
                 <input
-                  id="company"
-                  value={form.company}
-                  onChange={update('company')}
-                  autoComplete="organization"
-                  placeholder="Acme Co. · acme.com"
-                  aria-invalid={!!errors.company}
-                  aria-describedby={errors.company ? 'company-err' : undefined}
-                  className={inputCls('company')}
+                  type="checkbox"
+                  name="botcheck"
+                  checked={form.botcheck}
+                  onChange={update('botcheck')}
+                  className="hidden"
+                  tabIndex={-1}
+                  autoComplete="off"
                 />
-              </Field>
-              <Field id="interest" label="Primary Area of Interest" error={errors.interest}>
-                <select
-                  id="interest"
-                  value={form.interest}
-                  onChange={update('interest')}
-                  aria-invalid={!!errors.interest}
-                  aria-describedby={errors.interest ? 'interest-err' : undefined}
-                  className={`${inputCls('interest')} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 fill=%22none%22 stroke=%22%2367e8f9%22 stroke-width=%222%22><path d=%22M4 6l4 4 4-4%22/></svg>')] bg-[length:16px] bg-[right_1rem_center] bg-no-repeat pr-10`}>
-                  <option value="" disabled>
-                    Select an area...
-                  </option>
-                  {INTERESTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field id="message" label="Message / Operational Challenges" error={errors.message}>
-                <textarea
-                  id="message"
-                  rows={5}
-                  value={form.message}
-                  onChange={update('message')}
-                  placeholder="Where does work get stuck? Which tools does your team live in? What would you fix first?"
-                  aria-invalid={!!errors.message}
-                  aria-describedby={errors.message ? 'message-err' : undefined}
-                  className={`${inputCls('message')} resize-y`}
-                />
-              </Field>
-
-              {status === 'error' && (
-                <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>
-                    {serverError} Your message was not sent. Try again, or email us directly with the button below.
-                  </span>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field id="name" label="Full Name" error={errors.name}>
+                    <input
+                      id="name"
+                      value={form.name}
+                      onChange={update('name')}
+                      autoComplete="name"
+                      placeholder="Jordan Rivera"
+                      aria-invalid={!!errors.name}
+                      aria-describedby={errors.name ? 'name-err' : undefined}
+                      className={inputCls('name')}
+                    />
+                  </Field>
+                  <Field id="email" label="Business Email" error={errors.email}>
+                    <input
+                      id="email"
+                      type="email"
+                      value={form.email}
+                      onChange={update('email')}
+                      autoComplete="email"
+                      placeholder="jordan@company.com"
+                      aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? 'email-err' : undefined}
+                      className={inputCls('email')}
+                    />
+                  </Field>
                 </div>
-              )}
+                <Field id="company" label="Company Name / Website" error={errors.company}>
+                  <input
+                    id="company"
+                    value={form.company}
+                    onChange={update('company')}
+                    autoComplete="organization"
+                    placeholder="Acme Co. · acme.com"
+                    aria-invalid={!!errors.company}
+                    aria-describedby={errors.company ? 'company-err' : undefined}
+                    className={inputCls('company')}
+                  />
+                </Field>
+                <Field id="interest" label="Primary Area of Interest" error={errors.interest}>
+                  <select
+                    id="interest"
+                    value={form.interest}
+                    onChange={update('interest')}
+                    aria-invalid={!!errors.interest}
+                    aria-describedby={errors.interest ? 'interest-err' : undefined}
+                    className={`${inputCls('interest')} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 fill=%22none%22 stroke=%22%2367e8f9%22 stroke-width=%222%22><path d=%22M4 6l4 4 4-4%22/></svg>')] bg-[length:16px] bg-[right_1rem_center] bg-no-repeat pr-10`}>
+                    <option value="" disabled>
+                      Select an area...
+                    </option>
+                    {INTERESTS.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field id="message" label="Message / Operational Challenges" error={errors.message}>
+                  <textarea
+                    id="message"
+                    rows={5}
+                    value={form.message}
+                    onChange={update('message')}
+                    placeholder="Where does work get stuck? Which tools does your team live in? What would you fix first?"
+                    aria-invalid={!!errors.message}
+                    aria-describedby={errors.message ? 'message-err' : undefined}
+                    className={`${inputCls('message')} resize-y`}
+                  />
+                </Field>
 
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
-                <PrimaryButton type="submit" disabled={status === 'loading'} className="flex-1 py-3.5">
-                  {status === 'loading' ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Sending...
-                    </>
-                  ) : (
-                    <>
-                      Book Strategy Audit <Send className="h-4 w-4" />
-                    </>
-                  )}
-                </PrimaryButton>
-                <a
-                  href={buildMailto(mailSubject, mailBody)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-5 py-3.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/60 hover:bg-cyan-500/10">
-                  <Mail className="h-4 w-4" /> Email us directly
-                </a>
-              </div>
-              <p className="text-xs text-slate-500">
-                We only use your details to respond to this request. No newsletters, no list selling.
-              </p>
-            </form>
-          )}
-        </GlassCard>
+                {status === 'error' && (
+                  <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      {serverError} Your message was not sent. Try again, or email us directly with the button below.
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+                  <PrimaryButton type="submit" disabled={status === 'loading'} className="flex-1 py-3.5">
+                    {status === 'loading' ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Sending...
+                      </>
+                    ) : (
+                      <>
+                        Book Strategy Audit <Send className="h-4 w-4" />
+                      </>
+                    )}
+                  </PrimaryButton>
+                  <a
+                    href={buildMailto(mailSubject, mailBody)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-5 py-3.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/60 hover:bg-cyan-500/10">
+                    <Mail className="h-4 w-4" /> Email us directly
+                  </a>
+                </div>
+                <p className="text-xs text-slate-500">
+                  We only use your details to respond to this request. No newsletters, no list selling.
+                </p>
+              </form>
+            )}
+          </GlassCard>
+        </Reveal>
       </div>
     </section>
   );
@@ -1864,18 +1922,20 @@ export default function App() {
       <style>{GLOBAL_CSS}</style>
       {isLoading && <LoadingScreen phase={loadPhase} onSkip={finishIntro} />}
       <OceanBackdrop />
-      <div className={loadPhase === 'burst' ? 'sp-reveal' : undefined}>
-        <NavBar active={active} />
-        <main>
-          <Hero />
-          <Services onRequest={requestAudit} />
-          <Diagnostic onRequest={requestAudit} />
-          <Playbook />
-          <RoiCalculator />
-          <Contact prefill={prefill} />
-        </main>
-        <Footer />
-      </div>
+      <RevealReadyContext.Provider value={!isLoading}>
+        <div className={loadPhase === 'burst' ? 'sp-reveal' : undefined}>
+          <NavBar active={active} />
+          <main>
+            <Hero />
+            <Services onRequest={requestAudit} />
+            <Diagnostic onRequest={requestAudit} />
+            <Playbook />
+            <RoiCalculator />
+            <Contact prefill={prefill} />
+          </main>
+          <Footer />
+        </div>
+      </RevealReadyContext.Provider>
     </div>
   );
 }
