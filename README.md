@@ -18,13 +18,14 @@ npm run preview   # preview the production build
 ## Contact form setup (Web3Forms)
 
 The lead form and the diagnostic "send to my inbox" form post to
-`https://api.web3forms.com/submit`. Web3Forms delivers to the inbox that owns the access key:
+`https://api.web3forms.com/submit` using the production access key set in
+`WEB3FORMS_ACCESS_KEY` near the top of `src/App.jsx`. Web3Forms delivers every submission
+to the inbox that owns that key (`scrimmageproductions@gmail.com`). The key is public by
+design; it can only send to that inbox.
 
-1. Create a free access key for `scrimmageproductions@gmail.com` at https://web3forms.com.
-2. Paste it into `WEB3FORMS_ACCESS_KEY` near the top of `src/App.jsx`.
-
-Until a key is set, both forms fall back to opening the visitor's email client with a
-pre-filled message to `scrimmageproductions@gmail.com`.
+If the key is ever removed or replaced with a `YOUR_` placeholder, both forms fall back to
+opening the visitor's email client with a pre-filled message to
+`scrimmageproductions@gmail.com`.
 
 ## Sections
 
