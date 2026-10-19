@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -1505,10 +1505,27 @@ function Footer() {
 /*  Loading sequence                                                   */
 /* ------------------------------------------------------------------ */
 
-// Timeline: the S fills, holds at peak glow while it charges, then bursts to reveal the site.
-const LOAD_MS = 2500;
-const CHARGE_MS = 350;
-const BURST_MS = 1000;
+// Timeline (~2.6s): the S fills, holds at peak glow while it charges, then bursts to reveal the site.
+const LOAD_MS = 1700;
+const CHARGE_MS = 250;
+const BURST_MS = 650; // every burst animation below is tuned to finish inside this window
+
+// The intro plays once per browser session. Storage can throw in sandboxed frames, so guard it.
+const INTRO_KEY = 'scrimmage_intro_seen';
+const introSeen = () => {
+  try {
+    return sessionStorage.getItem(INTRO_KEY) !== null;
+  } catch {
+    return false;
+  }
+};
+const markIntroSeen = () => {
+  try {
+    sessionStorage.setItem(INTRO_KEY, 'true');
+  } catch {
+    // Storage unavailable: the intro will simply play again next load.
+  }
+};
 
 // Pixel silhouette of the "S" used by the loader (7 x 10 grid).
 const S_LOADER = [
@@ -1570,7 +1587,7 @@ const LOADER_SHARDS = S_LOADER.flatMap((row, y) =>
         dy: `${((vy / len) * dist).toFixed(1)}vmax`,
         rot: `${(((x * 53 + y * 29) % 9) - 4) * 40}deg`,
         scale: (1.8 + (jitter % 4) * 0.5).toFixed(2),
-        delay: `${jitter * 12}ms`,
+        delay: `${jitter * 8}ms`,
       },
     ];
   }),
@@ -1585,11 +1602,11 @@ const LOADER_SPARKS = Array.from({ length: 28 }, (_, i) => {
     dx: `${(Math.cos(angle) * dist).toFixed(1)}vmax`,
     dy: `${(Math.sin(angle) * dist).toFixed(1)}vmax`,
     size: 3 + (i % 4),
-    delay: `${(i % 5) * 18}ms`,
+    delay: `${(i % 5) * 12}ms`,
   };
 });
 
-function LoadingScreen({ phase }) {
+function LoadingScreen({ phase, onSkip }) {
   const [pct, setPct] = useState(0);
   const bursting = phase === 'burst';
 
@@ -1610,16 +1627,28 @@ function LoadingScreen({ phase }) {
       role="status"
       aria-live="polite"
       aria-label={`Loading Scrimmage Productions, ${pct}%`}
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden ${
+      onClick={onSkip}
+      className={`fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center overflow-hidden ${
         bursting ? 'pointer-events-none' : ''
-      }`}
-      style={{ '--sp-burst': `${BURST_MS}ms` }}>
+      }`}>
       {/* Backdrop: drops away during the burst to reveal the site behind it */}
       <div
         className={`absolute inset-0 bg-[#04090e] bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(6,182,212,0.10),transparent_70%)] ${
           bursting ? 'sp-backdrop-out' : ''
         }`}
       />
+
+      {!bursting && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSkip();
+          }}
+          className="absolute right-4 top-4 z-50 cursor-pointer rounded-md px-2 py-1 text-xs tracking-wider text-slate-500 transition-colors hover:text-cyan-400 focus:outline-none focus-visible:text-cyan-400 focus-visible:ring-1 focus-visible:ring-cyan-400/60 sm:right-6 sm:top-6">
+          Skip Intro ✕
+        </button>
+      )}
 
       <div className="relative">
         <div
@@ -1645,7 +1674,7 @@ function LoadingScreen({ phase }) {
             <span className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border-2 border-cyan-300 shadow-[0_0_40px_rgba(6,182,212,0.9),inset_0_0_30px_rgba(56,189,248,0.6)]" />
             <span
               className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-sky-200/80"
-              style={{ animationDelay: '110ms' }}
+              style={{ animationDelay: '70ms' }}
             />
 
             {/* The S itself breaks apart */}
@@ -1716,26 +1745,27 @@ const GLOBAL_CSS = `
   .sp-charge { animation: sp-charge ${CHARGE_MS}ms cubic-bezier(.3,.7,.4,1) forwards; }
   /* Burst */
   @keyframes sp-core-out { from { transform: scale(1.18); opacity: 1; } to { transform: scale(6); opacity: 0; } }
-  @keyframes sp-flash { 0% { transform: translate(-50%,-50%) scale(.05); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
-  @keyframes sp-shock { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(14); opacity: 0; } }
+  @keyframes sp-flash { 0% { transform: translate3d(-50%,-50%,0) scale(.05); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate3d(-50%,-50%,0) scale(1); opacity: 0; } }
+  @keyframes sp-shock { 0% { transform: translate3d(-50%,-50%,0) scale(.2); opacity: 1; } 100% { transform: translate3d(-50%,-50%,0) scale(14); opacity: 0; } }
   @keyframes sp-shard {
-    0% { transform: translate(0,0) rotate(0) scale(1); opacity: 1; filter: brightness(1.8); }
-    12% { transform: translate(calc(var(--dx) * .04), calc(var(--dy) * .04)) scale(1.35); opacity: 1; }
-    100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(var(--s)); opacity: 0; filter: brightness(1); }
+    0% { transform: translate3d(0,0,0) rotate(0) scale(1); opacity: 1; }
+    12% { transform: translate3d(calc(var(--dx) * .04), calc(var(--dy) * .04), 0) scale(1.35); opacity: 1; }
+    100% { transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--r)) scale(var(--s)); opacity: 0; }
   }
-  @keyframes sp-spark { 0% { transform: translate(-50%,-50%); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3); opacity: 0; } }
+  @keyframes sp-spark { 0% { transform: translate3d(-50%,-50%,0); opacity: 1; } 100% { transform: translate3d(calc(-50% + var(--dx)), calc(-50% + var(--dy)), 0) scale(.3); opacity: 0; } }
   @keyframes sp-backdrop-out { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
   @keyframes sp-label-out { to { opacity: 0; transform: translateY(14px); letter-spacing: .6em; } }
   @keyframes sp-reveal { from { transform: scale(1.05); filter: blur(8px) brightness(1.5); } to { transform: none; filter: none; } }
-  .sp-core-out { animation: sp-core-out 260ms cubic-bezier(.5,0,.75,0) forwards; }
-  .sp-flash { animation: sp-flash 650ms cubic-bezier(.1,.7,.3,1) forwards; }
-  .sp-shock { animation: sp-shock 850ms cubic-bezier(.1,.75,.25,1) both; }
-  .sp-shard { animation: sp-shard 900ms cubic-bezier(.12,.8,.3,1) both; will-change: transform, opacity; }
-  .sp-spark { animation: sp-spark 800ms cubic-bezier(.15,.85,.35,1) both; }
-  .sp-backdrop-out { animation: sp-backdrop-out 620ms ease-out forwards; }
-  .sp-label-out { animation: sp-label-out 300ms ease-in forwards; }
+  .sp-core-out { animation: sp-core-out 200ms cubic-bezier(.5,0,.75,0) forwards; }
+  .sp-flash, .sp-shock, .sp-shard, .sp-spark { will-change: transform, opacity; backface-visibility: hidden; }
+  .sp-flash { animation: sp-flash 450ms cubic-bezier(.1,.7,.3,1) forwards; }
+  .sp-shock { animation: sp-shock 560ms cubic-bezier(.1,.75,.25,1) both; }
+  .sp-shard { animation: sp-shard 590ms cubic-bezier(.12,.8,.3,1) both; }
+  .sp-spark { animation: sp-spark 560ms cubic-bezier(.15,.85,.35,1) both; }
+  .sp-backdrop-out { animation: sp-backdrop-out 420ms ease-out forwards; }
+  .sp-label-out { animation: sp-label-out 220ms ease-in forwards; }
   /* backwards fill only: no lingering transform/filter, which would break position:fixed children */
-  .sp-reveal { animation: sp-reveal 900ms cubic-bezier(.16,.84,.3,1) 80ms backwards; }
+  .sp-reveal { animation: sp-reveal 600ms cubic-bezier(.16,.84,.3,1) 40ms backwards; }
   .sp-input {
     border-radius: .75rem; border: 1px solid rgba(6,182,212,.22); background: rgba(4,9,14,.7);
     padding: .75rem 1rem; color: #f8fafc; font-size: .9rem; outline: none;
@@ -1762,24 +1792,49 @@ const GLOBAL_CSS = `
 /* ------------------------------------------------------------------ */
 
 export default function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadPhase, setLoadPhase] = useState('fill'); // fill | charge | burst
+  const [isLoading, setIsLoading] = useState(() => !introSeen());
+  const [loadPhase, setLoadPhase] = useState(() => (introSeen() ? 'done' : 'fill')); // fill | charge | burst | done
+  const introTimers = useRef([]);
   const [active, setActive] = useState('');
   const [prefill, setPrefill] = useState(null);
 
-  // Loader timeline: fill the S, charge at peak glow, burst, then unmount once the burst has cleared.
+  const clearIntroTimers = () => {
+    introTimers.current.forEach(clearTimeout);
+    introTimers.current = [];
+  };
+
+  // Ends the intro, whether it ran to completion or was skipped.
+  const finishIntro = useCallback(() => {
+    clearIntroTimers();
+    document.body.style.overflow = '';
+    markIntroSeen();
+    setIsLoading(false);
+    setLoadPhase('done');
+  }, []);
+
+  // Loader timeline: fill the S, charge at peak glow, burst (scroll unlocks here), then unmount.
   useEffect(() => {
+    if (!isLoading) return undefined;
     document.body.style.overflow = 'hidden';
-    const charge = setTimeout(() => setLoadPhase('charge'), LOAD_MS);
-    const burst = setTimeout(() => {
-      setLoadPhase('burst');
-      document.body.style.overflow = '';
-    }, LOAD_MS + CHARGE_MS);
-    const done = setTimeout(() => setIsLoading(false), LOAD_MS + CHARGE_MS + BURST_MS);
+    introTimers.current = [
+      setTimeout(() => setLoadPhase('charge'), LOAD_MS),
+      setTimeout(() => {
+        setLoadPhase('burst');
+        document.body.style.overflow = '';
+      }, LOAD_MS + CHARGE_MS),
+      setTimeout(finishIntro, LOAD_MS + CHARGE_MS + BURST_MS),
+    ];
+    const onKey = (e) => {
+      if (e.key === 'Escape') finishIntro();
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
-      [charge, burst, done].forEach(clearTimeout);
+      clearIntroTimers();
+      window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
+    // Runs once on mount; finishing the intro must not restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Highlight the nav link for the section in view.
@@ -1804,7 +1859,7 @@ export default function App() {
   return (
     <div className="relative min-h-screen font-sans text-slate-400 antialiased selection:bg-cyan-400/30 selection:text-white">
       <style>{GLOBAL_CSS}</style>
-      {isLoading && <LoadingScreen phase={loadPhase} />}
+      {isLoading && <LoadingScreen phase={loadPhase} onSkip={finishIntro} />}
       <OceanBackdrop />
       <div className={loadPhase === 'burst' ? 'sp-reveal' : undefined}>
         <NavBar active={active} />
