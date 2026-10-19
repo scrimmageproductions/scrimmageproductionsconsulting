@@ -27,7 +27,6 @@ import {
   Search,
   Send,
   Shield,
-  Sparkles,
   Target,
   TrendingUp,
   Users,
@@ -67,18 +66,18 @@ const INTERESTS = [
 const HERO_METRICS = [
   { icon: Clock, value: '15+ hrs/week', label: 'reclaimed per key operator' },
   { icon: Filter, value: 'Zero-Loss', label: 'funnel audits' },
-  { icon: Cpu, value: '100%', label: 'tailored AI integration' },
+  { icon: Cpu, value: '100%', label: 'tailored integrations' },
 ];
 
 const TICKER_ITEMS = [
   'Gmail triage pipelines',
-  'Gemini in Docs, Sheets & Gmail',
+  'Custom assistants in Docs, Sheets & Gmail',
   'Shared Drive architecture',
   'Sentiment-routed support',
   'Auto-generated proposals',
   'Typeform · Tally · Google Forms',
   'Zapier & Make orchestration',
-  'OpenAI / Claude API agents',
+  'Contract & proposal generation',
   'Funnel drop-off forensics',
   'Webhook-driven onboarding',
 ];
@@ -92,13 +91,13 @@ const BOTTLENECKS = [
     play: 'The Inbox Triage Play',
     interest: 'Email Automation',
     steps: [
-      'AI auto-categorization and priority labels on every inbound thread',
+      'Auto-categorization and priority labels on every inbound thread',
       'Sentiment routing that escalates frustrated customers in minutes, not days',
       'Drafted-for-you replies grounded in your SOPs, approved in one click',
     ],
     hours: 12,
     revenue: 'Faster response times on every lead and support thread',
-    stack: ['Gmail', 'Apps Script', 'Claude / OpenAI API', 'Zapier'],
+    stack: ['Gmail', 'Apps Script', 'Zapier / Make', 'Webhooks'],
   },
   {
     id: 'workspace',
@@ -110,11 +109,11 @@ const BOTTLENECKS = [
     steps: [
       'Full Drive and Shared Drive architecture map with a clean folder taxonomy',
       'Permission audit that closes oversharing and orphaned-file risk',
-      'Gemini and custom assistants wired into Docs, Sheets and Gmail',
+      'Custom assistants configured for Docs, Sheets and Gmail',
     ],
     hours: 8,
     revenue: 'Lower risk of data leaks and lost work from broken files',
-    stack: ['Google Workspace', 'Gemini', 'Apps Script', 'Shared Drives'],
+    stack: ['Google Workspace', 'Apps Script', 'Shared Drives'],
   },
   {
     id: 'docs',
@@ -126,7 +125,7 @@ const BOTTLENECKS = [
     steps: [
       'Static PDFs converted into smart intake forms that validate as they go',
       'Form submissions trigger finished contracts, proposals and briefs',
-      'AI text synthesis tailors each document to the client in seconds',
+      'Text synthesis tailors each document to the client in seconds',
     ],
     hours: 10,
     revenue: 'Proposals out the same day, while the deal is still warm',
@@ -151,36 +150,36 @@ const BOTTLENECKS = [
 ];
 
 const SERVICES = {
-  ai: {
-    label: 'AI Workflow Automation',
-    short: 'AI Automation',
+  automation: {
+    label: 'Workflow Automation',
+    short: 'Automation',
     icon: Workflow,
-    blurb: 'Hands-off systems inside the tools your team already uses every day.',
+    blurb: 'Automated systems built inside the tools your team already uses every day.',
     cards: [
       {
         icon: FolderTree,
-        title: 'Full Google Workspace AI Audit',
-        summary: 'A structural teardown of how your team actually stores, shares and computes, then an AI layer on top.',
+        title: 'Full Google Workspace Audit',
+        summary: 'A structural review of how your team stores, shares and calculates, followed by assistants built for your actual workflows.',
         deliverables: [
           'Drive and Shared Drive architecture review',
           'User permissioning and access-risk audit',
           'Sheet formula and calendar scheduling bottleneck fixes',
-          'Gemini and custom AI assistants for Docs, Gmail and Sheets',
+          'Custom assistants for Docs, Gmail and Sheets',
         ],
-        stack: ['Google Workspace', 'Gemini', 'Apps Script', 'OpenAI / Claude API'],
+        stack: ['Google Workspace', 'Apps Script', 'Zapier / Make', 'Webhooks'],
         interest: 'Google Workspace Audit',
       },
       {
         icon: Mail,
-        title: 'Intelligent Email & Inbox Automation',
-        summary: 'Turn the inbox from a to-do list you never finish into a pipeline that sorts and drafts itself.',
+        title: 'Intelligent Email & Inbox Routing',
+        summary: 'Move the inbox from an unmanaged to-do list to a routed pipeline that sorts threads and prepares drafts.',
         deliverables: [
           'Triage pipelines with smart auto-categorization',
           'Customer support sentiment routing and escalation',
-          'AI-drafted responses grounded in your playbooks',
+          'Automated drafted responses based on your SOPs',
           'Target: 10 to 15 hours/week back per key operator',
         ],
-        stack: ['Gmail', 'Zapier / Make', 'OpenAI / Claude API', 'Webhooks'],
+        stack: ['Google Workspace', 'Gmail', 'Zapier / Make', 'Webhooks'],
         interest: 'Email Automation',
       },
       {
@@ -190,10 +189,10 @@ const SERVICES = {
         deliverables: [
           'Static PDFs converted to Google Forms, Typeform or Tally intake',
           'Auto-generated contracts, proposals and onboarding briefs',
-          'AI text synthesis that tailors every document to the client',
+          'Text synthesis that tailors every document to the client',
           'Trigger-based delivery straight to the client and your Drive',
         ],
-        stack: ['Google Forms', 'Typeform', 'Tally', 'Zapier / Make', 'Webhooks'],
+        stack: ['Google Workspace', 'Typeform', 'Tally', 'Zapier / Make', 'Webhooks'],
         interest: 'Document AI',
       },
     ],
@@ -222,7 +221,7 @@ const SERVICES = {
         title: 'On-Site Opportunity Teardown',
         summary: 'A frank critique of your website through the eyes of a buyer who is ready to leave.',
         deliverables: [
-          'Missing lead capture mechanics and quick wins',
+          'Missing lead capture mechanics, ranked by effort',
           'Value proposition clarity and messaging review',
           'UX barriers on mobile and desktop',
           'Annotated teardown with a prioritized fix list',
@@ -240,7 +239,7 @@ const SERVICES = {
           'Root-cause analysis, not symptom patching',
           'Actionable implementation playbook with owners and order',
         ],
-        stack: ['Process Mapping', 'Ops Strategy', 'AI Readiness'],
+        stack: ['Process Mapping', 'Ops Strategy', 'Automation Readiness'],
         interest: 'General Diagnostic Advisory',
       },
     ],
@@ -253,7 +252,7 @@ const METHOD_STEPS = [
     icon: Film,
     title: 'The Film Room',
     tag: 'Diagnose',
-    body: 'Like reviewing game tape, we study how work actually moves through your business. We listen first, map every bottleneck, and quantify where hours and revenue leak.',
+    body: 'We review how work actually moves through your business. We listen first, map each bottleneck, and quantify where hours and revenue are lost.',
     points: ['Discovery interviews', 'Workflow and funnel mapping', 'Bottleneck scoring'],
   },
   {
@@ -261,7 +260,7 @@ const METHOD_STEPS = [
     icon: BookOpen,
     title: 'The Playbook',
     tag: 'Architect',
-    body: 'We design the plays: custom AI automations, Workspace restructuring and funnel fixes, sequenced by ROI so the fastest wins land first.',
+    body: 'We architect the fixes: custom automations, Workspace restructuring and funnel corrections, sequenced by ROI so the highest-return work ships first.',
     points: ['Automation blueprints', 'Funnel fix roadmap', 'ROI-ranked sequencing'],
   },
   {
@@ -269,7 +268,7 @@ const METHOD_STEPS = [
     icon: Rocket,
     title: 'The Execution',
     tag: 'Deploy',
-    body: 'We run the drills with you. Hands-on deployment, team training inside your Workspace, and iteration until the new system runs without us.',
+    body: 'Hands-on deployment, team training inside your Workspace, and iteration until the new system runs reliably without us.',
     points: ['Hands-on deployment', 'Workspace training', 'Operational scale-up'],
   },
 ];
@@ -349,7 +348,7 @@ function Logo({ onClick }) {
       </span>
       <span className="leading-tight">
         <span className="block text-[15px] font-semibold tracking-tight text-slate-50">Scrimmage Productions</span>
-        <span className="block font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-400/80">LLC · AI Ops & Strategy</span>
+        <span className="block font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-400/80">LLC · Ops & Strategy</span>
       </span>
     </button>
   );
@@ -506,10 +505,12 @@ function NavBar({ active }) {
         </ul>
 
         <div className="flex items-center gap-2">
-          <PrimaryButton onClick={() => go('contact')} className="hidden px-4 py-2.5 sm:inline-flex">
-            Book Strategy Audit
-            <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-          </PrimaryButton>
+          <span className="hidden sm:block">
+            <PrimaryButton onClick={() => go('contact')} className="px-4 py-2.5">
+              Book Strategy Audit
+              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </PrimaryButton>
+          </span>
           <button
             onClick={() => setOpen(true)}
             className="grid h-10 w-10 place-items-center rounded-lg border border-cyan-500/25 text-cyan-200 lg:hidden"
@@ -577,18 +578,18 @@ function Hero() {
     <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 sm:pt-20 lg:px-8 lg:pb-24 lg:pt-28">
       <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
-          <Eyebrow icon={Sparkles}>Business Consulting · AI Workflow Optimization</Eyebrow>
+          <Eyebrow icon={Target}>Business Consulting · Operational Optimization</Eyebrow>
           <h1 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl xl:text-[68px]">
             <span className="bg-gradient-to-r from-cyan-300 via-sky-200 to-white bg-clip-text text-transparent">
               Precision Business Architecture.
             </span>
             <br />
-            <span className="text-slate-50">Autonomous AI Workflows.</span>
+            <span className="text-slate-50">Automated Workflows.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
-            We run the drills that eliminate operational waste. Scrimmage Productions automates your Google Workspace,
-            inbox and document flow with tailored AI, then pairs it with executive diagnostic consulting that finds the
-            root cause behind the friction, not just the symptom.
+            Scrimmage Productions restructures your Google Workspace, automates email routing and document generation,
+            and provides executive diagnostic consulting to identify the root cause of operational friction. The result
+            is fewer manual steps, clearer ownership, and hours returned to your team each week.
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -597,7 +598,7 @@ function Hero() {
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
             </PrimaryButton>
             <GhostButton onClick={() => scrollToId('services')} className="px-6 py-3.5 text-[15px]">
-              Explore Automation Playbooks
+              Explore Automations
             </GhostButton>
           </div>
 
@@ -895,7 +896,7 @@ function Diagnostic({ onRequest }) {
 /* ------------------------------------------------------------------ */
 
 function Services({ onRequest }) {
-  const [tab, setTab] = useState('ai');
+  const [tab, setTab] = useState('automation');
   const pillar = SERVICES[tab];
 
   return (
@@ -904,8 +905,8 @@ function Services({ onRequest }) {
         <SectionHeader
           eyebrow="Services"
           icon={Layers}
-          title="Two pillars. One operating system for your business."
-          sub="Automate the repetitive work, and fix the strategy behind it. Most clients start with one pillar and add the other once the first wins land."
+          title="Automation for repetitive work. Advisory for the decisions behind it."
+          sub="Most engagements begin with one pillar. The second is added once the first is delivering measurable results."
         />
 
         <div role="tablist" aria-label="Service pillars" className="mx-auto mb-10 flex w-full max-w-xl rounded-2xl border border-cyan-500/20 bg-[#06111a]/80 p-1.5 backdrop-blur-xl">
@@ -992,7 +993,7 @@ function Playbook() {
           eyebrow="The Scrimmage Method"
           icon={BookOpen}
           title="Film. Playbook. Execution."
-          sub="Every engagement runs the same three-phase drill, so you always know what happens next and why."
+          sub="Every engagement follows the same three phases, so scope, sequence and accountability are clear from the start."
         />
 
         <ol className="relative grid gap-6 lg:grid-cols-3">
@@ -1264,7 +1265,7 @@ function Contact({ prefill }) {
             center={false}
             eyebrow="Book a Strategy Audit"
             icon={Mail}
-            title="Tell us where it hurts. We will bring the playbook."
+            title="Describe the friction. We will scope the fix."
             sub="Every engagement starts with listening. Share your operational challenges and we will come back within one business day with next steps."
           />
           <ul className="space-y-4">
@@ -1441,8 +1442,8 @@ function Footer() {
           <div>
             <Logo onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">
-              Precision business architecture and autonomous AI workflows. We find the friction, run the drills, and give
-              your team its hours back.
+              Precision business architecture and automated workflows. We identify operational friction, remove it, and
+              return measurable hours to your team.
             </p>
           </div>
           <div>
@@ -1501,6 +1502,96 @@ function Footer() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Loading sequence                                                   */
+/* ------------------------------------------------------------------ */
+
+const LOAD_MS = 2500;
+const FADE_MS = 600;
+
+// Pixel silhouette of the "S" used by the loader (7 x 10 grid).
+const S_LOADER = [
+  '.#####.',
+  '##...##',
+  '##.....',
+  '.##....',
+  '..###..',
+  '....##.',
+  '.....##',
+  '.....##',
+  '##...##',
+  '.#####.',
+];
+
+function LoaderGlyph({ lit }) {
+  const cell = 12;
+  const pad = 2;
+  return (
+    <svg viewBox={`0 0 ${7 * cell} ${10 * cell}`} className="h-full w-full" aria-hidden="true">
+      {S_LOADER.flatMap((row, y) =>
+        row.split('').map((v, x) =>
+          v === '#' ? (
+            <rect
+              key={`${x}-${y}`}
+              x={x * cell + pad}
+              y={y * cell + pad}
+              width={cell - pad * 2}
+              height={cell - pad * 2}
+              rx={2}
+              fill={lit ? '#06b6d4' : 'none'}
+              stroke={lit ? '#e0f2fe' : 'rgba(6,182,212,0.45)'}
+              strokeWidth={lit ? 0.6 : 1}
+            />
+          ) : (
+            <circle key={`${x}-${y}`} cx={x * cell + cell / 2} cy={y * cell + cell / 2} r={0.9} fill="rgba(14,116,144,0.35)" />
+          ),
+        ),
+      )}
+    </svg>
+  );
+}
+
+function LoadingScreen({ fading }) {
+  const [pct, setPct] = useState(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    let raf;
+    const step = (now) => {
+      const p = Math.min(100, Math.round(((now - start) / LOAD_MS) * 100));
+      setPct(p);
+      if (p < 100) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={`Loading Scrimmage Productions, ${pct}%`}
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#04090e] transition-opacity ease-out ${
+        fading ? 'pointer-events-none opacity-0' : 'opacity-100'
+      }`}
+      style={{ transitionDuration: `${FADE_MS}ms` }}>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(6,182,212,0.10),transparent_70%)]" />
+      <div className={`relative h-40 w-28 sm:h-48 sm:w-[134px] ${pct === 100 ? 'sp-loader-glow' : ''}`}>
+        <LoaderGlyph lit={false} />
+        <div className="sp-fill absolute inset-x-0 bottom-0 overflow-hidden" style={{ animationDuration: `${LOAD_MS}ms` }}>
+          <div className="absolute inset-x-0 bottom-0 h-40 sm:h-48">
+            <LoaderGlyph lit />
+          </div>
+        </div>
+      </div>
+      <div className="relative mt-10 flex flex-col items-center gap-2">
+        <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">Scrimmage Productions</span>
+        <span className="font-mono text-xs tabular-nums text-slate-500">{String(pct).padStart(3, '0')}%</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Global styles (keyframes + form controls)                          */
 /* ------------------------------------------------------------------ */
 
@@ -1517,6 +1608,10 @@ const GLOBAL_CSS = `
   .sp-pixel { animation: sp-pixel 2.4s ease-in-out infinite; }
   .sp-fade-in { animation: sp-fade-in .45s ease-out both; }
   .sp-pop { animation: sp-pop .5s cubic-bezier(.2,.9,.3,1.3) both; }
+  @keyframes sp-fill { from { height: 0%; } to { height: 100%; } }
+  @keyframes sp-loader-glow { 0% { filter: drop-shadow(0 0 0 rgba(6,182,212,0)); } 100% { filter: drop-shadow(0 0 18px rgba(6,182,212,.85)) drop-shadow(0 0 40px rgba(56,189,248,.45)); } }
+  .sp-fill { height: 0%; animation-name: sp-fill; animation-timing-function: cubic-bezier(.45,.05,.35,1); animation-fill-mode: forwards; }
+  .sp-loader-glow { animation: sp-loader-glow .35s ease-out forwards; }
   .sp-input {
     border-radius: .75rem; border: 1px solid rgba(6,182,212,.22); background: rgba(4,9,14,.7);
     padding: .75rem 1rem; color: #f8fafc; font-size: .9rem; outline: none;
@@ -1532,6 +1627,7 @@ const GLOBAL_CSS = `
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .sp-marquee, .sp-silk, .sp-pixel, .sp-fade-in, .sp-pop { animation: none !important; }
+    .sp-fill { animation-duration: 1ms !important; }
   }
 `;
 
@@ -1540,8 +1636,25 @@ const GLOBAL_CSS = `
 /* ------------------------------------------------------------------ */
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFading, setIsFading] = useState(false);
   const [active, setActive] = useState('');
   const [prefill, setPrefill] = useState(null);
+
+  // Hold the loader until the "S" fill completes, then fade it out and unmount it.
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    const fade = setTimeout(() => setIsFading(true), LOAD_MS + 250);
+    const done = setTimeout(() => {
+      setIsLoading(false);
+      document.body.style.overflow = '';
+    }, LOAD_MS + 250 + FADE_MS);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(done);
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   // Highlight the nav link for the section in view.
   useEffect(() => {
@@ -1565,6 +1678,7 @@ export default function App() {
   return (
     <div className="relative min-h-screen font-sans text-slate-400 antialiased selection:bg-cyan-400/30 selection:text-white">
       <style>{GLOBAL_CSS}</style>
+      {isLoading && <LoadingScreen fading={isFading} />}
       <OceanBackdrop />
       <NavBar active={active} />
       <main>
