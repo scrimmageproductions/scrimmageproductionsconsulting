@@ -1,29 +1,27 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
-  BookOpen,
   Check,
+  CheckCircle,
   ChevronRight,
   Clock,
-  Cpu,
   Ear,
   FileText,
-  Film,
   Filter,
-  FolderTree,
   Globe,
-  Inbox,
+  HardDrive,
   Loader2,
   Lock,
   Mail,
   Menu,
-  Rocket,
   Search,
-  Shield,
+  Settings,
+  ShieldCheck,
   Target,
   TrendingUp,
   Workflow,
   X,
+  Zap,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -55,9 +53,9 @@ const INTERESTS = [
 ];
 
 const HERO_METRICS = [
-  { icon: Clock, value: '15+ hrs/week', label: 'reclaimed per key operator' },
-  { icon: Filter, value: 'Zero-Loss', label: 'funnel audits' },
-  { icon: Cpu, value: '100%', label: 'tailored integrations' },
+  { icon: Clock, value: '15+ hours', label: 'saved per week, per employee' },
+  { icon: TrendingUp, value: 'Plug the holes', label: 'in your sales process' },
+  { icon: Settings, value: '100%', label: 'custom-built for the tools you already use' },
 ];
 
 const TICKER_ITEMS = [
@@ -77,8 +75,8 @@ const BOTTLENECKS = [
   {
     id: 'inbox',
     label: 'Inbox Overwhelm',
-    icon: Inbox,
-    symptom: 'Your best operators live in Gmail, sorting, forwarding and re-typing the same replies all day.',
+    icon: Mail,
+    symptom: 'Your best workers live in Gmail, sorting, forwarding, and re-typing the same replies all day.',
     play: 'The Inbox Triage Play',
     interest: 'Email Automation',
     steps: [
@@ -92,9 +90,9 @@ const BOTTLENECKS = [
   },
   {
     id: 'workspace',
-    label: 'Disorganized Google Workspace',
-    icon: FolderTree,
-    symptom: 'Nobody can find the latest version, permissions are a guess, and formulas break when someone sneezes.',
+    label: 'Messy Google Drive',
+    icon: HardDrive,
+    symptom: 'Nobody can find the latest version of a file, sharing permissions are a guess, and spreadsheets keep breaking.',
     play: 'The Workspace Rebuild Play',
     interest: 'Google Workspace Audit',
     steps: [
@@ -108,9 +106,9 @@ const BOTTLENECKS = [
   },
   {
     id: 'docs',
-    label: 'Manual Document Creation',
+    label: 'Manual Paperwork',
     icon: FileText,
-    symptom: 'Proposals, contracts and onboarding briefs are rebuilt from scratch, copy-pasted from old files.',
+    symptom: 'Proposals, contracts, and onboarding files are rebuilt from scratch or copy-pasted from old documents.',
     play: 'The Doc Engine Play',
     interest: 'Document AI',
     steps: [
@@ -124,9 +122,9 @@ const BOTTLENECKS = [
   },
   {
     id: 'funnel',
-    label: 'Leaky Sales Funnel',
+    label: 'Losing Sales Leads',
     icon: TrendingUp,
-    symptom: 'Traffic arrives, interest is there, but leads quietly disappear between first click and signed deal.',
+    symptom: 'People visit your website, but leads quietly disappear between the first click and the signed deal.',
     play: 'The Funnel Teardown Play',
     interest: 'Funnel Teardown',
     steps: [
@@ -142,46 +140,49 @@ const BOTTLENECKS = [
 
 const SERVICES = {
   automation: {
-    label: 'Workflow Automation',
-    short: 'Automation',
+    label: 'Automations & Tech',
+    short: 'Automations & Tech',
     icon: Workflow,
-    blurb: 'Automated systems built inside the tools your team already uses every day.',
+    blurb: 'Stop doing robotic work. We build systems inside the tools your team already uses every day.',
     cards: [
       {
-        icon: FolderTree,
-        title: 'Full Google Workspace Audit',
-        summary: 'A structural review of how your team stores, shares and calculates, followed by assistants built for your actual workflows.',
+        icon: HardDrive,
+        title: 'Google Workspace Cleanup & Setup',
+        summary:
+          'We organize how your team stores files, fix confusing permissions, and build custom tools to make Google Docs, Sheets, and Gmail work faster for you.',
         deliverables: [
-          'Drive and Shared Drive architecture review',
-          'User permissioning and access-risk audit',
-          'Sheet formula and calendar scheduling bottleneck fixes',
-          'Custom assistants for Docs, Gmail and Sheets',
+          'Organize Google Drive folders so files are easy to find',
+          'Fix file sharing permissions to keep your data secure',
+          'Repair broken spreadsheets and simplify calendar scheduling',
+          'Build custom shortcuts for your daily Google tasks',
         ],
         stack: ['Google Workspace', 'Apps Script', 'Zapier / Make', 'Webhooks'],
         interest: 'Google Workspace Audit',
       },
       {
         icon: Mail,
-        title: 'Intelligent Email & Inbox Routing',
-        summary: 'Move the inbox from an unmanaged to-do list to a routed pipeline that sorts threads and prepares drafts.',
+        title: 'Smart Email Automation',
+        summary:
+          'Turn your chaotic inbox into an organized system that automatically sorts emails, flags urgent messages, and drafts replies for you.',
         deliverables: [
-          'Triage pipelines with smart auto-categorization',
-          'Customer support sentiment routing and escalation',
-          'Automated drafted responses based on your SOPs',
-          'Target: 10 to 15 hours/week back per key operator',
+          'Automatically sort incoming emails by priority and sender',
+          'Instantly flag angry or urgent customer emails',
+          'Pre-draft email replies based on your company rules',
+          'Goal: Give your team back 10 to 15 hours a week',
         ],
         stack: ['Google Workspace', 'Gmail', 'Zapier / Make', 'Webhooks'],
         interest: 'Email Automation',
       },
       {
         icon: FileText,
-        title: 'Smart Forms & Document Generation',
-        summary: 'Replace static PDFs and copy-paste docs with intake that writes the paperwork for you.',
+        title: 'Automated Paperwork & Forms',
+        summary:
+          'Stop copying and pasting. We turn your old PDFs into smart online forms that instantly create your client paperwork.',
         deliverables: [
-          'Static PDFs converted to Google Forms, Typeform or Tally intake',
-          'Auto-generated contracts, proposals and onboarding briefs',
-          'Text synthesis that tailors every document to the client',
-          'Trigger-based delivery straight to the client and your Drive',
+          'Convert static PDFs into easy-to-use online forms (Google Forms, Typeform)',
+          'Automatically type up custom contracts, proposals, and welcome packets',
+          'Eliminate human error from your daily data entry',
+          'Deliver finished documents straight to your client and your Drive',
         ],
         stack: ['Google Workspace', 'Typeform', 'Tally', 'Zapier / Make', 'Webhooks'],
         interest: 'Document AI',
@@ -189,8 +190,8 @@ const SERVICES = {
     ],
   },
   strategy: {
-    label: 'General Business Strategy',
-    short: 'Business Strategy',
+    label: 'Sales & Strategy',
+    short: 'Sales & Strategy',
     icon: Target,
     blurb: 'Executive-grade diagnostics that find the root cause before anyone writes a line of automation.',
     cards: [
@@ -243,26 +244,26 @@ const SERVICES = {
 const METHOD_STEPS = [
   {
     n: '01',
-    icon: Film,
-    title: 'The Film Room',
-    tag: 'Diagnose',
-    body: 'We review how work actually moves through your business. We listen first, map each bottleneck, and quantify where hours and revenue are lost.',
+    icon: Search,
+    title: 'Find the Bottlenecks',
+    tag: 'The Film Room',
+    body: 'We look at how your business runs today. We listen to your challenges and find exactly where you are losing time and money.',
     points: ['Discovery interviews', 'Workflow and funnel mapping', 'Bottleneck scoring'],
   },
   {
     n: '02',
-    icon: BookOpen,
-    title: 'The Playbook',
-    tag: 'Architect',
-    body: 'We architect the fixes: custom automations, Workspace restructuring and funnel corrections, sequenced by ROI so the highest-return work ships first.',
+    icon: Settings,
+    title: 'Build the Plan',
+    tag: 'The Playbook',
+    body: 'We design the exact steps to fix your tech tools, organize your files, and automate the busywork.',
     points: ['Automation blueprints', 'Funnel fix roadmap', 'ROI-ranked sequencing'],
   },
   {
     n: '03',
-    icon: Rocket,
-    title: 'The Execution',
-    tag: 'Deploy',
-    body: 'Hands-on deployment, team training inside your Workspace, and iteration until the new system runs reliably without us.',
+    icon: Zap,
+    title: 'Put it into Action',
+    tag: 'The Execution',
+    body: 'We build the new systems, train your team to use them, and make sure everything runs smoothly without us.',
     points: ['Hands-on deployment', 'Workspace training', 'Operational scale-up'],
   },
 ];
@@ -589,14 +590,14 @@ function Hero() {
       <div className="mx-auto max-w-4xl text-center">
         <p className="text-sm font-medium text-zinc-500 sm:text-base">Business Consulting · Operational Optimization</p>
         <h1 className="mt-5 text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-          Precision Business Architecture.
+          Organize Your Operations.
           <br />
-          <span className="text-zinc-500">Automated Workflows.</span>
+          <span className="text-zinc-500">Automate the Busywork.</span>
         </h1>
         <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-zinc-400 sm:text-xl">
-          Scrimmage Productions restructures your Google Workspace, automates email routing and document generation,
-          and provides executive diagnostic consulting to identify the root cause of operational friction. The result
-          is fewer manual steps, clearer ownership, and hours returned to your team each week.
+          Scrimmage Productions cleans up your messy Google Drive, automates your repetitive emails and paperwork, and
+          finds exactly what’s slowing your business down. We fix the tech headaches so your team can get hours back in
+          their week.
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -638,10 +639,10 @@ function Hero() {
 
 function HeroConsole() {
   const lines = [
-    { icon: Inbox, text: '142 inbound threads triaged' },
-    { icon: Shield, text: '37 overshared files locked down' },
-    { icon: FileText, text: 'Proposal generated · 00:41s' },
-    { icon: TrendingUp, text: 'Funnel leak patched · Stage 3' },
+    { icon: Mail, text: '142 incoming emails automatically sorted' },
+    { icon: ShieldCheck, text: '37 private files properly secured' },
+    { icon: FileText, text: 'Client proposal automatically typed · 00:41s' },
+    { icon: Settings, text: 'Website checkout error fixed' },
   ];
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -736,7 +737,7 @@ function Diagnostic({ onRequest }) {
       <div className="mx-auto max-w-6xl">
         <SectionHeader
           eyebrow="Operational Friction Diagnostic"
-          title="What is slowing your team down the most?"
+          title="What is slowing your business down the most?"
           sub="Pick your biggest bottleneck. You will see the play we would run, and a rough estimate of the hours it gives back."
         />
 
@@ -758,7 +759,7 @@ function Diagnostic({ onRequest }) {
                   className={`flex w-full items-start gap-3.5 rounded-2xl px-4 py-3.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                     on ? 'bg-zinc-800' : 'hover:bg-zinc-900'
                   }`}>
-                  <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-500'}`} />
+                  <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-400'}`} />
                   <span>
                     <span className={`block text-[15px] font-medium ${on ? 'text-white' : 'text-zinc-200'}`}>{opt.label}</span>
                     <span className="mt-0.5 block text-sm leading-snug text-zinc-500">{opt.symptom}</span>
@@ -779,7 +780,7 @@ function Diagnostic({ onRequest }) {
             <ul className="mt-6 space-y-3">
               {b.steps.map((s) => (
                 <li key={s} className="flex gap-3 text-[15px] text-zinc-300">
-                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
                   <span>{s}</span>
                 </li>
               ))}
@@ -908,7 +909,7 @@ function Services({ onRequest }) {
             return (
               <Reveal key={c.title} delay={i * 100} className="h-full">
                 <Card className="flex h-full flex-col p-7 sm:p-8">
-                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-200">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-400">
                     <Icon className="h-5 w-5" />
                   </span>
                   <h3 className="mt-6 text-xl font-semibold tracking-tight text-white">{c.title}</h3>
@@ -918,7 +919,7 @@ function Services({ onRequest }) {
                   <ul className="mt-3 space-y-2.5">
                     {c.deliverables.map((d) => (
                       <li key={d} className="flex gap-2.5 text-sm text-zinc-300">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+                        <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
                         {d}
                       </li>
                     ))}
@@ -962,7 +963,7 @@ function Playbook() {
             <Reveal as="li" key={n} delay={i * 100}>
               <Card className="h-full p-7 sm:p-8">
                 <div className="flex items-start justify-between">
-                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-200">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-400">
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="text-5xl font-semibold tracking-tight text-zinc-800">{n}</span>
@@ -1046,7 +1047,7 @@ function RoiCalculator() {
               />
               <Slider
                 id="roi-rate"
-                label="Loaded hourly cost per person"
+                label="Average hourly pay per person"
                 value={rate}
                 min={20}
                 max={250}
@@ -1078,7 +1079,7 @@ function RoiCalculator() {
                 {[
                   { label: 'Hours back / week', value: Math.round(r.weeklyHours).toLocaleString() },
                   { label: 'Hours back / year', value: Math.round(r.annualHours).toLocaleString() },
-                  { label: 'Full-time equivalents', value: r.fte.toFixed(1) },
+                  { label: 'Extra full-time employees saved', value: r.fte.toFixed(1) },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-2xl bg-zinc-950 p-4">
                     <dt className="text-sm text-zinc-500">{label}</dt>
@@ -1215,7 +1216,7 @@ function Contact({ prefill }) {
               {[
                 { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
                 { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
-                { icon: Shield, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
+                { icon: ShieldCheck, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
               ].map(({ icon: Icon, title, body }) => (
                 <li key={title} className="flex gap-4">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-300">
