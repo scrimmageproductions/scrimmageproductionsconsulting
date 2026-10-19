@@ -1,38 +1,29 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
-  ArrowRight,
-  ArrowUpRight,
-  BarChart3,
   BookOpen,
-  Calculator,
-  CheckCircle2,
+  Check,
+  ChevronRight,
   Clock,
   Cpu,
-  DollarSign,
   Ear,
   FileText,
   Film,
   Filter,
   FolderTree,
-  Gauge,
   Globe,
   Inbox,
-  Layers,
   Loader2,
   Lock,
   Mail,
   Menu,
   Rocket,
   Search,
-  Send,
   Shield,
   Target,
   TrendingUp,
-  Users,
   Workflow,
   X,
-  Zap,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -319,23 +310,15 @@ const S_MATRIX = ['01111', '10000', '10000', '01110', '00001', '00001', '11110']
 function MatrixS({ size = 36 }) {
   const cell = 10;
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="-6 -6 62 82"
-      aria-hidden="true"
-      className="drop-shadow-[0_0_8px_rgba(6,182,212,0.7)]">
+    <svg width={size} height={size} viewBox="-6 -6 62 82" aria-hidden="true">
       {S_MATRIX.flatMap((row, y) =>
         row.split('').map((on, x) => (
           <circle
             key={`${x}-${y}`}
             cx={x * cell + 5}
             cy={y * cell + 5}
-            r={on === '1' ? 3.6 : 1.4}
-            fill={on === '1' ? '#e0f2fe' : '#0e7490'}
-            opacity={on === '1' ? 1 : 0.45}
-            className={on === '1' ? 'sp-pixel' : undefined}
-            style={on === '1' ? { animationDelay: `${(x + y) * 120}ms` } : undefined}
+            r={on === '1' ? 3.8 : 1.3}
+            fill={on === '1' ? '#ffffff' : '#52525b'}
           />
         )),
       )}
@@ -343,26 +326,20 @@ function MatrixS({ size = 36 }) {
   );
 }
 
-function Logo({ onClick }) {
+function Logo({ onClick, tagline = false }) {
   return (
-    <button onClick={onClick} className="group flex items-center gap-3 text-left" aria-label="Scrimmage Productions LLC, back to top">
-      <span className="relative grid h-11 w-11 place-items-center rounded-xl border border-cyan-500/30 bg-[#06111a] shadow-[0_0_25px_rgba(6,182,212,0.25)] transition group-hover:border-cyan-400/60">
-        <MatrixS size={30} />
-      </span>
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2.5 rounded-lg text-left transition-opacity duration-200 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+      aria-label="Scrimmage Productions LLC, back to top">
+      <MatrixS size={tagline ? 30 : 22} />
       <span className="leading-tight">
-        <span className="block text-[15px] font-semibold tracking-tight text-slate-50">Scrimmage Productions</span>
-        <span className="block font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-400/80">LLC · Ops & Strategy</span>
+        <span className="block text-[15px] font-semibold tracking-tight text-white">
+          Scrimmage Productions <span className="font-normal text-zinc-500">LLC</span>
+        </span>
+        {tagline && <span className="block text-xs text-zinc-500">Ops & Strategy</span>}
       </span>
     </button>
-  );
-}
-
-function Eyebrow({ icon: Icon, children }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-300">
-      {Icon && <Icon className="h-3.5 w-3.5" />}
-      {children}
-    </span>
   );
 }
 
@@ -417,94 +394,86 @@ function Reveal({ as: Tag = 'div', delay = 0, className = '', style, children, .
   );
 }
 
-function SectionHeader({ eyebrow, icon, title, sub, center = true }) {
+/* ------------------------------------------------------------------ */
+/*  System components                                                  */
+/* ------------------------------------------------------------------ */
+
+function SectionHeader({ eyebrow, title, sub, center = true }) {
   return (
-    <Reveal className={`mb-12 max-w-3xl ${center ? 'mx-auto text-center' : ''}`}>
-      <Eyebrow icon={icon}>{eyebrow}</Eyebrow>
-      <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">{title}</h2>
-      {sub && <p className="mt-4 text-base leading-relaxed text-slate-400 sm:text-lg">{sub}</p>}
+    <Reveal className={`mb-14 max-w-3xl ${center ? 'mx-auto text-center' : ''}`}>
+      <p className="text-sm font-medium text-zinc-500">{eyebrow}</p>
+      <h2 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">{title}</h2>
+      {sub && <p className="mt-5 text-lg leading-relaxed text-zinc-400 sm:text-xl">{sub}</p>}
     </Reveal>
   );
 }
 
-function GlassCard({ className = '', children, ...rest }) {
+// Flat, slightly elevated system-gray surface.
+function Card({ className = '', children, ...rest }) {
   return (
-    <div
-      className={`rounded-2xl border border-cyan-500/20 bg-[rgba(13,26,38,0.7)] backdrop-blur-xl transition duration-300 hover:border-cyan-400/50 hover:shadow-[0_0_25px_rgba(6,182,212,0.25)] ${className}`}
-      {...rest}>
+    <div className={`rounded-3xl border border-white/5 bg-zinc-900 ${className}`} {...rest}>
       {children}
     </div>
   );
 }
 
-function StackBadge({ children }) {
-  return (
-    <span className="rounded-md border border-sky-400/20 bg-sky-400/5 px-2 py-0.5 font-mono text-[10.5px] tracking-wide text-sky-300">
-      {children}
-    </span>
-  );
+function Badge({ children }) {
+  return <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-300">{children}</span>;
 }
+
+const PRESS = 'transition duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black';
 
 function PrimaryButton({ children, className = '', ...rest }) {
   return (
     <button
-      className={`group inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 px-5 py-3 text-sm font-semibold text-[#04090e] shadow-[0_0_25px_rgba(6,182,212,0.35)] transition hover:shadow-[0_0_40px_rgba(56,189,248,0.55)] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#04090e] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full bg-cyan-500 px-5 py-2.5 text-[15px] font-medium text-white hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${PRESS} ${className}`}
       {...rest}>
       {children}
     </button>
   );
 }
 
-function GhostButton({ children, className = '', ...rest }) {
+const SECONDARY_CLS = `inline-flex items-center justify-center gap-1.5 rounded-full px-5 py-2.5 text-[15px] font-medium text-cyan-500 hover:bg-cyan-500/10 ${PRESS}`;
+
+function SecondaryButton({ children, className = '', ...rest }) {
+  return (
+    <button className={`${SECONDARY_CLS} ${className}`} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+// Text-style action, like Apple's "Learn more >" links.
+function TextAction({ children, className = '', ...rest }) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/60 hover:bg-cyan-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-md text-[15px] font-medium text-cyan-500 transition-colors duration-200 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className}`}
       {...rest}>
       {children}
     </button>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Background                                                         */
-/* ------------------------------------------------------------------ */
-
-function OceanBackdrop() {
+// Native iOS-style slider: thin zinc track, cyan fill up to the thumb, white circular thumb.
+function RangeSlider({ id, value, min, max, step = 1, onChange }) {
+  const fill = ((value - min) / (max - min)) * 100;
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#04090e]">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_15%_0%,rgba(6,182,212,0.08),transparent_60%),radial-gradient(ellipse_70%_50%_at_90%_30%,rgba(14,165,233,0.05),transparent_60%),linear-gradient(180deg,#04090e_0%,#08141e_55%,#04090e_100%)]" />
-      {/* undulating silk */}
-      <svg className="absolute bottom-0 left-0 h-[70vh] w-[200%] sp-silk opacity-60" viewBox="0 0 2400 600" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="sp-silk-a" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#0e7490" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#04090e" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="sp-silk-b" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#0369a1" stopOpacity="0.14" />
-            <stop offset="100%" stopColor="#04090e" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M0 320 C 200 240 400 400 600 320 S 1000 240 1200 320 S 1600 400 1800 320 S 2200 240 2400 320 V600 H0Z"
-          fill="url(#sp-silk-a)"
-        />
-        <path
-          d="M0 400 C 250 330 450 470 700 400 S 1150 330 1200 400 S 1650 470 1900 400 S 2300 330 2400 400 V600 H0Z"
-          fill="url(#sp-silk-b)"
-        />
-        <path
-          d="M0 320 C 200 240 400 400 600 320 S 1000 240 1200 320 S 1600 400 1800 320 S 2200 240 2400 320"
-          fill="none"
-          stroke="#22d3ee"
-          strokeOpacity="0.12"
-        />
-      </svg>
-      {/* faint particle grid */}
-      <div className="absolute inset-0 bg-[radial-gradient(rgba(224,242,254,0.06)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]" />
-    </div>
+    <input
+      id={id}
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="sp-range my-3 w-full"
+      style={{ '--fill': `${fill}%` }}
+    />
   );
 }
+
+const INPUT_CLS =
+  'w-full rounded-xl border-0 bg-zinc-800 px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 outline-none transition duration-200 focus:ring-2 focus:ring-cyan-500';
 
 /* ------------------------------------------------------------------ */
 /*  Navigation                                                         */
@@ -512,14 +481,6 @@ function OceanBackdrop() {
 
 function NavBar({ active }) {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -534,92 +495,87 @@ function NavBar({ active }) {
   };
 
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled ? 'border-b border-cyan-500/15 bg-[#04090e]/80 backdrop-blur-xl' : 'border-b border-transparent'
-      }`}>
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Logo onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+    <>
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-zinc-950/80 backdrop-blur-xl backdrop-saturate-150">
+        <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Logo onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
 
-        <ul className="hidden items-center gap-1 lg:flex">
-          {NAV_LINKS.map((l) => (
-            <li key={l.id}>
-              <button
-                onClick={() => go(l.id)}
-                className={`relative rounded-lg px-3 py-2 text-sm transition ${
-                  active === l.id ? 'text-cyan-300' : 'text-slate-400 hover:text-slate-100'
-                }`}>
-                {l.label}
-                {active === l.id && (
-                  <span className="absolute inset-x-3 -bottom-0.5 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:block">
-            <PrimaryButton onClick={() => go('contact')} className="px-4 py-2.5">
-              Book Strategy Audit
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-            </PrimaryButton>
-          </span>
-          <button
-            onClick={() => setOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-lg border border-cyan-500/25 text-cyan-200 lg:hidden"
-            aria-label="Open menu"
-            aria-expanded={open}>
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile drawer */}
-      <div
-        className={`fixed inset-0 z-50 lg:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
-        aria-hidden={!open}>
-        <div
-          onClick={() => setOpen(false)}
-          className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
-        />
-        <aside
-          className={`absolute right-0 top-0 flex h-full w-[85%] max-w-sm flex-col border-l border-cyan-500/20 bg-[#06111a]/95 p-6 backdrop-blur-xl transition-transform duration-300 ${
-            open ? 'translate-x-0' : 'translate-x-full'
-          }`}>
-          <div className="mb-8 flex items-center justify-between">
-            <MatrixS size={30} />
-            <button
-              onClick={() => setOpen(false)}
-              className="grid h-10 w-10 place-items-center rounded-lg border border-cyan-500/25 text-cyan-200"
-              aria-label="Close menu">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <ul className="space-y-1">
-            {NAV_LINKS.map((l, i) => (
+          <ul className="hidden items-center gap-7 lg:flex">
+            {NAV_LINKS.map((l) => (
               <li key={l.id}>
                 <button
                   onClick={() => go(l.id)}
-                  className="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-base text-slate-200 transition hover:bg-cyan-500/10 hover:text-cyan-200">
-                  <span>
-                    <span className="mr-3 font-mono text-xs text-cyan-500/70">0{i + 1}</span>
-                    {l.label}
-                  </span>
-                  <ArrowUpRight className="h-4 w-4 text-cyan-500/60" />
+                  aria-current={active === l.id ? 'true' : undefined}
+                  className={`rounded text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                    active === l.id ? 'text-white' : 'text-zinc-400 hover:text-white'
+                  }`}>
+                  {l.label}
                 </button>
               </li>
             ))}
           </ul>
-          <PrimaryButton onClick={() => go('contact')} className="mt-auto w-full">
-            Book Strategy Audit <ArrowRight className="h-4 w-4" />
+
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:block">
+              <PrimaryButton onClick={() => go('contact')} className="px-4 py-1.5 text-sm">
+                Book Strategy Audit
+              </PrimaryButton>
+            </span>
+            <button
+              onClick={() => setOpen(true)}
+              className={`grid h-9 w-9 place-items-center rounded-full text-zinc-300 hover:bg-zinc-800 lg:hidden ${PRESS}`}
+              aria-label="Open menu"
+              aria-expanded={open}>
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* Mobile drawer: kept outside the header, whose backdrop-filter would otherwise trap position:fixed */}
+      <div
+        className={`fixed inset-0 z-[60] lg:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        aria-hidden={!open}>
+        <div
+          onClick={() => setOpen(false)}
+          className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+        />
+        <aside
+          className={`absolute right-0 top-0 flex h-full w-[85%] max-w-sm flex-col bg-zinc-900 p-6 shadow-lg shadow-black/50 transition-transform duration-300 ease-out ${
+            open ? 'translate-x-0' : 'translate-x-full'
+          }`}>
+          <div className="mb-6 flex items-center justify-between">
+            <MatrixS size={24} />
+            <button
+              onClick={() => setOpen(false)}
+              className={`grid h-9 w-9 place-items-center rounded-full bg-zinc-800 text-zinc-300 hover:bg-zinc-700 ${PRESS}`}
+              aria-label="Close menu">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <ul className="divide-y divide-white/5">
+            {NAV_LINKS.map((l) => (
+              <li key={l.id}>
+                <button
+                  onClick={() => go(l.id)}
+                  className="flex w-full items-center justify-between py-4 text-left text-lg font-medium text-white transition-colors duration-200 hover:text-zinc-300">
+                  {l.label}
+                  <ChevronRight className="h-5 w-5 text-zinc-600" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <PrimaryButton onClick={() => go('contact')} className="mt-auto w-full py-3">
+            Book Strategy Audit
           </PrimaryButton>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="mt-4 text-center text-sm text-slate-400 hover:text-cyan-300">
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="mt-4 text-center text-sm text-zinc-400 transition-colors duration-200 hover:text-white">
             {CONTACT_EMAIL}
           </a>
         </aside>
       </div>
-    </header>
+    </>
   );
 }
 
@@ -629,70 +585,63 @@ function NavBar({ active }) {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 sm:pt-20 lg:px-8 lg:pb-24 lg:pt-28">
-      <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
-        <div>
-          <Eyebrow icon={Target}>Business Consulting · Operational Optimization</Eyebrow>
-          <h1 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl xl:text-[68px]">
-            <span className="bg-gradient-to-r from-cyan-300 via-sky-200 to-white bg-clip-text text-transparent">
-              Precision Business Architecture.
-            </span>
-            <br />
-            <span className="text-slate-50">Automated Workflows.</span>
-          </h1>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
-            Scrimmage Productions restructures your Google Workspace, automates email routing and document generation,
-            and provides executive diagnostic consulting to identify the root cause of operational friction. The result
-            is fewer manual steps, clearer ownership, and hours returned to your team each week.
-          </p>
+    <section className="px-4 pb-24 pt-24 sm:px-6 sm:pb-32 sm:pt-36 lg:px-8">
+      <div className="mx-auto max-w-4xl text-center">
+        <p className="text-sm font-medium text-zinc-500 sm:text-base">Business Consulting · Operational Optimization</p>
+        <h1 className="mt-5 text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
+          Precision Business Architecture.
+          <br />
+          <span className="text-zinc-500">Automated Workflows.</span>
+        </h1>
+        <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-zinc-400 sm:text-xl">
+          Scrimmage Productions restructures your Google Workspace, automates email routing and document generation,
+          and provides executive diagnostic consulting to identify the root cause of operational friction. The result
+          is fewer manual steps, clearer ownership, and hours returned to your team each week.
+        </p>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3.5 text-[15px]">
-              Book Strategy Audit
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-            </PrimaryButton>
-            <GhostButton onClick={() => scrollToId('services')} className="px-6 py-3.5 text-[15px]">
-              Explore Automations
-            </GhostButton>
-          </div>
-
-          <Reveal as="dl" className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {HERO_METRICS.map(({ icon: Icon, value, label }) => (
-              <div key={label} className="rounded-xl border border-cyan-500/15 bg-[rgba(13,26,38,0.55)] px-4 py-3 backdrop-blur-xl">
-                <dt className="flex items-center gap-2 text-lg font-semibold text-slate-50">
-                  <Icon className="h-4 w-4 text-emerald-400" />
-                  {value}
-                </dt>
-                <dd className="mt-0.5 text-xs text-slate-400">{label}</dd>
-              </div>
-            ))}
-          </Reveal>
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <PrimaryButton onClick={() => scrollToId('contact')} className="px-7 py-3 text-[17px]">
+            Book Strategy Audit
+          </PrimaryButton>
+          <SecondaryButton onClick={() => scrollToId('services')} className="px-6 py-3 text-[17px]">
+            Explore Automations <ChevronRight className="h-4 w-4" />
+          </SecondaryButton>
         </div>
 
-        <HeroConsole />
-      </div>
-
-      {/* Ticker */}
-      <div className="relative mx-auto mt-16 max-w-7xl overflow-hidden rounded-xl border border-cyan-500/15 bg-[#06111a]/70 py-3 backdrop-blur-xl [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)]">
-        <div className="sp-marquee flex w-max gap-10 whitespace-nowrap">
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, i) => (
-            <span key={i} className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
-              <Zap className="h-3.5 w-3.5 text-cyan-400" />
-              {t}
-            </span>
+        <Reveal
+          as="dl"
+          className="mx-auto mt-20 grid max-w-3xl grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
+          {HERO_METRICS.map(({ value, label }) => (
+            <div key={label} className="px-6">
+              <dt className="text-3xl font-semibold tracking-tight text-white">{value}</dt>
+              <dd className="mt-1 text-sm text-zinc-500">{label}</dd>
+            </div>
           ))}
-        </div>
+        </Reveal>
       </div>
+
+      <Reveal className="mx-auto mt-20 max-w-xl">
+        <HeroConsole />
+      </Reveal>
+
+      <Reveal as="ul" className="mx-auto mt-16 flex max-w-4xl flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-zinc-500">
+        {TICKER_ITEMS.map((t, i) => (
+          <li key={t} className="flex items-center gap-5">
+            {i > 0 && <span aria-hidden="true" className="h-1 w-1 rounded-full bg-zinc-700" />}
+            {t}
+          </li>
+        ))}
+      </Reveal>
     </section>
   );
 }
 
 function HeroConsole() {
   const lines = [
-    { icon: Inbox, text: '142 inbound threads triaged', tone: 'text-cyan-300' },
-    { icon: Shield, text: '37 overshared files locked down', tone: 'text-sky-300' },
-    { icon: FileText, text: 'Proposal generated · 00:41s', tone: 'text-cyan-300' },
-    { icon: TrendingUp, text: 'Funnel leak patched · Stage 3', tone: 'text-emerald-400' },
+    { icon: Inbox, text: '142 inbound threads triaged' },
+    { icon: Shield, text: '37 overshared files locked down' },
+    { icon: FileText, text: 'Proposal generated · 00:41s' },
+    { icon: TrendingUp, text: 'Funnel leak patched · Stage 3' },
   ];
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -701,40 +650,30 @@ function HeroConsole() {
   }, [lines.length]);
 
   return (
-    <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-      <div className="absolute -inset-6 rounded-[32px] bg-cyan-500/10 blur-3xl" aria-hidden="true" />
-      <GlassCard className="relative overflow-hidden p-6 shadow-[0_0_25px_rgba(6,182,212,0.25)]">
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Ops Console · Sample run</span>
-          <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> live demo
-          </span>
-        </div>
-
-        <div className="my-8 flex justify-center">
-          <div className="relative grid h-36 w-36 place-items-center rounded-3xl border border-cyan-500/25 bg-[#04090e]/80 shadow-[0_0_60px_rgba(6,182,212,0.25)]">
-            <MatrixS size={96} />
-          </div>
-        </div>
-
-        <ul className="space-y-2">
-          {lines.map(({ icon: Icon, text, tone }, i) => (
-            <li
-              key={text}
-              className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-all duration-500 ${
-                i === tick
-                  ? 'border-cyan-400/40 bg-cyan-500/10 text-slate-50'
-                  : 'border-transparent bg-white/[0.02] text-slate-400'
-              }`}>
-              <Icon className={`h-4 w-4 shrink-0 ${i === tick ? tone : 'text-slate-500'}`} />
-              <span className="truncate">{text}</span>
-              {i === tick && <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-emerald-400" />}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 text-[11px] text-slate-500">Illustrative automation events. Your results depend on your stack and volume.</p>
-      </GlassCard>
-    </div>
+    <Card className="p-5 text-left shadow-lg shadow-black/50 sm:p-6">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-sm font-medium text-zinc-300">Ops Console · Sample run</span>
+        <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> live demo
+        </span>
+      </div>
+      <ul className="mt-4 space-y-1">
+        {lines.map(({ icon: Icon, text }, i) => (
+          <li
+            key={text}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-500 ${
+              i === tick ? 'bg-zinc-800 text-white' : 'text-zinc-500'
+            }`}>
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{text}</span>
+            {i === tick && <Check className="ml-auto h-4 w-4 shrink-0 text-cyan-500" />}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 px-1 text-xs text-zinc-600">
+        Illustrative automation events. Your results depend on your stack and volume.
+      </p>
+    </Card>
   );
 }
 
@@ -793,18 +732,17 @@ function Diagnostic({ onRequest }) {
   };
 
   return (
-    <section id="diagnostic" className="scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto max-w-7xl">
+    <section id="diagnostic" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         <SectionHeader
           eyebrow="Operational Friction Diagnostic"
-          icon={Gauge}
           title="What is slowing your team down the most?"
           sub="Pick your biggest bottleneck. You will see the play we would run, and a rough estimate of the hours it gives back."
         />
 
-        <Reveal className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          {/* Options */}
-          <div role="radiogroup" aria-label="Biggest bottleneck" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <Reveal className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-10">
+          {/* Sidebar list */}
+          <div role="radiogroup" aria-label="Biggest bottleneck" className="space-y-1">
             {BOTTLENECKS.map((opt) => {
               const Icon = opt.icon;
               const on = opt.id === selected;
@@ -817,88 +755,66 @@ function Diagnostic({ onRequest }) {
                     setSelected(opt.id);
                     setStatus('idle');
                   }}
-                  className={`group flex items-start gap-4 rounded-2xl border p-4 text-left backdrop-blur-xl transition sm:p-5 ${
-                    on
-                      ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_25px_rgba(6,182,212,0.25)]'
-                      : 'border-cyan-500/15 bg-[rgba(13,26,38,0.6)] hover:border-cyan-400/40'
+                  className={`flex w-full items-start gap-3.5 rounded-2xl px-4 py-3.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                    on ? 'bg-zinc-800' : 'hover:bg-zinc-900'
                   }`}>
-                  <span
-                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition ${
-                      on ? 'border-cyan-300/50 bg-cyan-400/20 text-cyan-200' : 'border-cyan-500/20 text-cyan-400'
-                    }`}>
-                    <Icon className="h-5 w-5" />
-                  </span>
+                  <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-500'}`} />
                   <span>
-                    <span className="block font-semibold text-slate-100">{opt.label}</span>
-                    <span className="mt-1 block text-sm leading-snug text-slate-400">{opt.symptom}</span>
+                    <span className={`block text-[15px] font-medium ${on ? 'text-white' : 'text-zinc-200'}`}>{opt.label}</span>
+                    <span className="mt-0.5 block text-sm leading-snug text-zinc-500">{opt.symptom}</span>
                   </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Result */}
-          <GlassCard key={b.id} className="sp-fade-in flex flex-col p-6 sm:p-8">
+          {/* Detail panel */}
+          <Card key={b.id} className="sp-fade-in flex flex-col p-6 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Your Scrimmage Solution</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300">
-                <TrendingUp className="h-3.5 w-3.5" /> ROI positive
-              </span>
+              <span className="text-sm font-medium text-zinc-500">Your Scrimmage Solution</span>
+              <Badge>ROI positive</Badge>
             </div>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-50">{b.play}</h3>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{b.play}</h3>
 
-            <ul className="mt-5 space-y-3">
+            <ul className="mt-6 space-y-3">
               {b.steps.map((s) => (
-                <li key={s} className="flex gap-3 text-slate-300">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-400" />
+                <li key={s} className="flex gap-3 text-[15px] text-zinc-300">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
                   <span>{s}</span>
                 </li>
               ))}
             </ul>
 
-            <div className="mt-7">
-              <label htmlFor="team" className="flex items-center justify-between text-sm text-slate-400">
-                <span className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-cyan-400" /> People affected
-                </span>
-                <span className="font-mono text-cyan-200">{team}</span>
+            <div className="mt-8">
+              <label htmlFor="team" className="flex items-center justify-between text-[15px] text-zinc-300">
+                People affected
+                <span className="font-medium tabular-nums text-white">{team}</span>
               </label>
-              <input
-                id="team"
-                type="range"
-                min={1}
-                max={25}
-                value={team}
-                onChange={(e) => setTeam(Number(e.target.value))}
-                className="sp-range mt-3 w-full"
-              />
+              <RangeSlider id="team" value={team} min={1} max={25} onChange={setTeam} />
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
-                <p className="text-xs text-slate-400">Est. hours reclaimed / week</p>
-                <p className="mt-1 text-3xl font-semibold text-emerald-300">~{weekly}</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-zinc-950 p-5">
+                <p className="text-sm text-zinc-500">Est. hours reclaimed / week</p>
+                <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-white">~{weekly}</p>
               </div>
-              <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
-                <p className="text-xs text-slate-400">Est. hours reclaimed / year</p>
-                <p className="mt-1 text-3xl font-semibold text-emerald-300">~{yearly.toLocaleString()}</p>
+              <div className="rounded-2xl bg-zinc-950 p-5">
+                <p className="text-sm text-zinc-500">Est. hours reclaimed / year</p>
+                <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-white">~{yearly.toLocaleString()}</p>
               </div>
             </div>
-            <p className="mt-3 flex items-start gap-2 text-sm text-slate-400">
-              <DollarSign className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-              {b.revenue}
-            </p>
+            <p className="mt-4 text-sm text-zinc-400">{b.revenue}</p>
 
             <div className="mt-5 flex flex-wrap gap-1.5">
               {b.stack.map((s) => (
-                <StackBadge key={s}>{s}</StackBadge>
+                <Badge key={s}>{s}</Badge>
               ))}
             </div>
 
-            <div className="mt-8 border-t border-cyan-500/15 pt-6">
+            <div className="mt-8 border-t border-white/5 pt-6">
               {status === 'success' || status === 'fallback' ? (
-                <div className="sp-fade-in flex items-start gap-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200">
-                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                <div className="sp-fade-in flex items-start gap-3 rounded-2xl bg-zinc-800 p-4 text-sm text-zinc-200">
+                  <Check className="h-5 w-5 shrink-0 text-white" />
                   <span>
                     {status === 'success'
                       ? 'Preview sent. We will follow up with your full audit outline within one business day.'
@@ -907,10 +823,10 @@ function Diagnostic({ onRequest }) {
                 </div>
               ) : (
                 <form onSubmit={send} noValidate>
-                  <label htmlFor="diag-email" className="text-sm font-medium text-slate-200">
+                  <label htmlFor="diag-email" className="text-[15px] font-medium text-white">
                     Send this audit preview to your inbox
                   </label>
-                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <input
                       id="diag-email"
                       type="email"
@@ -918,27 +834,27 @@ function Diagnostic({ onRequest }) {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@company.com"
                       aria-invalid={status === 'error'}
-                      className="sp-input flex-1"
+                      className={`${INPUT_CLS} flex-1 ${status === 'error' ? 'ring-2 ring-red-500/70' : ''}`}
                     />
-                    <PrimaryButton type="submit" disabled={status === 'loading'}>
-                      {status === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <PrimaryButton type="submit" disabled={status === 'loading'} className="py-3">
+                      {status === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
                       Send my audit
                     </PrimaryButton>
                   </div>
                   {status === 'error' && (
-                    <p className="mt-2 flex items-center gap-1.5 text-sm text-rose-300">
+                    <p className="mt-2 flex items-center gap-1.5 text-sm text-red-400">
                       <AlertTriangle className="h-4 w-4" /> {error}
                     </p>
                   )}
                 </form>
               )}
-              <button
+              <TextAction
                 onClick={() => onRequest(b.interest, `My biggest bottleneck is ${b.label.toLowerCase()}. ${b.symptom}`)}
-                className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-cyan-300 hover:text-cyan-200">
-                Book Strategy Audit <ArrowRight className="h-4 w-4" />
-              </button>
+                className="mt-5">
+                Book Strategy Audit <ChevronRight className="h-4 w-4" />
+              </TextAction>
             </div>
-          </GlassCard>
+          </Card>
         </Reveal>
       </div>
     </section>
@@ -954,77 +870,70 @@ function Services({ onRequest }) {
   const pillar = SERVICES[tab];
 
   return (
-    <section id="services" className="scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto max-w-7xl">
+    <section id="services" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         <SectionHeader
           eyebrow="Services"
-          icon={Layers}
           title="Automation for repetitive work. Advisory for the decisions behind it."
           sub="Most engagements begin with one pillar. The second is added once the first is delivering measurable results."
         />
 
-        <div role="tablist" aria-label="Service pillars" className="mx-auto mb-10 flex w-full max-w-xl rounded-2xl border border-cyan-500/20 bg-[#06111a]/80 p-1.5 backdrop-blur-xl">
-          {Object.entries(SERVICES).map(([key, p]) => {
-            const Icon = p.icon;
-            const on = key === tab;
-            return (
-              <button
-                key={key}
-                role="tab"
-                aria-selected={on}
-                onClick={() => setTab(key)}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                  on
-                    ? 'bg-gradient-to-r from-cyan-500/90 to-sky-400/90 text-[#04090e] shadow-[0_0_25px_rgba(6,182,212,0.35)]'
-                    : 'text-slate-400 hover:text-slate-100'
-                }`}>
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="truncate sm:hidden">{p.short}</span>
-                <span className="hidden truncate sm:inline">{p.label}</span>
-              </button>
-            );
-          })}
+        {/* Segmented control */}
+        <div className="mb-6 flex justify-center">
+          <div role="tablist" aria-label="Service pillars" className="inline-flex w-full max-w-md rounded-xl bg-zinc-900 p-1">
+            {Object.entries(SERVICES).map(([key, p]) => {
+              const on = key === tab;
+              return (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setTab(key)}
+                  className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                    on ? 'bg-zinc-700 text-white shadow-lg shadow-black/50' : 'text-zinc-400 hover:text-white'
+                  }`}>
+                  <span className="truncate sm:hidden">{p.short}</span>
+                  <span className="hidden truncate sm:inline">{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <p className="mb-8 text-center text-slate-400">{pillar.blurb}</p>
+        <p className="mb-12 text-center text-zinc-400">{pillar.blurb}</p>
 
-        <div key={tab} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div key={tab} className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {pillar.cards.map((c, i) => {
             const Icon = c.icon;
             return (
               <Reveal key={c.title} delay={i * 100} className="h-full">
-                <GlassCard className="group flex h-full flex-col p-6 sm:p-7">
-                  <span className="grid h-12 w-12 place-items-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 transition group-hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]">
-                    <Icon className="h-6 w-6" />
+                <Card className="flex h-full flex-col p-7 sm:p-8">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-200">
+                    <Icon className="h-5 w-5" />
                   </span>
-                  <h3 className="mt-5 text-xl font-semibold text-slate-50">{c.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{c.summary}</p>
+                  <h3 className="mt-6 text-xl font-semibold tracking-tight text-white">{c.title}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-zinc-400">{c.summary}</p>
 
-                  <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/70">Deliverables</p>
+                  <p className="mt-7 text-xs font-medium uppercase tracking-wide text-zinc-500">Deliverables</p>
                   <ul className="mt-3 space-y-2.5">
                     {c.deliverables.map((d) => (
-                      <li key={d} className="flex gap-2.5 text-sm text-slate-300">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+                      <li key={d} className="flex gap-2.5 text-sm text-zinc-300">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
                         {d}
                       </li>
                     ))}
                   </ul>
 
-                  <div className="mb-7 mt-6 flex flex-wrap gap-1.5">
+                  <div className="mb-8 mt-6 flex flex-wrap gap-1.5">
                     {c.stack.map((s) => (
-                      <StackBadge key={s}>{s}</StackBadge>
+                      <Badge key={s}>{s}</Badge>
                     ))}
                   </div>
 
-                  <button
-                    onClick={() => onRequest(c.interest, `I'm interested in: ${c.title}.`)}
-                    className="mt-auto flex items-center justify-between gap-2 border-t border-cyan-500/15 pt-5 text-sm font-semibold text-cyan-300 transition hover:text-cyan-100">
-                    Request Audit
-                    <span className="grid h-8 w-8 place-items-center rounded-lg border border-cyan-500/30 transition group-hover:border-cyan-300/60 group-hover:bg-cyan-500/15">
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                  </button>
-                </GlassCard>
+                  <TextAction onClick={() => onRequest(c.interest, `I'm interested in: ${c.title}.`)} className="mt-auto self-start">
+                    Request Audit <ChevronRight className="h-4 w-4" />
+                  </TextAction>
+                </Card>
               </Reveal>
             );
           })}
@@ -1040,42 +949,37 @@ function Services({ onRequest }) {
 
 function Playbook() {
   return (
-    <section id="playbook" className="scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto max-w-7xl">
+    <section id="playbook" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         <SectionHeader
           eyebrow="The Scrimmage Method"
-          icon={BookOpen}
           title="Film. Playbook. Execution."
           sub="Every engagement follows the same three phases, so scope, sequence and accountability are clear from the start."
         />
 
-        <ol className="relative grid gap-6 lg:grid-cols-3">
-          <div
-            aria-hidden="true"
-            className="absolute left-0 right-0 top-[52px] hidden h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent lg:block"
-          />
+        <ol className="grid gap-5 lg:grid-cols-3">
           {METHOD_STEPS.map(({ n, icon: Icon, title, tag, body, points }, i) => (
-            <Reveal as="li" key={n} delay={i * 100} className="relative">
-              <GlassCard className="h-full p-6 sm:p-7">
-                <div className="flex items-center justify-between">
-                  <span className="relative grid h-14 w-14 place-items-center rounded-2xl border border-cyan-400/40 bg-[#04090e] text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.3)]">
-                    <Icon className="h-6 w-6" />
+            <Reveal as="li" key={n} delay={i * 100}>
+              <Card className="h-full p-7 sm:p-8">
+                <div className="flex items-start justify-between">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-200">
+                    <Icon className="h-5 w-5" />
                   </span>
-                  <span className="bg-gradient-to-b from-cyan-200/50 to-transparent bg-clip-text font-mono text-5xl font-bold text-transparent">
-                    {n}
-                  </span>
+                  <span className="text-5xl font-semibold tracking-tight text-zinc-800">{n}</span>
                 </div>
-                <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Step {n.slice(1)} · {tag}</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-50">{title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-400">{body}</p>
-                <ul className="mt-5 flex flex-wrap gap-2">
+                <p className="mt-6 text-sm font-medium text-zinc-500">
+                  Step {n.slice(1)} · {tag}
+                </p>
+                <h3 className="mt-1 text-2xl font-semibold tracking-tight text-white">{title}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-zinc-400">{body}</p>
+                <ul className="mt-6 flex flex-wrap gap-1.5">
                   {points.map((p) => (
-                    <li key={p} className="rounded-full border border-cyan-500/20 bg-cyan-500/5 px-3 py-1 text-xs text-cyan-100">
-                      {p}
+                    <li key={p}>
+                      <Badge>{p}</Badge>
                     </li>
                   ))}
                 </ul>
-              </GlassCard>
+              </Card>
             </Reveal>
           ))}
         </ol>
@@ -1091,26 +995,14 @@ function Playbook() {
 const RECOVERY_RATE = 0.6; // share of manual hours a typical automation set recovers
 const WORK_WEEKS = 48;
 
-function Slider({ id, label, icon: Icon, value, min, max, step = 1, onChange, format = (v) => v }) {
+function Slider({ id, label, value, min, max, step = 1, onChange, format = (v) => v }) {
   return (
     <div>
-      <label htmlFor={id} className="flex items-center justify-between gap-3 text-sm text-slate-300">
-        <span className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-cyan-400" />
-          {label}
-        </span>
-        <span className="rounded-md border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 font-mono text-cyan-100">{format(value)}</span>
+      <label htmlFor={id} className="flex items-center justify-between gap-3 text-[15px] text-zinc-300">
+        {label}
+        <span className="font-medium tabular-nums text-white">{format(value)}</span>
       </label>
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="sp-range mt-3 w-full"
-      />
+      <RangeSlider id={id} value={value} min={min} max={max} step={step} onChange={onChange} />
     </div>
   );
 }
@@ -1131,23 +1023,21 @@ function RoiCalculator() {
   const pct = Math.min(100, (r.annualValue / 500000) * 100);
 
   return (
-    <section id="roi" className="scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto max-w-7xl">
+    <section id="roi" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         <SectionHeader
           eyebrow="ROI Calculator"
-          icon={Calculator}
           title="What is manual work really costing you?"
           sub="Move the sliders to match your team. We assume automation recovers about 60% of repetitive hours, a conservative starting point we refine during the Film Room."
         />
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           <Reveal className="h-full">
-            <GlassCard className="h-full space-y-8 p-6 sm:p-8">
-              <Slider id="roi-people" label="Team members doing repetitive work" icon={Users} value={people} min={1} max={50} onChange={setPeople} />
+            <Card className="flex h-full flex-col gap-7 p-7 sm:p-8">
+              <Slider id="roi-people" label="Team members doing repetitive work" value={people} min={1} max={50} onChange={setPeople} />
               <Slider
                 id="roi-hours"
                 label="Manual hours per person, per week"
-                icon={Clock}
                 value={hours}
                 min={1}
                 max={30}
@@ -1157,7 +1047,6 @@ function RoiCalculator() {
               <Slider
                 id="roi-rate"
                 label="Loaded hourly cost per person"
-                icon={DollarSign}
                 value={rate}
                 min={20}
                 max={250}
@@ -1165,49 +1054,46 @@ function RoiCalculator() {
                 onChange={setRate}
                 format={(v) => `$${v}`}
               />
-              <p className="flex items-start gap-2 rounded-xl border border-cyan-500/15 bg-[#04090e]/60 p-4 text-xs leading-relaxed text-slate-400">
-                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+              <p className="mt-auto flex items-start gap-2.5 rounded-2xl bg-zinc-950 p-4 text-sm leading-relaxed text-zinc-500">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0" />
                 Calculated in your browser. Nothing you enter here is stored or sent anywhere.
               </p>
-            </GlassCard>
+            </Card>
           </Reveal>
 
           <Reveal delay={100} className="h-full">
-            <GlassCard className="flex h-full flex-col p-6 sm:p-8">
-              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Estimated annual value recovered</span>
-              <p className="mt-3 bg-gradient-to-r from-emerald-300 to-cyan-200 bg-clip-text text-5xl font-semibold tracking-tight text-transparent sm:text-6xl">
+            <Card className="flex h-full flex-col p-7 sm:p-8">
+              <span className="text-sm font-medium text-zinc-500">Estimated annual value recovered</span>
+              <p className="mt-2 text-5xl font-semibold tracking-tight tabular-nums text-white sm:text-6xl">
                 {fmtMoney(r.annualValue)}
               </p>
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-cyan-500/10" aria-hidden="true">
+              <div className="mt-6 h-1 overflow-hidden rounded-full bg-zinc-800" aria-hidden="true">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)] transition-all duration-500"
-                  style={{ width: `${Math.max(pct, 3)}%` }}
+                  className="h-full rounded-full bg-white transition-all duration-500 ease-out"
+                  style={{ width: `${Math.max(pct, 2)}%` }}
                 />
               </div>
 
               <dl className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[
-                  { label: 'Hours back / week', value: Math.round(r.weeklyHours).toLocaleString(), icon: Clock },
-                  { label: 'Hours back / year', value: Math.round(r.annualHours).toLocaleString(), icon: BarChart3 },
-                  { label: 'Full-time equivalents', value: r.fte.toFixed(1), icon: Users },
-                ].map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
-                    <dt className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <Icon className="h-3.5 w-3.5 text-emerald-400" />
-                      {label}
-                    </dt>
-                    <dd className="mt-1 text-2xl font-semibold text-emerald-300">{value}</dd>
+                  { label: 'Hours back / week', value: Math.round(r.weeklyHours).toLocaleString() },
+                  { label: 'Hours back / year', value: Math.round(r.annualHours).toLocaleString() },
+                  { label: 'Full-time equivalents', value: r.fte.toFixed(1) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-2xl bg-zinc-950 p-4">
+                    <dt className="text-sm text-zinc-500">{label}</dt>
+                    <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-white">{value}</dd>
                   </div>
                 ))}
               </dl>
 
-              <p className="mb-8 mt-6 text-sm text-slate-400">
+              <p className="mb-8 mt-6 text-[15px] text-zinc-400">
                 That is capacity you can redirect to sales, delivery and strategy, without adding headcount.
               </p>
-              <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full">
-                Book Strategy Audit <ArrowRight className="h-4 w-4" />
+              <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full py-3">
+                Book Strategy Audit
               </PrimaryButton>
-            </GlassCard>
+            </Card>
           </Reveal>
         </div>
       </div>
@@ -1234,12 +1120,12 @@ function validate(f) {
 function Field({ id, label, error, children }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-200">
+      <label htmlFor={id} className="mb-2 block text-sm font-medium text-zinc-300">
         {label}
       </label>
       {children}
       {error && (
-        <p id={`${id}-err`} className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-300">
+        <p id={`${id}-err`} className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400">
           <AlertTriangle className="h-3.5 w-3.5" /> {error}
         </p>
       )}
@@ -1312,63 +1198,62 @@ function Contact({ prefill }) {
     }
   };
 
-  const inputCls = (k) => `sp-input w-full ${errors[k] ? '!border-rose-400/60' : ''}`;
+  const inputCls = (k) => `${INPUT_CLS} ${errors[k] ? 'ring-2 ring-red-500/70' : ''}`;
 
   return (
-    <section id="contact" className="scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+    <section id="contact" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
         <div>
           <SectionHeader
             center={false}
             eyebrow="Book a Strategy Audit"
-            icon={Mail}
             title="Describe the friction. We will scope the fix."
             sub="Every engagement starts with listening. Share your operational challenges and we will come back within one business day with next steps."
           />
           <Reveal delay={100}>
-            <ul className="space-y-4">
+            <ul className="space-y-5">
               {[
                 { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
                 { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
                 { icon: Shield, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
               ].map(({ icon: Icon, title, body }) => (
                 <li key={title} className="flex gap-4">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 text-cyan-300">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-300">
                     <Icon className="h-5 w-5" />
                   </span>
                   <span>
-                    <span className="block font-semibold text-slate-100">{title}</span>
-                    <span className="text-sm text-slate-400">{body}</span>
+                    <span className="block text-[15px] font-medium text-white">{title}</span>
+                    <span className="text-sm text-zinc-400">{body}</span>
                   </span>
                 </li>
               ))}
             </ul>
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="mt-8 inline-flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-200 transition hover:border-cyan-400/60">
+              className="mt-8 inline-flex items-center gap-2 rounded-md text-[15px] font-medium text-cyan-500 transition-colors duration-200 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
               <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
             </a>
           </Reveal>
         </div>
 
         <Reveal delay={150} className="h-full">
-          <GlassCard className="relative h-full p-6 sm:p-8">
+          <Card className="h-full p-6 shadow-lg shadow-black/50 sm:p-10">
             {status === 'success' || status === 'fallback' ? (
               <div className="sp-fade-in flex min-h-[420px] flex-col items-center justify-center text-center">
-                <span className="sp-pop grid h-20 w-20 place-items-center rounded-full border border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_40px_rgba(16,185,129,0.35)]">
-                  <CheckCircle2 className="h-10 w-10 text-emerald-300" />
+                <span className="sp-pop grid h-16 w-16 place-items-center rounded-full bg-zinc-800">
+                  <Check className="h-8 w-8 text-white" />
                 </span>
-                <h3 className="mt-6 text-2xl font-semibold text-slate-50">
+                <h3 className="mt-6 text-2xl font-semibold tracking-tight text-white">
                   {status === 'success' ? 'Message received.' : 'Almost there.'}
                 </h3>
-                <p className="mt-3 max-w-sm text-slate-400">
+                <p className="mt-3 max-w-sm text-zinc-400">
                   {status === 'success'
                     ? 'Your request is in our inbox. Expect a reply within one business day with times for your Strategy Audit.'
                     : 'Your email app opened with everything pre-filled. Hit send and we will reply within one business day.'}
                 </p>
-                <GhostButton onClick={() => setStatus('idle')} className="mt-8">
+                <SecondaryButton onClick={() => setStatus('idle')} className="mt-8">
                   Send another message
-                </GhostButton>
+                </SecondaryButton>
               </div>
             ) : (
               <form onSubmit={onSubmit} noValidate className="space-y-5">
@@ -1427,7 +1312,7 @@ function Contact({ prefill }) {
                     onChange={update('interest')}
                     aria-invalid={!!errors.interest}
                     aria-describedby={errors.interest ? 'interest-err' : undefined}
-                    className={`${inputCls('interest')} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 fill=%22none%22 stroke=%22%2367e8f9%22 stroke-width=%222%22><path d=%22M4 6l4 4 4-4%22/></svg>')] bg-[length:16px] bg-[right_1rem_center] bg-no-repeat pr-10`}>
+                    className={`${inputCls('interest')} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 fill=%22none%22 stroke=%22%23a1a1aa%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M4 6l4 4 4-4%22/></svg>')] bg-[length:16px] bg-[right_1rem_center] bg-no-repeat pr-10`}>
                     <option value="" disabled>
                       Select an area...
                     </option>
@@ -1452,7 +1337,7 @@ function Contact({ prefill }) {
                 </Field>
 
                 {status === 'error' && (
-                  <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200">
+                  <div role="alert" className="flex items-start gap-3 rounded-2xl bg-red-500/10 p-4 text-sm text-red-300">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>
                       {serverError} Your message was not sent. Try again, or email us directly with the button below.
@@ -1460,30 +1345,26 @@ function Contact({ prefill }) {
                   </div>
                 )}
 
-                <div className="flex flex-col gap-3 pt-1 sm:flex-row">
-                  <PrimaryButton type="submit" disabled={status === 'loading'} className="flex-1 py-3.5">
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
+                  <PrimaryButton type="submit" disabled={status === 'loading'} className="flex-1 py-3">
                     {status === 'loading' ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" /> Sending...
                       </>
                     ) : (
-                      <>
-                        Book Strategy Audit <Send className="h-4 w-4" />
-                      </>
+                      'Book Strategy Audit'
                     )}
                   </PrimaryButton>
-                  <a
-                    href={buildMailto(mailSubject, mailBody)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-5 py-3.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/60 hover:bg-cyan-500/10">
+                  <a href={buildMailto(mailSubject, mailBody)} className={`${SECONDARY_CLS} py-3`}>
                     <Mail className="h-4 w-4" /> Email us directly
                   </a>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-zinc-500">
                   We only use your details to respond to this request. No newsletters, no list selling.
                 </p>
               </form>
             )}
-          </GlassCard>
+          </Card>
         </Reveal>
       </div>
     </section>
@@ -1496,23 +1377,25 @@ function Contact({ prefill }) {
 
 function Footer() {
   const [legal, setLegal] = useState(null);
+  const footLink =
+    'rounded text-sm text-zinc-400 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500';
   return (
-    <footer className="border-t border-cyan-500/15 bg-[#04090e]/80 px-4 pb-10 pt-14 backdrop-blur-xl sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <footer className="border-t border-white/5 px-4 pb-10 pt-16 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <Logo onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
-            <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">
+            <Logo tagline onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+            <p className="mt-5 max-w-sm text-sm leading-relaxed text-zinc-500">
               Precision business architecture and automated workflows. We identify operational friction, remove it, and
               return measurable hours to your team.
             </p>
           </div>
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Navigate</p>
-            <ul className="mt-4 space-y-2.5">
+            <p className="text-sm font-semibold text-white">Navigate</p>
+            <ul className="mt-4 space-y-3">
               {NAV_LINKS.map((l) => (
                 <li key={l.id}>
-                  <button onClick={() => scrollToId(l.id)} className="text-sm text-slate-400 transition hover:text-cyan-300">
+                  <button onClick={() => scrollToId(l.id)} className={footLink}>
                     {l.label}
                   </button>
                 </li>
@@ -1520,24 +1403,25 @@ function Footer() {
             </ul>
           </div>
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-400/80">Contact</p>
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="mt-4 flex items-center gap-2 break-all text-sm text-slate-300 transition hover:text-cyan-300">
-              <Mail className="h-4 w-4 shrink-0 text-cyan-400" /> {CONTACT_EMAIL}
+            <p className="text-sm font-semibold text-white">Contact</p>
+            <a href={`mailto:${CONTACT_EMAIL}`} className={`mt-4 block break-all ${footLink}`}>
+              {CONTACT_EMAIL}
             </a>
-            <PrimaryButton onClick={() => scrollToId('contact')} className="mt-5 px-4 py-2.5">
-              Book Strategy Audit <ArrowRight className="h-4 w-4" />
+            <PrimaryButton onClick={() => scrollToId('contact')} className="mt-5 px-4 py-2 text-sm">
+              Book Strategy Audit
             </PrimaryButton>
           </div>
         </div>
 
         {legal && (
-          <div className="sp-fade-in mt-10 rounded-xl border border-cyan-500/15 bg-[rgba(13,26,38,0.7)] p-5 text-sm leading-relaxed text-slate-400">
+          <div className="sp-fade-in mt-10 rounded-2xl bg-zinc-900 p-5 text-sm leading-relaxed text-zinc-400">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-semibold text-slate-200">{legal === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</span>
-              <button onClick={() => setLegal(null)} aria-label="Close" className="text-slate-500 hover:text-slate-200">
-                <X className="h-4 w-4" />
+              <span className="font-medium text-white">{legal === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</span>
+              <button
+                onClick={() => setLegal(null)}
+                aria-label="Close"
+                className={`grid h-7 w-7 place-items-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white ${PRESS}`}>
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
             {legal === 'privacy'
@@ -1546,13 +1430,13 @@ function Footer() {
           </div>
         )}
 
-        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-cyan-500/10 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center">
+        <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-white/5 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center">
           <p>© 2026 Scrimmage Productions LLC. All Rights Reserved.</p>
           <div className="flex gap-5">
-            <button onClick={() => setLegal('privacy')} className="hover:text-cyan-300">
+            <button onClick={() => setLegal('privacy')} className="transition-colors duration-200 hover:text-white">
               Privacy Policy
             </button>
-            <button onClick={() => setLegal('terms')} className="hover:text-cyan-300">
+            <button onClick={() => setLegal('terms')} className="transition-colors duration-200 hover:text-white">
               Terms of Service
             </button>
           </div>
@@ -1566,7 +1450,7 @@ function Footer() {
 /*  Loading sequence                                                   */
 /* ------------------------------------------------------------------ */
 
-// Timeline (~2.6s): the S fills, holds at peak glow while it charges, then bursts to reveal the site.
+// Timeline (~2.6s): the S fills, holds while it charges, then bursts to reveal the site.
 const LOAD_MS = 1700;
 const CHARGE_MS = 250;
 const BURST_MS = 650; // every burst animation below is tuned to finish inside this window
@@ -1616,13 +1500,13 @@ function LoaderGlyph({ lit }) {
               y={y * cell + pad}
               width={cell - pad * 2}
               height={cell - pad * 2}
-              rx={2}
+              rx={2.5}
               fill={lit ? '#06b6d4' : 'none'}
-              stroke={lit ? '#e0f2fe' : 'rgba(6,182,212,0.45)'}
-              strokeWidth={lit ? 0.6 : 1}
+              stroke={lit ? 'none' : '#3f3f46'}
+              strokeWidth={1}
             />
           ) : (
-            <circle key={`${x}-${y}`} cx={x * cell + cell / 2} cy={y * cell + cell / 2} r={0.9} fill="rgba(14,116,144,0.35)" />
+            <circle key={`${x}-${y}`} cx={x * cell + cell / 2} cy={y * cell + cell / 2} r={0.9} fill="#27272a" />
           ),
         ),
       )}
@@ -1654,7 +1538,7 @@ const LOADER_SHARDS = S_LOADER.flatMap((row, y) =>
   }),
 );
 
-// Free sparks scattered around the burst for extra energy.
+// Free particles scattered around the burst.
 const LOADER_SPARKS = Array.from({ length: 28 }, (_, i) => {
   const angle = ((i * 360) / 28 + ((i * 47) % 11)) * (Math.PI / 180);
   const dist = 22 + ((i * 31) % 9) * 5; // vmax
@@ -1693,11 +1577,7 @@ function LoadingScreen({ phase, onSkip }) {
         bursting ? 'pointer-events-none' : ''
       }`}>
       {/* Backdrop: drops away during the burst to reveal the site behind it */}
-      <div
-        className={`absolute inset-0 bg-[#04090e] bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(6,182,212,0.10),transparent_70%)] ${
-          bursting ? 'sp-backdrop-out' : ''
-        }`}
-      />
+      <div className={`absolute inset-0 bg-black ${bursting ? 'sp-backdrop-out' : ''}`} />
 
       {!bursting && (
         <button
@@ -1706,21 +1586,21 @@ function LoadingScreen({ phase, onSkip }) {
             e.stopPropagation();
             onSkip();
           }}
-          className="absolute right-4 top-4 z-50 cursor-pointer rounded-md px-2 py-1 text-xs tracking-wider text-slate-500 transition-colors hover:text-cyan-400 focus:outline-none focus-visible:text-cyan-400 focus-visible:ring-1 focus-visible:ring-cyan-400/60 sm:right-6 sm:top-6">
+          className="absolute right-4 top-4 z-50 cursor-pointer rounded-full px-3 py-1.5 text-xs tracking-wide text-zinc-500 transition-colors duration-200 hover:bg-zinc-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 sm:right-6 sm:top-6">
           Skip Intro ✕
         </button>
       )}
 
       <div className="relative">
         <div
-          className={`relative h-40 w-28 sm:h-48 sm:w-[134px] ${phase === 'charge' ? 'sp-charge' : ''} ${
+          className={`relative h-36 w-[101px] sm:h-44 sm:w-[123px] ${phase === 'charge' ? 'sp-charge' : ''} ${
             bursting ? 'sp-core-out' : ''
           }`}>
           {!bursting && (
             <>
               <LoaderGlyph lit={false} />
               <div className="sp-fill absolute inset-x-0 bottom-0 overflow-hidden" style={{ animationDuration: `${LOAD_MS}ms` }}>
-                <div className="absolute inset-x-0 bottom-0 h-40 sm:h-48">
+                <div className="absolute inset-x-0 bottom-0 h-36 sm:h-44">
                   <LoaderGlyph lit />
                 </div>
               </div>
@@ -1730,11 +1610,11 @@ function LoadingScreen({ phase, onSkip }) {
 
         {bursting && (
           <div className="absolute inset-0" aria-hidden="true">
-            {/* Flash + shockwaves, centered on the glyph */}
-            <span className="sp-flash absolute left-1/2 top-1/2 h-[220vmax] w-[220vmax] rounded-full bg-[radial-gradient(circle,rgba(224,242,254,0.95)_0%,rgba(56,189,248,0.55)_12%,rgba(6,182,212,0.18)_30%,transparent_55%)]" />
-            <span className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border-2 border-cyan-300 shadow-[0_0_40px_rgba(6,182,212,0.9),inset_0_0_30px_rgba(56,189,248,0.6)]" />
+            {/* Soft flash + hairline shockwaves, centered on the glyph */}
+            <span className="sp-flash absolute left-1/2 top-1/2 h-[220vmax] w-[220vmax] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.05)_18%,transparent_45%)]" />
+            <span className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-white/25" />
             <span
-              className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-sky-200/80"
+              className="sp-shock absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-white/10"
               style={{ animationDelay: '70ms' }}
             />
 
@@ -1754,14 +1634,14 @@ function LoadingScreen({ phase, onSkip }) {
                   '--s': sh.scale,
                   animationDelay: sh.delay,
                 }}>
-                <span className="block h-full w-full rounded-[3px] bg-cyan-400 shadow-[0_0_14px_rgba(6,182,212,0.95)] ring-1 ring-sky-100/80" />
+                <span className="block h-full w-full rounded-[3px] bg-cyan-500" />
               </span>
             ))}
 
             {LOADER_SPARKS.map((sp) => (
               <span
                 key={sp.key}
-                className="sp-spark absolute left-1/2 top-1/2 rounded-full bg-sky-100 shadow-[0_0_10px_3px_rgba(56,189,248,0.8)]"
+                className="sp-spark absolute left-1/2 top-1/2 rounded-full bg-white/70"
                 style={{ width: sp.size, height: sp.size, '--dx': sp.dx, '--dy': sp.dy, animationDelay: sp.delay }}
               />
             ))}
@@ -1769,54 +1649,51 @@ function LoadingScreen({ phase, onSkip }) {
         )}
       </div>
 
-      <div className={`relative mt-10 flex flex-col items-center gap-2 ${bursting ? 'sp-label-out' : ''}`}>
-        <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">Scrimmage Productions</span>
-        <span className="font-mono text-xs tabular-nums text-slate-500">{String(pct).padStart(3, '0')}%</span>
+      <div className={`relative mt-10 flex flex-col items-center gap-1.5 ${bursting ? 'sp-label-out' : ''}`}>
+        <span className="text-sm font-medium tracking-tight text-zinc-400">Scrimmage Productions</span>
+        <span className="text-xs tabular-nums text-zinc-600">{pct}%</span>
       </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Global styles (keyframes + form controls)                          */
+/*  Global styles (keyframes + native controls)                        */
 /* ------------------------------------------------------------------ */
 
 const GLOBAL_CSS = `
   html { scroll-behavior: smooth; }
-  body { background: #04090e; }
-  @keyframes sp-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-  @keyframes sp-silk { 0%,100% { transform: translateX(0) scaleY(1); } 50% { transform: translateX(-25%) scaleY(1.08); } }
-  @keyframes sp-pixel { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
-  @keyframes sp-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  @keyframes sp-pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
-  .sp-marquee { animation: sp-marquee 40s linear infinite; }
-  .sp-silk { animation: sp-silk 22s ease-in-out infinite; transform-origin: bottom; }
-  .sp-pixel { animation: sp-pixel 2.4s ease-in-out infinite; }
-  .sp-fade-in { animation: sp-fade-in .45s ease-out both; }
-  .sp-pop { animation: sp-pop .5s cubic-bezier(.2,.9,.3,1.3) both; }
+  body { background: #000; }
+  .sp-root {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  @keyframes sp-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes sp-pop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .sp-fade-in { animation: sp-fade-in .35s ease-out both; }
+  .sp-pop { animation: sp-pop .35s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes sp-fill { from { height: 0%; } to { height: 100%; } }
   .sp-fill { height: 0%; animation-name: sp-fill; animation-timing-function: cubic-bezier(.45,.05,.35,1); animation-fill-mode: forwards; }
-  /* Charge: peak glow with a tight pulse just before the burst */
+  /* Charge: a tight scale pulse just before the burst */
   @keyframes sp-charge {
-    0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(6,182,212,0)); }
-    55% { transform: scale(1.14); filter: drop-shadow(0 0 22px rgba(6,182,212,.95)) drop-shadow(0 0 50px rgba(56,189,248,.55)) brightness(1.25); }
-    75% { transform: scale(1.08) rotate(-1.5deg); }
-    100% { transform: scale(1.18) rotate(1deg); filter: drop-shadow(0 0 30px rgba(224,242,254,.95)) drop-shadow(0 0 70px rgba(56,189,248,.7)) brightness(1.5); }
+    0% { transform: scale(1); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1.12); }
   }
   .sp-charge { animation: sp-charge ${CHARGE_MS}ms cubic-bezier(.3,.7,.4,1) forwards; }
   /* Burst */
-  @keyframes sp-core-out { from { transform: scale(1.18); opacity: 1; } to { transform: scale(6); opacity: 0; } }
+  @keyframes sp-core-out { from { transform: scale(1.12); opacity: 1; } to { transform: scale(5); opacity: 0; } }
   @keyframes sp-flash { 0% { transform: translate3d(-50%,-50%,0) scale(.05); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate3d(-50%,-50%,0) scale(1); opacity: 0; } }
   @keyframes sp-shock { 0% { transform: translate3d(-50%,-50%,0) scale(.2); opacity: 1; } 100% { transform: translate3d(-50%,-50%,0) scale(14); opacity: 0; } }
   @keyframes sp-shard {
     0% { transform: translate3d(0,0,0) rotate(0) scale(1); opacity: 1; }
-    12% { transform: translate3d(calc(var(--dx) * .04), calc(var(--dy) * .04), 0) scale(1.35); opacity: 1; }
+    12% { transform: translate3d(calc(var(--dx) * .04), calc(var(--dy) * .04), 0) scale(1.2); opacity: 1; }
     100% { transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--r)) scale(var(--s)); opacity: 0; }
   }
   @keyframes sp-spark { 0% { transform: translate3d(-50%,-50%,0); opacity: 1; } 100% { transform: translate3d(calc(-50% + var(--dx)), calc(-50% + var(--dy)), 0) scale(.3); opacity: 0; } }
   @keyframes sp-backdrop-out { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
-  @keyframes sp-label-out { to { opacity: 0; transform: translateY(14px); letter-spacing: .6em; } }
-  @keyframes sp-reveal { from { transform: scale(1.05); filter: blur(8px) brightness(1.5); } to { transform: none; filter: none; } }
+  @keyframes sp-label-out { to { opacity: 0; transform: translateY(10px); } }
+  @keyframes sp-reveal { from { transform: scale(1.02); filter: blur(6px); } to { transform: none; filter: none; } }
   .sp-core-out { animation: sp-core-out 200ms cubic-bezier(.5,0,.75,0) forwards; }
   .sp-flash, .sp-shock, .sp-shard, .sp-spark { will-change: transform, opacity; backface-visibility: hidden; }
   .sp-flash { animation: sp-flash 450ms cubic-bezier(.1,.7,.3,1) forwards; }
@@ -1827,21 +1704,28 @@ const GLOBAL_CSS = `
   .sp-label-out { animation: sp-label-out 220ms ease-in forwards; }
   /* backwards fill only: no lingering transform/filter, which would break position:fixed children */
   .sp-reveal { animation: sp-reveal 600ms cubic-bezier(.16,.84,.3,1) 40ms backwards; }
-  .sp-input {
-    border-radius: .75rem; border: 1px solid rgba(6,182,212,.22); background: rgba(4,9,14,.7);
-    padding: .75rem 1rem; color: #f8fafc; font-size: .9rem; outline: none;
-    transition: border-color .2s, box-shadow .2s;
+  select option { background: #27272a; color: #fff; }
+  /* Native iOS-style slider */
+  .sp-range {
+    -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px; outline: none; cursor: pointer;
+    background: linear-gradient(to right, #06b6d4 0%, #06b6d4 var(--fill, 0%), #3f3f46 var(--fill, 0%), #3f3f46 100%);
   }
-  .sp-input::placeholder { color: #475569; }
-  .sp-input:focus { border-color: rgba(34,211,238,.7); box-shadow: 0 0 0 3px rgba(6,182,212,.18), 0 0 20px rgba(6,182,212,.15); }
-  .sp-input option { background: #08141e; color: #f8fafc; }
-  .sp-range { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; background: rgba(6,182,212,.18); outline: none; }
-  .sp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 999px; background: #e0f2fe; border: 3px solid #06b6d4; box-shadow: 0 0 14px rgba(6,182,212,.8); cursor: pointer; }
-  .sp-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 999px; background: #e0f2fe; border: 3px solid #06b6d4; box-shadow: 0 0 14px rgba(6,182,212,.8); cursor: pointer; }
-  .sp-range:focus-visible::-webkit-slider-thumb { outline: 2px solid #38bdf8; outline-offset: 2px; }
+  .sp-range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 24px; height: 24px; border-radius: 999px; background: #fff; border: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.08); transition: transform .2s;
+  }
+  .sp-range::-moz-range-thumb {
+    width: 24px; height: 24px; border-radius: 999px; background: #fff; border: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.08);
+  }
+  .sp-range::-moz-range-track { height: 4px; border-radius: 999px; background: #3f3f46; }
+  .sp-range::-moz-range-progress { height: 4px; border-radius: 999px; background: #06b6d4; }
+  .sp-range:active::-webkit-slider-thumb { transform: scale(1.06); }
+  .sp-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px #000, 0 0 0 5px #06b6d4; }
+  .sp-range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px #000, 0 0 0 5px #06b6d4; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .sp-marquee, .sp-silk, .sp-pixel, .sp-fade-in, .sp-pop { animation: none !important; }
+    .sp-fade-in, .sp-pop { animation: none !important; }
     .sp-fill { animation-duration: 1ms !important; }
     .sp-charge, .sp-core-out, .sp-reveal { animation: none !important; }
     .sp-flash, .sp-shock, .sp-shard, .sp-spark { display: none; }
@@ -1873,7 +1757,7 @@ export default function App() {
     setLoadPhase('done');
   }, []);
 
-  // Loader timeline: fill the S, charge at peak glow, burst (scroll unlocks here), then unmount.
+  // Loader timeline: fill the S, charge, burst (scroll unlocks here), then unmount.
   useEffect(() => {
     if (!isLoading) return undefined;
     document.body.style.overflow = 'hidden';
@@ -1918,10 +1802,9 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen font-sans text-slate-400 antialiased selection:bg-cyan-400/30 selection:text-white">
+    <div className="sp-root relative min-h-screen bg-black text-zinc-400 selection:bg-cyan-500/30 selection:text-white">
       <style>{GLOBAL_CSS}</style>
       {isLoading && <LoadingScreen phase={loadPhase} onSkip={finishIntro} />}
-      <OceanBackdrop />
       <RevealReadyContext.Provider value={!isLoading}>
         <div className={loadPhase === 'burst' ? 'sp-reveal' : undefined}>
           <NavBar active={active} />
