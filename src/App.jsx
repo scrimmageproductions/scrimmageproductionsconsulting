@@ -1,13 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertCircle,
   AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Building,
   Check,
   CheckCircle,
+  CheckCircle2,
   ChevronRight,
   Clock,
   Ear,
   FileText,
   Filter,
+  FolderOpen,
   Globe,
   HardDrive,
   Loader2,
@@ -18,7 +24,9 @@ import {
   Settings,
   ShieldCheck,
   Target,
+  TrendingDown,
   TrendingUp,
+  Users,
   Workflow,
   X,
   Zap,
@@ -42,14 +50,6 @@ const NAV_LINKS = [
   { id: 'playbook', label: 'The Playbook' },
   { id: 'roi', label: 'ROI Calculator' },
   { id: 'contact', label: 'Contact' },
-];
-
-const INTERESTS = [
-  'Google Workspace Audit',
-  'Email Automation',
-  'Document AI',
-  'Funnel Teardown',
-  'General Diagnostic Advisory',
 ];
 
 const HERO_METRICS = [
@@ -519,7 +519,7 @@ function NavBar({ active }) {
           <div className="flex items-center gap-2">
             <span className="hidden sm:block">
               <PrimaryButton onClick={() => go('contact')} className="px-4 py-1.5 text-sm">
-                Book Strategy Audit
+                Start Free Diagnostic
               </PrimaryButton>
             </span>
             <button
@@ -567,7 +567,7 @@ function NavBar({ active }) {
             ))}
           </ul>
           <PrimaryButton onClick={() => go('contact')} className="mt-auto w-full py-3">
-            Book Strategy Audit
+            Start Free Diagnostic
           </PrimaryButton>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
@@ -602,7 +602,7 @@ function Hero() {
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <PrimaryButton onClick={() => scrollToId('contact')} className="px-7 py-3 text-[17px]">
-            Book Strategy Audit
+            Start Free Diagnostic
           </PrimaryButton>
           <SecondaryButton onClick={() => scrollToId('services')} className="px-6 py-3 text-[17px]">
             Explore Automations <ChevronRight className="h-4 w-4" />
@@ -850,9 +850,9 @@ function Diagnostic({ onRequest }) {
                 </form>
               )}
               <TextAction
-                onClick={() => onRequest(b.interest, `My biggest bottleneck is ${b.label.toLowerCase()}. ${b.symptom}`)}
+                onClick={() => onRequest(b.interest)}
                 className="mt-5">
-                Book Strategy Audit <ChevronRight className="h-4 w-4" />
+                Start Free Diagnostic <ChevronRight className="h-4 w-4" />
               </TextAction>
             </div>
           </Card>
@@ -931,8 +931,8 @@ function Services({ onRequest }) {
                     ))}
                   </div>
 
-                  <TextAction onClick={() => onRequest(c.interest, `I'm interested in: ${c.title}.`)} className="mt-auto self-start">
-                    Request Audit <ChevronRight className="h-4 w-4" />
+                  <TextAction onClick={() => onRequest(c.interest)} className="mt-auto self-start">
+                    Start Free Diagnostic <ChevronRight className="h-4 w-4" />
                   </TextAction>
                 </Card>
               </Reveal>
@@ -1092,7 +1092,7 @@ function RoiCalculator() {
                 That is capacity you can redirect to sales, delivery and strategy, without adding headcount.
               </p>
               <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full py-3">
-                Book Strategy Audit
+                Get Your Diagnostic Report
               </PrimaryButton>
             </Card>
           </Reveal>
@@ -1103,94 +1103,380 @@ function RoiCalculator() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Contact                                                            */
+/*  Diagnostic & onboarding funnel                                     */
 /* ------------------------------------------------------------------ */
 
-const EMPTY_FORM = { name: '', email: '', company: '', interest: '', message: '', botcheck: false };
+const HOURLY_RATE = 150;
+const WEEKS_PER_YEAR = 50;
 
-function validate(f) {
+const FUNNEL_STEPS = ['Contact & Location', 'Business Profile', 'Pain Points & Friction', 'Your Diagnostic Report'];
+
+const INDUSTRIES = [
+  'Professional Services / Agency',
+  'Construction / Trades',
+  'E-commerce / Retail',
+  'Health / Wellness',
+  'Real Estate',
+  'Other',
+];
+
+// `rate` is the blended hourly cost we assume for a team of this size when valuing lost time.
+const TEAM_SIZES = [
+  { id: '1', label: '1 (Solo)', rate: 75 },
+  { id: '2-5', label: '2–5 employees', rate: 50 },
+  { id: '6-15', label: '6–15 employees', rate: 45 },
+  { id: '16-50', label: '16–50 employees', rate: 40 },
+  { id: '50+', label: '50+', rate: 40 },
+];
+
+const CLIENT_VOLUMES = ['< 10 clients/mo', '10–50 clients/mo', '50–200 clients/mo', '200+ clients/mo'];
+
+const CORE_TOOLS = ['Google Workspace', 'Microsoft 365', 'Zapier / Make', 'Slack', 'QuickBooks', 'Spreadsheets / Manual Files'];
+
+const PAIN_POINTS = [
+  {
+    id: 'inbox',
+    icon: Mail,
+    label: 'Inbox Chaos',
+    detail: 'Drowning in unread emails, missed follow-ups',
+    insight: 'Important messages are getting buried. Every missed reply can cost you a customer or a deadline.',
+    rec: 'inbox',
+  },
+  {
+    id: 'files',
+    icon: FolderOpen,
+    label: 'Disorganized Files',
+    detail: 'Can’t find documents, broken permissions, lost templates',
+    insight: 'Time goes into hunting for files, and loose sharing settings put private data at risk.',
+    rec: 'files',
+  },
+  {
+    id: 'paperwork',
+    icon: FileText,
+    label: 'Repetitive Paperwork',
+    detail: 'Copy-pasting proposals, contracts, onboarding briefs',
+    insight: 'Your team is retyping the same documents. It is slow, and every copy-paste invites a costly mistake.',
+    rec: 'paperwork',
+  },
+  {
+    id: 'leads',
+    icon: TrendingDown,
+    label: 'Losing Sales Leads',
+    detail: 'Leads fall through cracks, slow response times',
+    insight: 'Interested buyers go cold before anyone follows up. That is revenue you already paid to attract.',
+    rec: 'leads',
+  },
+  {
+    id: 'handoff',
+    icon: Users,
+    label: 'Team Handoff Friction',
+    detail: 'Unclear task ownership, repeating instructions',
+    insight: 'Work stalls between people. Without clear ownership, you end up repeating yourself and fixing dropped tasks.',
+    rec: 'advisory',
+  },
+];
+
+const RECOMMENDATIONS = {
+  inbox: {
+    icon: Mail,
+    title: 'Intelligent Email & Inbox Routing',
+    detail: 'Automatic sorting, urgent-message flags and pre-drafted replies so nothing slips through.',
+  },
+  files: {
+    icon: HardDrive,
+    title: 'Google Workspace Cleanup & Setup',
+    detail: 'A clean folder structure, safe sharing permissions and repaired spreadsheets.',
+  },
+  paperwork: {
+    icon: FileText,
+    title: 'Automated Paperwork & Form Generation',
+    detail: 'Online forms that fill in your proposals, contracts and welcome packets for you.',
+  },
+  leads: {
+    icon: TrendingUp,
+    title: 'Funnel Optimization & Follow-up Architecture',
+    detail: 'Find where leads drop off and set up automatic follow-ups so none go cold.',
+  },
+  advisory: {
+    icon: Users,
+    title: 'Executive Diagnostic & Advisory',
+    detail: 'Clear owners, simple handoff checklists and a step-by-step plan your team can follow.',
+  },
+};
+
+const GOALS = [
+  'Reclaiming 10+ hours a week for growth',
+  'A business that runs smoothly when I take a week off',
+  'Zero lost customer leads',
+  'Something else',
+];
+
+// Map the other "start diagnostic" entry points onto a pre-selected pain point.
+const INTEREST_TO_PAIN = {
+  'Email Automation': 'inbox',
+  'Google Workspace Audit': 'files',
+  'Document AI': 'paperwork',
+  'Funnel Teardown': 'leads',
+};
+
+const EMPTY_FUNNEL = {
+  name: '',
+  email: '',
+  phone: '',
+  location: '',
+  company: '',
+  industry: '',
+  teamSize: '',
+  volume: '',
+  tools: [],
+  pains: [],
+  hours: 10,
+  goal: '',
+  notes: '',
+  botcheck: false,
+};
+
+function validateStep(step, f) {
   const e = {};
-  if (f.name.trim().length < 2) e.name = 'Please enter your full name.';
-  if (!isEmail(f.email)) e.email = 'Please enter a valid business email.';
-  if (f.company.trim().length < 2) e.company = 'Company name or website helps us prepare.';
-  if (!f.interest) e.interest = 'Choose the area you want to focus on.';
-  if (f.message.trim().length < 20) e.message = 'Give us a sentence or two (20+ characters) on what is breaking.';
+  if (step === 0) {
+    if (f.name.trim().length < 2) e.name = 'Please enter your full name.';
+    if (!isEmail(f.email)) e.email = 'Please enter a valid business email.';
+    if (f.phone.replace(/\D/g, '').length < 7) e.phone = 'Please enter a phone number we can reach you on.';
+    if (f.location.trim().length < 2) e.location = 'Please enter your city and state.';
+    if (f.company.trim().length < 2) e.company = 'Please enter your company name or website.';
+  }
+  if (step === 1) {
+    if (!f.industry) e.industry = 'Choose the option closest to your business.';
+    if (!f.teamSize) e.teamSize = 'Choose your team size.';
+    if (!f.volume) e.volume = 'Choose your typical client volume.';
+    if (!f.tools.length) e.tools = 'Select at least one tool you use today.';
+  }
+  if (step === 2) {
+    if (!f.pains.length) e.pains = 'Select at least one bottleneck.';
+    if (!f.goal) e.goal = 'Choose what success looks like for you.';
+    if (f.goal === 'Something else' && f.notes.trim().length < 10) e.notes = 'Tell us a little about your goal (10+ characters).';
+  }
   return e;
 }
 
-function Field({ id, label, error, children }) {
+// 2 to 3 recommended services, in the order the bottlenecks are listed.
+function buildRecommendations(pains) {
+  const keys = [];
+  PAIN_POINTS.forEach((p) => {
+    if (pains.includes(p.id) && !keys.includes(p.rec)) keys.push(p.rec);
+  });
+  for (const fallback of ['advisory', 'files']) {
+    if (keys.length >= 2) break;
+    if (!keys.includes(fallback)) keys.push(fallback);
+  }
+  return keys.slice(0, 3).map((k) => RECOMMENDATIONS[k]);
+}
+
+function buildReport(f) {
+  const team = TEAM_SIZES.find((t) => t.id === f.teamSize);
+  const annualHours = f.hours * WEEKS_PER_YEAR;
+  const rate = team ? team.rate : 50;
+  return {
+    bottlenecks: PAIN_POINTS.filter((p) => f.pains.includes(p.id)),
+    recommendations: buildRecommendations(f.pains),
+    annualHours,
+    rate,
+    annualValue: annualHours * rate,
+  };
+}
+
+function FieldError({ id, children }) {
+  if (!children) return null;
+  return (
+    <p id={`${id}-err`} className="mt-2 flex items-center gap-1.5 text-xs text-red-400">
+      <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {children}
+    </p>
+  );
+}
+
+function TextField({ id, label, error, ...rest }) {
   return (
     <div>
       <label htmlFor={id} className="mb-2 block text-sm font-medium text-zinc-300">
         {label}
       </label>
-      {children}
-      {error && (
-        <p id={`${id}-err`} className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" /> {error}
-        </p>
-      )}
+      <input
+        id={id}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-err` : undefined}
+        className={`${INPUT_CLS} min-h-[44px] ${error ? 'ring-2 ring-red-500/70' : ''}`}
+        {...rest}
+      />
+      <FieldError id={id}>{error}</FieldError>
     </div>
   );
 }
 
-function Contact({ prefill }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+// Selectable pill. Single-choice groups render as radios, multi-choice groups as toggle buttons.
+function Pill({ selected, multi, onClick, children }) {
+  return (
+    <button
+      type="button"
+      role={multi ? undefined : 'radio'}
+      aria-checked={multi ? undefined : selected}
+      aria-pressed={multi ? selected : undefined}
+      onClick={onClick}
+      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+        selected ? 'bg-zinc-800 text-white ring-1 ring-cyan-500' : 'bg-zinc-800/60 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+      }`}>
+      {multi && selected && <Check className="h-4 w-4 text-cyan-500" />}
+      {children}
+    </button>
+  );
+}
+
+function PillGroup({ id, label, multi = false, error, children }) {
+  return (
+    <fieldset id={id} tabIndex={-1} className="outline-none" aria-describedby={error ? `${id}-err` : undefined}>
+      <legend className="mb-3 text-sm font-medium text-zinc-300">{label}</legend>
+      <div role={multi ? 'group' : 'radiogroup'} aria-label={label} className="flex flex-wrap gap-2">
+        {children}
+      </div>
+      <FieldError id={id}>{error}</FieldError>
+    </fieldset>
+  );
+}
+
+function StepIndicator({ step }) {
+  return (
+    <div>
+      <div className="flex gap-1.5" aria-hidden="true">
+        {FUNNEL_STEPS.map((s, i) => (
+          <span
+            key={s}
+            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= step ? 'bg-cyan-500' : 'bg-zinc-800'}`}
+          />
+        ))}
+      </div>
+      <p className="mt-3 text-sm text-zinc-500" aria-live="polite">
+        <span className="font-medium text-zinc-300">Step {step + 1} of 4:</span> {FUNNEL_STEPS[step]}
+      </p>
+    </div>
+  );
+}
+
+function StepHeading({ title, sub }) {
+  return (
+    <div className="mb-8">
+      <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{title}</h3>
+      <p className="mt-2 text-[15px] text-zinc-400">{sub}</p>
+    </div>
+  );
+}
+
+function DiagnosticFunnel({ prefill }) {
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState(EMPTY_FUNNEL);
   const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | loading | success | error | fallback
   const [serverError, setServerError] = useState('');
+  const topRef = useRef(null);
 
-  // Apply a new "Request Audit" prefill during render (no effect round-trip).
+  // Apply a new "Start Free Diagnostic" prefill during render (no effect round-trip).
   const [appliedPrefill, setAppliedPrefill] = useState(null);
   if (prefill && prefill !== appliedPrefill) {
     setAppliedPrefill(prefill);
-    setForm((f) => ({ ...f, interest: prefill.interest, message: f.message || prefill.message }));
-    setStatus('idle');
+    if (prefill.pain) {
+      setForm((f) => (f.pains.includes(prefill.pain) ? f : { ...f, pains: [...f.pains, prefill.pain] }));
+    }
   }
 
-  const update = (key) => (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  const set = (key, value) =>
     setForm((f) => {
       const next = { ...f, [key]: value };
-      if (touched) setErrors(validate(next));
+      if (attempted) setErrors(validateStep(step, next));
       return next;
     });
+  const toggle = (key, value) =>
+    set(key, form[key].includes(value) ? form[key].filter((v) => v !== value) : [...form[key], value]);
+
+  const goTo = (next) => {
+    setStep(next);
+    setErrors({});
+    setAttempted(false);
+    // Keep the top of the funnel in view when a step is taller than the screen.
+    const el = topRef.current;
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const mailBody = `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\nInterest: ${form.interest}\n\n${form.message}`;
-  const mailSubject = `Strategy Audit request${form.company ? `: ${form.company}` : ''}`;
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setTouched(true);
-    const v = validate(form);
+  const next = () => {
+    const v = validateStep(step, form);
+    setAttempted(true);
     setErrors(v);
     if (Object.keys(v).length) {
       document.getElementById(Object.keys(v)[0])?.focus();
       return;
     }
-    if (form.botcheck) return;
+    goTo(step + 1);
+  };
 
+  const report = useMemo(() => buildReport(form), [form]);
+  const teamLabel = TEAM_SIZES.find((t) => t.id === form.teamSize)?.label ?? '';
+
+  const summary = [
+    `Name: ${form.name}`,
+    `Email: ${form.email}`,
+    `Phone: ${form.phone}`,
+    `Location: ${form.location}`,
+    `Company: ${form.company}`,
+    '',
+    `Industry: ${form.industry}`,
+    `Team size: ${teamLabel}`,
+    `Client volume: ${form.volume}`,
+    `Tools: ${form.tools.join(', ')}`,
+    '',
+    `Bottlenecks: ${report.bottlenecks.map((b) => b.label).join(', ')}`,
+    `Hours lost per week: ${form.hours >= 40 ? '40+' : form.hours}`,
+    `Goal: ${form.goal}`,
+    form.notes ? `Notes: ${form.notes}` : null,
+    '',
+    `Recommended: ${report.recommendations.map((r) => r.title).join('; ')}`,
+    `Hours recovered per year: ${report.annualHours.toLocaleString()}`,
+    `Estimated annual value: ${fmtMoney(report.annualValue)} (at $${report.rate}/hr blended)`,
+    `Rate: $${HOURLY_RATE}/hour`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+  const mailSubject = `Diagnostic intake: ${form.company || form.name}`;
+
+  const submit = async () => {
+    if (form.botcheck) return;
     setStatus('loading');
     setServerError('');
     try {
       await submitToWeb3Forms({
         subject: mailSubject,
-        from_name: 'Scrimmage Productions Website',
+        from_name: 'Scrimmage Productions Diagnostic',
         name: form.name,
         email: form.email,
         replyto: form.email,
+        phone: form.phone,
+        location: form.location,
         company: form.company,
-        interest: form.interest,
-        message: form.message,
+        industry: form.industry,
+        team_size: teamLabel,
+        client_volume: form.volume,
+        tools: form.tools.join(', '),
+        bottlenecks: report.bottlenecks.map((b) => b.label).join(', '),
+        hours_lost_per_week: form.hours >= 40 ? '40+' : String(form.hours),
+        goal: form.goal,
+        notes: form.notes,
+        recommendations: report.recommendations.map((r) => r.title).join('; '),
+        hours_recovered_per_year: report.annualHours,
+        estimated_annual_value: fmtMoney(report.annualValue),
+        hourly_rate: `$${HOURLY_RATE}/hour`,
+        message: summary,
       });
       setStatus('success');
-      setForm(EMPTY_FORM);
-      setTouched(false);
     } catch (err) {
       if (err.code === 'not-configured') {
-        window.location.assign(buildMailto(mailSubject, mailBody));
+        window.location.assign(buildMailto(mailSubject, summary));
         setStatus('fallback');
       } else {
         setServerError(err.message || 'Something went wrong.');
@@ -1199,173 +1485,381 @@ function Contact({ prefill }) {
     }
   };
 
-  const inputCls = (k) => `${INPUT_CLS} ${errors[k] ? 'ring-2 ring-red-500/70' : ''}`;
+  const reset = () => {
+    setForm(EMPTY_FUNNEL);
+    setStatus('idle');
+    goTo(0);
+  };
+
+  if (status === 'success' || status === 'fallback') {
+    return (
+      <div ref={topRef} className="sp-fade-in flex min-h-[460px] flex-col items-center justify-center py-6 text-center">
+        <span className="sp-pop grid h-16 w-16 place-items-center rounded-full bg-zinc-800">
+          <CheckCircle2 className="h-8 w-8 text-white" />
+        </span>
+        <h3 className="mt-6 text-2xl font-semibold tracking-tight text-white">
+          {status === 'success' ? 'Diagnostic submitted.' : 'Almost there.'}
+        </h3>
+        <p className="mt-3 max-w-md text-zinc-400">
+          {status === 'success'
+            ? 'Your diagnostic dossier has been transmitted to Scrimmage Productions LLC. We will review your bottleneck analysis and reach out within 1 business day.'
+            : 'Your email app opened with your diagnostic pre-filled. Hit send and we will reach out within 1 business day.'}
+        </p>
+        <SecondaryButton onClick={reset} className="mt-8 min-h-[44px]">
+          Start a new diagnostic
+        </SecondaryButton>
+      </div>
+    );
+  }
 
   return (
-    <section id="contact" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-        <div>
-          <SectionHeader
-            center={false}
-            eyebrow="Book a Strategy Audit"
-            title="Describe the friction. We will scope the fix."
-            sub="Every engagement starts with listening. Share your operational challenges and we will come back within one business day with next steps."
-          />
-          <Reveal delay={100}>
-            <ul className="space-y-5">
-              {[
-                { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
-                { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
-                { icon: ShieldCheck, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
-              ].map(({ icon: Icon, title, body }) => (
-                <li key={title} className="flex gap-4">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-300">
-                    <Icon className="h-5 w-5" />
+    <div ref={topRef} className="scroll-mt-20">
+      <StepIndicator step={step} />
+
+      <div key={step} className="sp-fade-in mt-8">
+        {step === 0 && (
+          <>
+            <StepHeading title="Let's start with the basics." sub="Where can we send your customized diagnostic report?" />
+            <input
+              type="checkbox"
+              name="botcheck"
+              checked={form.botcheck}
+              onChange={(e) => set('botcheck', e.target.checked)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <TextField
+                id="name"
+                label="Full Name"
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                autoComplete="name"
+                placeholder="Jordan Rivera"
+                error={errors.name}
+              />
+              <TextField
+                id="email"
+                label="Business Email"
+                type="email"
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+                autoComplete="email"
+                placeholder="jordan@company.com"
+                error={errors.email}
+              />
+              <TextField
+                id="phone"
+                label="Phone Number"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => set('phone', e.target.value)}
+                autoComplete="tel"
+                placeholder="(555) 123-4567"
+                error={errors.phone}
+              />
+              <TextField
+                id="location"
+                label="City, State"
+                value={form.location}
+                onChange={(e) => set('location', e.target.value)}
+                autoComplete="address-level2"
+                placeholder="Austin, TX"
+                error={errors.location}
+              />
+              <div className="sm:col-span-2">
+                <TextField
+                  id="company"
+                  label="Company Name & Website"
+                  value={form.company}
+                  onChange={(e) => set('company', e.target.value)}
+                  autoComplete="organization"
+                  placeholder="Acme Co. · acme.com"
+                  error={errors.company}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <StepHeading
+              title="Tell us about your business."
+              sub="This helps us understand your operational scale and current volume."
+            />
+            <div className="space-y-8">
+              <PillGroup id="industry" label="Industry / Business Type" error={errors.industry}>
+                {INDUSTRIES.map((o) => (
+                  <Pill key={o} selected={form.industry === o} onClick={() => set('industry', o)}>
+                    {o}
+                  </Pill>
+                ))}
+              </PillGroup>
+              <PillGroup id="teamSize" label="Team Size" error={errors.teamSize}>
+                {TEAM_SIZES.map((o) => (
+                  <Pill key={o.id} selected={form.teamSize === o.id} onClick={() => set('teamSize', o.id)}>
+                    {o.label}
+                  </Pill>
+                ))}
+              </PillGroup>
+              <PillGroup id="volume" label="Client / Customer Volume" error={errors.volume}>
+                {CLIENT_VOLUMES.map((o) => (
+                  <Pill key={o} selected={form.volume === o} onClick={() => set('volume', o)}>
+                    {o}
+                  </Pill>
+                ))}
+              </PillGroup>
+              <PillGroup id="tools" label="Core Tools in Use (select all that apply)" multi error={errors.tools}>
+                {CORE_TOOLS.map((o) => (
+                  <Pill key={o} multi selected={form.tools.includes(o)} onClick={() => toggle('tools', o)}>
+                    {o}
+                  </Pill>
+                ))}
+              </PillGroup>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <StepHeading
+              title="Where is the friction?"
+              sub="Select the primary bottlenecks costing you time, energy, and revenue."
+            />
+            <div className="space-y-8">
+              <fieldset id="pains" tabIndex={-1} className="outline-none" aria-describedby={errors.pains ? 'pains-err' : undefined}>
+                <legend className="mb-3 text-sm font-medium text-zinc-300">
+                  What stresses you the most on a daily basis? (select all that apply)
+                </legend>
+                <div role="group" className="grid gap-2 sm:grid-cols-2">
+                  {PAIN_POINTS.map((p) => {
+                    const Icon = p.icon;
+                    const on = form.pains.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggle('pains', p.id)}
+                        className={`flex min-h-[44px] items-start gap-3 rounded-2xl p-4 text-left transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                          on ? 'bg-zinc-800 ring-1 ring-cyan-500' : 'bg-zinc-800/60 hover:bg-zinc-800'
+                        }`}>
+                        <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-400'}`} />
+                        <span className="flex-1">
+                          <span className="block text-[15px] font-medium text-white">{p.label}</span>
+                          <span className="mt-0.5 block text-sm leading-snug text-zinc-500">{p.detail}</span>
+                        </span>
+                        {on && <CheckCircle2 className="h-5 w-5 shrink-0 text-cyan-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <FieldError id="pains">{errors.pains}</FieldError>
+              </fieldset>
+
+              <div>
+                <label htmlFor="hours" className="flex items-center justify-between gap-3 text-sm font-medium text-zinc-300">
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-zinc-400" /> Estimated hours lost per week to repetitive busywork
                   </span>
+                  <span className="text-[15px] tabular-nums text-white">{form.hours >= 40 ? '40+' : form.hours} hrs</span>
+                </label>
+                <RangeSlider id="hours" value={form.hours} min={2} max={40} onChange={(v) => set('hours', v)} />
+              </div>
+
+              <PillGroup id="goal" label="What does success look like for your business in 6 months?" error={errors.goal}>
+                {GOALS.map((o) => (
+                  <Pill key={o} selected={form.goal === o} onClick={() => set('goal', o)}>
+                    {o}
+                  </Pill>
+                ))}
+              </PillGroup>
+
+              <div>
+                <label htmlFor="notes" className="mb-2 block text-sm font-medium text-zinc-300">
+                  {form.goal === 'Something else' ? 'Describe your goal' : 'Anything else we should know? (optional)'}
+                </label>
+                <textarea
+                  id="notes"
+                  rows={3}
+                  value={form.notes}
+                  onChange={(e) => set('notes', e.target.value)}
+                  placeholder="For example: we want to stop losing quotes in email."
+                  aria-invalid={!!errors.notes}
+                  aria-describedby={errors.notes ? 'notes-err' : undefined}
+                  className={`${INPUT_CLS} resize-y ${errors.notes ? 'ring-2 ring-red-500/70' : ''}`}
+                />
+                <FieldError id="notes">{errors.notes}</FieldError>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <div>
+            <p className="text-sm font-medium text-zinc-500">Your Diagnostic Report</p>
+            <h3 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Operational Assessment for {form.company}
+            </h3>
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-zinc-500">
+              <Building className="h-4 w-4" /> {form.industry} · {teamLabel} · {form.volume}
+            </p>
+
+            <h4 className="mt-8 text-sm font-medium text-zinc-300">Identified critical bottlenecks</h4>
+            <ul className="mt-3 space-y-2">
+              {report.bottlenecks.map((b) => (
+                <li key={b.id} className="flex gap-3 rounded-2xl bg-zinc-950 p-4">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
                   <span>
-                    <span className="block text-[15px] font-medium text-white">{title}</span>
-                    <span className="text-sm text-zinc-400">{body}</span>
+                    <span className="block text-[15px] font-medium text-white">{b.label}</span>
+                    <span className="mt-0.5 block text-sm leading-relaxed text-zinc-400">{b.insight}</span>
                   </span>
                 </li>
               ))}
             </ul>
+
+            <h4 className="mt-8 text-sm font-medium text-zinc-300">Recommended Scrimmage action plan</h4>
+            <ol className="mt-3 space-y-2">
+              {report.recommendations.map((r, i) => {
+                const Icon = r.icon;
+                return (
+                  <li key={r.title} className="flex gap-3 rounded-2xl bg-zinc-950 p-4">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800 text-zinc-300">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span>
+                      <span className="block text-[15px] font-medium text-white">
+                        {i + 1}. {r.title}
+                      </span>
+                      <span className="mt-0.5 block text-sm leading-relaxed text-zinc-400">{r.detail}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <h4 className="mt-8 text-sm font-medium text-zinc-300">Estimated annual value recovered</h4>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-2xl bg-zinc-950 p-4 sm:p-5">
+                <p className="text-sm text-zinc-500">Hours saved per year</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-white sm:text-4xl">
+                  {report.annualHours.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-zinc-950 p-4 sm:p-5">
+                <p className="text-sm text-zinc-500">Estimated value</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-white sm:text-4xl">
+                  {fmtMoney(report.annualValue)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              {form.hours >= 40 ? '40+' : form.hours} hours a week × {WEEKS_PER_YEAR} weeks, valued at an estimated blended
+              cost of ${report.rate}/hour for a team of your size.
+            </p>
+
+            <div className="mt-8 rounded-2xl bg-zinc-950 p-5">
+              <p className="text-sm text-zinc-500">Pricing & engagement model</p>
+              <p className="mt-1 text-[15px] font-medium text-white">
+                Standard Consulting & Implementation Rate: <span className="tabular-nums">${HOURLY_RATE} / hour</span>
+              </p>
+              <p className="mt-2 text-sm text-zinc-400">
+                Engagements are scoped in clear, milestone-driven sprints with zero surprise fees.
+              </p>
+            </div>
+
+            <p className="mt-6 flex items-center gap-2 text-sm text-zinc-500">
+              <Mail className="h-4 w-4 shrink-0" /> We will follow up at {form.email}.
+            </p>
+
+            {status === 'error' && (
+              <div role="alert" className="mt-6 flex items-start gap-3 rounded-2xl bg-red-500/10 p-4 text-sm text-red-300">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {serverError} Your diagnostic was not sent. Try again, or{' '}
+                  <a href={buildMailto(mailSubject, summary)} className="underline underline-offset-2 hover:text-red-200">
+                    email it to us directly
+                  </a>
+                  .
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-10 flex flex-col-reverse gap-2 border-t border-white/5 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        {step > 0 ? (
+          <SecondaryButton onClick={() => goTo(step - 1)} disabled={status === 'loading'} className="min-h-[44px]">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </SecondaryButton>
+        ) : (
+          <span className="hidden sm:block" />
+        )}
+        {step < 3 ? (
+          <PrimaryButton onClick={next} className="min-h-[44px] px-6">
+            Continue <ArrowRight className="h-4 w-4" />
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton onClick={submit} disabled={status === 'loading'} className="min-h-[44px] px-6">
+            {status === 'loading' ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+              </>
+            ) : (
+              <>
+                Register & Submit Diagnostic for Onboarding <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </PrimaryButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Contact({ prefill }) {
+  return (
+    <section id="contact" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <SectionHeader
+          eyebrow="Free Diagnostic"
+          title="Get your free operational diagnostic."
+          sub="Four short steps. You will see your bottlenecks, a recommended plan and transparent pricing before you submit anything."
+        />
+
+        <Reveal>
+          <div className="rounded-3xl border border-white/5 bg-zinc-900 p-6 shadow-2xl sm:p-10">
+            <DiagnosticFunnel prefill={prefill} />
+          </div>
+        </Reveal>
+
+        <Reveal delay={100}>
+          <ul className="mt-12 grid gap-6 sm:grid-cols-3">
+            {[
+              { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
+              { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
+              { icon: ShieldCheck, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
+            ].map(({ icon: Icon, title, body }) => (
+              <li key={title} className="flex gap-3">
+                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
+                <span>
+                  <span className="block text-[15px] font-medium text-white">{title}</span>
+                  <span className="text-sm text-zinc-400">{body}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-10 text-center text-sm text-zinc-500">
+            Prefer email?{' '}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="mt-8 inline-flex items-center gap-2 rounded-md text-[15px] font-medium text-cyan-500 transition-colors duration-200 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
-              <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
+              className="rounded font-medium text-cyan-500 transition-colors duration-200 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+              {CONTACT_EMAIL}
             </a>
-          </Reveal>
-        </div>
-
-        <Reveal delay={150} className="h-full">
-          <Card className="h-full p-6 shadow-lg shadow-black/50 sm:p-10">
-            {status === 'success' || status === 'fallback' ? (
-              <div className="sp-fade-in flex min-h-[420px] flex-col items-center justify-center text-center">
-                <span className="sp-pop grid h-16 w-16 place-items-center rounded-full bg-zinc-800">
-                  <Check className="h-8 w-8 text-white" />
-                </span>
-                <h3 className="mt-6 text-2xl font-semibold tracking-tight text-white">
-                  {status === 'success' ? 'Message received.' : 'Almost there.'}
-                </h3>
-                <p className="mt-3 max-w-sm text-zinc-400">
-                  {status === 'success'
-                    ? 'Your request is in our inbox. Expect a reply within one business day with times for your Strategy Audit.'
-                    : 'Your email app opened with everything pre-filled. Hit send and we will reply within one business day.'}
-                </p>
-                <SecondaryButton onClick={() => setStatus('idle')} className="mt-8">
-                  Send another message
-                </SecondaryButton>
-              </div>
-            ) : (
-              <form onSubmit={onSubmit} noValidate className="space-y-5">
-                <input
-                  type="checkbox"
-                  name="botcheck"
-                  checked={form.botcheck}
-                  onChange={update('botcheck')}
-                  className="hidden"
-                  tabIndex={-1}
-                  autoComplete="off"
-                />
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field id="name" label="Full Name" error={errors.name}>
-                    <input
-                      id="name"
-                      value={form.name}
-                      onChange={update('name')}
-                      autoComplete="name"
-                      placeholder="Jordan Rivera"
-                      aria-invalid={!!errors.name}
-                      aria-describedby={errors.name ? 'name-err' : undefined}
-                      className={inputCls('name')}
-                    />
-                  </Field>
-                  <Field id="email" label="Business Email" error={errors.email}>
-                    <input
-                      id="email"
-                      type="email"
-                      value={form.email}
-                      onChange={update('email')}
-                      autoComplete="email"
-                      placeholder="jordan@company.com"
-                      aria-invalid={!!errors.email}
-                      aria-describedby={errors.email ? 'email-err' : undefined}
-                      className={inputCls('email')}
-                    />
-                  </Field>
-                </div>
-                <Field id="company" label="Company Name / Website" error={errors.company}>
-                  <input
-                    id="company"
-                    value={form.company}
-                    onChange={update('company')}
-                    autoComplete="organization"
-                    placeholder="Acme Co. · acme.com"
-                    aria-invalid={!!errors.company}
-                    aria-describedby={errors.company ? 'company-err' : undefined}
-                    className={inputCls('company')}
-                  />
-                </Field>
-                <Field id="interest" label="Primary Area of Interest" error={errors.interest}>
-                  <select
-                    id="interest"
-                    value={form.interest}
-                    onChange={update('interest')}
-                    aria-invalid={!!errors.interest}
-                    aria-describedby={errors.interest ? 'interest-err' : undefined}
-                    className={`${inputCls('interest')} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 fill=%22none%22 stroke=%22%23a1a1aa%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M4 6l4 4 4-4%22/></svg>')] bg-[length:16px] bg-[right_1rem_center] bg-no-repeat pr-10`}>
-                    <option value="" disabled>
-                      Select an area...
-                    </option>
-                    {INTERESTS.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field id="message" label="Message / Operational Challenges" error={errors.message}>
-                  <textarea
-                    id="message"
-                    rows={5}
-                    value={form.message}
-                    onChange={update('message')}
-                    placeholder="Where does work get stuck? Which tools does your team live in? What would you fix first?"
-                    aria-invalid={!!errors.message}
-                    aria-describedby={errors.message ? 'message-err' : undefined}
-                    className={`${inputCls('message')} resize-y`}
-                  />
-                </Field>
-
-                {status === 'error' && (
-                  <div role="alert" className="flex items-start gap-3 rounded-2xl bg-red-500/10 p-4 text-sm text-red-300">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>
-                      {serverError} Your message was not sent. Try again, or email us directly with the button below.
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
-                  <PrimaryButton type="submit" disabled={status === 'loading'} className="flex-1 py-3">
-                    {status === 'loading' ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> Sending...
-                      </>
-                    ) : (
-                      'Book Strategy Audit'
-                    )}
-                  </PrimaryButton>
-                  <a href={buildMailto(mailSubject, mailBody)} className={`${SECONDARY_CLS} py-3`}>
-                    <Mail className="h-4 w-4" /> Email us directly
-                  </a>
-                </div>
-                <p className="text-xs text-zinc-500">
-                  We only use your details to respond to this request. No newsletters, no list selling.
-                </p>
-              </form>
-            )}
-          </Card>
+          </p>
         </Reveal>
       </div>
     </section>
@@ -1409,7 +1903,7 @@ function Footer() {
               {CONTACT_EMAIL}
             </a>
             <PrimaryButton onClick={() => scrollToId('contact')} className="mt-5 px-4 py-2 text-sm">
-              Book Strategy Audit
+              Start Free Diagnostic
             </PrimaryButton>
           </div>
         </div>
@@ -1797,8 +2291,9 @@ export default function App() {
     return () => io.disconnect();
   }, []);
 
-  const requestAudit = (interest, message) => {
-    setPrefill({ interest, message, at: Date.now() });
+  // Every "Start Free Diagnostic" entry point lands on the funnel, pre-selecting a matching pain point.
+  const startDiagnostic = (interest) => {
+    setPrefill({ pain: INTEREST_TO_PAIN[interest], at: Date.now() });
     scrollToId('contact');
   };
 
@@ -1811,8 +2306,8 @@ export default function App() {
           <NavBar active={active} />
           <main>
             <Hero />
-            <Services onRequest={requestAudit} />
-            <Diagnostic onRequest={requestAudit} />
+            <Services onRequest={startDiagnostic} />
+            <Diagnostic onRequest={startDiagnostic} />
             <Playbook />
             <RoiCalculator />
             <Contact prefill={prefill} />
