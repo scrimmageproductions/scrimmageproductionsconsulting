@@ -1,33 +1,32 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Bot,
   Building,
   Check,
   CheckCircle,
   CheckCircle2,
   ChevronRight,
   Clock,
-  Ear,
+  Code2,
+  Cpu,
   FileText,
-  Filter,
-  FolderOpen,
   Globe,
-  HardDrive,
   Loader2,
   Lock,
   Mail,
+  MapPin,
   Menu,
+  Pizza,
+  Rocket,
   Search,
+  Send,
   Settings,
   ShieldCheck,
   Target,
-  TrendingDown,
-  TrendingUp,
   Users,
-  Workflow,
   X,
   Zap,
 } from 'lucide-react';
@@ -36,6 +35,7 @@ import {
 /*  Configuration                                                      */
 /* ------------------------------------------------------------------ */
 
+const SITE_DOMAIN = 'scrimmy.xyz';
 const CONTACT_EMAIL = 'scrimmageproductions@gmail.com';
 const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
 // Web3Forms routes submissions to the inbox that owns the access key (scrimmageproductions@gmail.com).
@@ -46,200 +46,169 @@ const KEY_CONFIGURED = !WEB3FORMS_ACCESS_KEY.startsWith('YOUR_');
 
 const NAV_LINKS = [
   { id: 'services', label: 'Services' },
-  { id: 'diagnostic', label: 'Diagnostic Quiz' },
-  { id: 'playbook', label: 'The Playbook' },
-  { id: 'roi', label: 'ROI Calculator' },
+  { id: 'events', label: 'PizzaDAO / Events' },
+  { id: 'work', label: 'Case Studies' },
+  { id: 'diagnostic', label: 'Diagnostic' },
   { id: 'contact', label: 'Contact' },
 ];
 
 const HERO_METRICS = [
-  { icon: Clock, value: '15+ hours', label: 'saved per week, per employee' },
-  { icon: TrendingUp, value: 'Plug the holes', label: 'in your sales process' },
-  { icon: Settings, value: '100%', label: 'custom-built for the tools you already use' },
+  { value: '100+', label: 'Global cities activated' },
+  { value: 'Sub-second', label: 'React page loads' },
+  { value: '15+ hrs/wk', label: 'Saved per team' },
+  { value: 'Billions', label: 'AI tokens in pipeline' },
 ];
 
-const TICKER_ITEMS = [
-  'Gmail triage pipelines',
-  'Custom assistants in Docs, Sheets & Gmail',
-  'Shared Drive architecture',
-  'Sentiment-routed support',
-  'Auto-generated proposals',
-  'Typeform · Tally · Google Forms',
-  'Zapier & Make orchestration',
-  'Contract & proposal generation',
-  'Funnel drop-off forensics',
-  'Webhook-driven onboarding',
+const CAPABILITIES = [
+  'Vite + React 19 builds',
+  'Tailwind CSS v4',
+  'Vercel deploys & domain migration',
+  'Meta / Facebook lead routing',
+  'Muse AI integrations',
+  'Zapier & Make webhooks',
+  'Lead-to-calendar sync',
+  'Proposal & document generation',
+  'Google Workspace audits',
+  'SOP synthesis',
+  'Multi-city run-of-show',
+  'Sponsor activations',
+  'Crypto-native ticketing',
 ];
 
-const BOTTLENECKS = [
-  {
-    id: 'inbox',
-    label: 'Inbox Overwhelm',
-    icon: Mail,
-    symptom: 'Your best workers live in Gmail, sorting, forwarding, and re-typing the same replies all day.',
-    play: 'The Inbox Triage Play',
-    interest: 'Email Automation',
-    steps: [
-      'Auto-categorization and priority labels on every inbound thread',
-      'Sentiment routing that escalates frustrated customers in minutes, not days',
-      'Drafted-for-you replies grounded in your SOPs, approved in one click',
-    ],
-    hours: 12,
-    revenue: 'Faster response times on every lead and support thread',
-    stack: ['Gmail', 'Apps Script', 'Zapier / Make', 'Webhooks'],
-  },
-  {
-    id: 'workspace',
-    label: 'Messy Google Drive',
-    icon: HardDrive,
-    symptom: 'Nobody can find the latest version of a file, sharing permissions are a guess, and spreadsheets keep breaking.',
-    play: 'The Workspace Rebuild Play',
-    interest: 'Google Workspace Audit',
-    steps: [
-      'Full Drive and Shared Drive architecture map with a clean folder taxonomy',
-      'Permission audit that closes oversharing and orphaned-file risk',
-      'Custom assistants configured for Docs, Sheets and Gmail',
-    ],
-    hours: 8,
-    revenue: 'Lower risk of data leaks and lost work from broken files',
-    stack: ['Google Workspace', 'Apps Script', 'Shared Drives'],
-  },
-  {
-    id: 'docs',
-    label: 'Manual Paperwork',
-    icon: FileText,
-    symptom: 'Proposals, contracts, and onboarding files are rebuilt from scratch or copy-pasted from old documents.',
-    play: 'The Doc Engine Play',
-    interest: 'Document AI',
-    steps: [
-      'Static PDFs converted into smart intake forms that validate as they go',
-      'Form submissions trigger finished contracts, proposals and briefs',
-      'Text synthesis tailors each document to the client in seconds',
-    ],
-    hours: 10,
-    revenue: 'Proposals out the same day, while the deal is still warm',
-    stack: ['Google Forms', 'Typeform', 'Tally', 'Docs Templates', 'Make'],
-  },
-  {
-    id: 'funnel',
-    label: 'Losing Sales Leads',
-    icon: TrendingUp,
-    symptom: 'People visit your website, but leads quietly disappear between the first click and the signed deal.',
-    play: 'The Funnel Teardown Play',
-    interest: 'Funnel Teardown',
-    steps: [
-      'Stage-by-stage drop-off map from first visit to closed deal',
-      'Website teardown: lead capture gaps, fuzzy value props, UX friction',
-      'Automated follow-up sequences so no qualified lead goes cold',
-    ],
-    hours: 6,
-    revenue: 'More of your existing traffic converts, without more ad spend',
-    stack: ['Analytics', 'CRM Webhooks', 'Zapier', 'Landing Page UX'],
-  },
+const CONSOLE_LINES = [
+  { icon: Bot, text: 'Facebook lead routed to calendar · 00:04s' },
+  { icon: Rocket, text: 'Production build deployed to Vercel' },
+  { icon: FileText, text: 'Proposal generated from intake form' },
+  { icon: Globe, text: 'Run-of-show synced across 14 cities' },
 ];
 
-const SERVICES = {
-  automation: {
-    label: 'Automations & Tech',
-    short: 'Automations & Tech',
-    icon: Workflow,
-    blurb: 'Stop doing robotic work. We build systems inside the tools your team already uses every day.',
-    cards: [
-      {
-        icon: HardDrive,
-        title: 'Google Workspace Cleanup & Setup',
-        summary:
-          'We organize how your team stores files, fix confusing permissions, and build custom tools to make Google Docs, Sheets, and Gmail work faster for you.',
-        deliverables: [
-          'Organize Google Drive folders so files are easy to find',
-          'Fix file sharing permissions to keep your data secure',
-          'Repair broken spreadsheets and simplify calendar scheduling',
-          'Build custom shortcuts for your daily Google tasks',
-        ],
-        stack: ['Google Workspace', 'Apps Script', 'Zapier / Make', 'Webhooks'],
-        interest: 'Google Workspace Audit',
-      },
-      {
-        icon: Mail,
-        title: 'Smart Email Automation',
-        summary:
-          'Turn your chaotic inbox into an organized system that automatically sorts emails, flags urgent messages, and drafts replies for you.',
-        deliverables: [
-          'Automatically sort incoming emails by priority and sender',
-          'Instantly flag angry or urgent customer emails',
-          'Pre-draft email replies based on your company rules',
-          'Goal: Give your team back 10 to 15 hours a week',
-        ],
-        stack: ['Google Workspace', 'Gmail', 'Zapier / Make', 'Webhooks'],
-        interest: 'Email Automation',
-      },
-      {
-        icon: FileText,
-        title: 'Automated Paperwork & Forms',
-        summary:
-          'Stop copying and pasting. We turn your old PDFs into smart online forms that instantly create your client paperwork.',
-        deliverables: [
-          'Convert static PDFs into easy-to-use online forms (Google Forms, Typeform)',
-          'Automatically type up custom contracts, proposals, and welcome packets',
-          'Eliminate human error from your daily data entry',
-          'Deliver finished documents straight to your client and your Drive',
-        ],
-        stack: ['Google Workspace', 'Typeform', 'Tally', 'Zapier / Make', 'Webhooks'],
-        interest: 'Document AI',
-      },
+const PILLARS = [
+  {
+    id: 'web',
+    icon: Code2,
+    title: 'Web & App Development',
+    offering:
+      'Ultra-fast, custom-engineered web applications and business platforms built on Vite, React 19, Tailwind and Vercel.',
+    value:
+      'No bloated, fragile Wix or Squarespace boilerplate. Sub-second load times, mobile-first design, contact routes that actually reach you, and a full domain migration.',
+    deliverables: [
+      'Custom React web apps',
+      'Local business capture engines',
+      'High-converting landing funnels',
+      'API-connected dynamic sites',
+      'Technical SEO architecture',
     ],
+    stack: ['Vite', 'React 19', 'Tailwind', 'Vercel'],
   },
-  strategy: {
-    label: 'Sales & Strategy',
-    short: 'Sales & Strategy',
+  {
+    id: 'automation',
+    icon: Bot,
+    title: 'AI & Workflow Automation',
+    offering: 'Practical, automated operations that remove manual busywork and triage inbound leads.',
+    value:
+      'Lead-to-calendar sync, CRM ingestion and custom LLM workflows that run 24/7 without anyone babysitting them.',
+    deliverables: [
+      'Muse AI & Meta / Facebook integrations',
+      'Webhook pipelines (Zapier, Make)',
+      'Automated document & proposal generation',
+      'Inbox categorization',
+      'Lead scrapers',
+    ],
+    stack: ['LLM APIs', 'Zapier', 'Make', 'Webhooks'],
+  },
+  {
+    id: 'consulting',
     icon: Target,
-    blurb: 'Executive-grade diagnostics that find the root cause before anyone writes a line of automation.',
-    cards: [
-      {
-        icon: Filter,
-        title: 'Friction & Conversion Funnel Analysis',
-        summary:
-          'Identify where traffic drops off, map friction in your client onboarding, and patch leakages in your sales pipelines.',
-        deliverables: [
-          'End-to-end funnel leakage report',
-          'Onboarding friction and drop-off mapping',
-          'CRM state and pipeline hygiene review',
-          'Revised conversion architecture playbook',
-        ],
-        stack: ['Funnel Analytics', 'CRM', 'Strategy'],
-        interest: 'Funnel Teardown',
-      },
-      {
-        icon: Globe,
-        title: 'On-Site Opportunity Teardown',
-        summary:
-          'A comprehensive critique of your digital presence to uncover missing lead capture mechanics, ambiguous value propositions, and UX barriers.',
-        deliverables: [
-          'UX and navigation barrier identification',
-          'Lead capture mechanics and CTA review',
-          'Value proposition clarity check',
-          'Actionable conversion rate optimization (CRO) roadmap',
-        ],
-        stack: ['CRO', 'UX / UI', 'Lead Capture'],
-        interest: 'Funnel Teardown',
-      },
-      {
-        icon: Ear,
-        title: 'Executive Diagnostic & Advisory',
-        summary:
-          'Tailored problem-solving sessions. We listen, diagram your operational chaos, identify the root causes (not just symptoms), and architect the fix.',
-        deliverables: [
-          '1-on-1 executive discovery and listening sessions',
-          'Operational friction diagramming',
-          'Root-cause isolation vs. symptom treating',
-          'Custom implementation and sequence playbook',
-        ],
-        stack: ['Executive Advisory', 'Architecture', 'Operations'],
-        interest: 'General Diagnostic Advisory',
-      },
+    title: 'Business & Operational Consulting',
+    offering: 'End-to-end operational audits, tech stack overhauls and process design.',
+    value:
+      'Pinpoint the exact friction points where time, leads and capital leak out, before a single line of code is written.',
+    deliverables: [
+      'Friction teardowns',
+      'Conversion funnel forensics',
+      'Google Workspace & data permission audits',
+      'SOP synthesis',
+      'Custom tooling strategy',
+    ],
+    stack: ['Ops audits', 'Process design', 'Google Workspace'],
+  },
+  {
+    id: 'events',
+    icon: Globe,
+    title: 'Event Production & Global Operations',
+    offering: 'Large-scale event production, decentralized community operations and live experiential networking.',
+    value:
+      'Led by PizzaDAO’s Director of Operations: Global Pizza Party events produced across 100+ cities and 50+ countries.',
+    deliverables: [
+      'Live event production',
+      'Sponsor integration & experiential marketing',
+      'Global multi-city coordination',
+      'Ticketing pipelines',
+      'Vendor & venue negotiation',
+    ],
+    stack: ['Run-of-show', 'Sponsors', 'Ticketing', 'Vendors'],
+  },
+];
+
+const EVENT_STATS = [
+  { value: '100+', label: 'Cities worldwide' },
+  { value: '50+', label: 'Countries' },
+  { value: 'Tens of thousands', label: 'Attendees united' },
+  { value: 'May 22', label: 'One date, every timezone: multi-timezone vendor management' },
+];
+
+const EVENT_CROSSOVER = [
+  {
+    icon: Cpu,
+    title: 'Technical ops',
+    body: 'Crypto-native ticketing and perks, sponsor activations and coordinated comms across every city.',
+  },
+  {
+    icon: MapPin,
+    title: 'Logistics',
+    body: 'International venue logistics, local pizzeria partnerships, budgeting and vendor management across time zones.',
+  },
+  {
+    icon: Users,
+    title: 'Real-world execution',
+    body: 'Thousands of attendees and a live community run-of-show, delivered on a single day around the world.',
+  },
+];
+
+const CASE_STUDIES = [
+  {
+    icon: Pizza,
+    tag: 'Event Production · PizzaDAO',
+    title: 'Global Pizza Party',
+    summary:
+      'Produced PizzaDAO’s Global Pizza Party for Bitcoin Pizza Day (May 22) across 100+ cities in 50+ countries.',
+    points: [
+      'Thousands of attendees coordinated',
+      'Local pizzeria partnerships and international venue logistics',
+      'Sponsor activations, budgeting and crypto-native ticketing',
     ],
   },
-};
+  {
+    icon: Code2,
+    tag: 'Web Development · Consulting',
+    title: 'Scrimmage Productions consulting platform',
+    summary:
+      'A Vite + React 19 site with a 4-step diagnostic funnel that builds a live report and delivers every intake by email.',
+    points: [
+      'Single-file React architecture deployed on Vercel',
+      'Real-time diagnostic report with value estimates',
+      'Web3Forms delivery with an email fallback',
+    ],
+  },
+  {
+    icon: Bot,
+    tag: 'AI Automation · Reference build',
+    title: 'Lead-to-calendar pipeline',
+    summary:
+      'The pattern behind most automation work: a Facebook lead is qualified, logged to the CRM and booked on a calendar without anyone touching it.',
+    points: ['Meta lead form → webhook', 'LLM qualification and CRM ingestion', 'Calendar booking and confirmation email'],
+  },
+];
 
 const METHOD_STEPS = [
   {
@@ -247,24 +216,24 @@ const METHOD_STEPS = [
     icon: Search,
     title: 'Find the Bottlenecks',
     tag: 'The Film Room',
-    body: 'We look at how your business runs today. We listen to your challenges and find exactly where you are losing time and money.',
-    points: ['Discovery interviews', 'Workflow and funnel mapping', 'Bottleneck scoring'],
+    body: 'I map how your business, product or event actually runs today and find exactly where time, leads and money leak.',
+    points: ['Discovery calls', 'Stack & funnel teardown', 'Bottleneck scoring'],
   },
   {
     n: '02',
     icon: Settings,
     title: 'Build the Plan',
     tag: 'The Playbook',
-    body: 'We design the exact steps to fix your tech tools, organize your files, and automate the busywork.',
-    points: ['Automation blueprints', 'Funnel fix roadmap', 'ROI-ranked sequencing'],
+    body: 'I design the stack, the automations or the run-of-show, sequenced so the highest-return work ships first.',
+    points: ['Architecture & scope', 'Automation blueprints', 'Milestone sprints'],
   },
   {
     n: '03',
     icon: Zap,
-    title: 'Put it into Action',
+    title: 'Ship & Operate',
     tag: 'The Execution',
-    body: 'We build the new systems, train your team to use them, and make sure everything runs smoothly without us.',
-    points: ['Hands-on deployment', 'Workspace training', 'Operational scale-up'],
+    body: 'I build, deploy and run it alongside your team until it holds up without me.',
+    points: ['Hands-on build', 'Launch & handoff', 'Live operations'],
   },
 ];
 
@@ -332,13 +301,13 @@ function Logo({ onClick, tagline = false }) {
     <button
       onClick={onClick}
       className="flex items-center gap-2.5 rounded-lg text-left transition-opacity duration-200 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-      aria-label="Scrimmage Productions LLC, back to top">
+      aria-label={`${SITE_DOMAIN}, back to top`}>
       <MatrixS size={tagline ? 30 : 22} />
       <span className="leading-tight">
         <span className="block text-[15px] font-semibold tracking-tight text-white">
-          Scrimmage Productions <span className="font-normal text-zinc-500">LLC</span>
+          scrimmy<span className="font-normal text-zinc-500">.xyz</span>
         </span>
-        {tagline && <span className="block text-xs text-zinc-500">Ops & Strategy</span>}
+        {tagline && <span className="block text-xs text-zinc-500">Scrimmage Productions LLC</span>}
       </span>
     </button>
   );
@@ -518,7 +487,7 @@ function NavBar({ active }) {
 
           <div className="flex items-center gap-2">
             <span className="hidden sm:block">
-              <PrimaryButton onClick={() => go('contact')} className="px-4 py-1.5 text-sm">
+              <PrimaryButton onClick={() => go('diagnostic')} className="px-4 py-1.5 text-sm">
                 Start Free Diagnostic
               </PrimaryButton>
             </span>
@@ -566,7 +535,7 @@ function NavBar({ active }) {
               </li>
             ))}
           </ul>
-          <PrimaryButton onClick={() => go('contact')} className="mt-auto w-full py-3">
+          <PrimaryButton onClick={() => go('diagnostic')} className="mt-auto w-full py-3">
             Start Free Diagnostic
           </PrimaryButton>
           <a
@@ -584,37 +553,38 @@ function NavBar({ active }) {
 /*  Hero                                                               */
 /* ------------------------------------------------------------------ */
 
-function Hero() {
+function Hero({ onStart }) {
   return (
     <section className="px-4 pb-24 pt-24 sm:px-6 sm:pb-32 sm:pt-36 lg:px-8">
-      <div className="mx-auto max-w-4xl text-center">
-        <p className="text-sm font-medium text-zinc-500 sm:text-base">Business Consulting · Operational Optimization</p>
-        <h1 className="mt-5 text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-          Organize Your Operations.
+      <div className="mx-auto max-w-5xl text-center">
+        <p className="text-sm font-medium text-cyan-500 sm:text-base">
+          Full-Stack Development · AI Automation · Operations & Events
+        </p>
+        <h1 className="mt-5 text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
+          High-Velocity Digital Products.
           <br />
-          <span className="text-zinc-500">Automate the Busywork.</span>
+          <span className="text-zinc-500">Automated Operations. Global Events.</span>
         </h1>
         <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-zinc-400 sm:text-xl">
-          Scrimmage Productions cleans up your messy Google Drive, automates your repetitive emails and paperwork, and
-          finds exactly what’s slowing your business down. We fix the tech headaches so your team can get hours back in
-          their week.
+          From custom React platforms and autonomous AI pipelines to producing 100+ city global events as Director of
+          Operations at PizzaDAO. I eliminate operational drag and build systems that scale.
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <PrimaryButton onClick={() => scrollToId('contact')} className="px-7 py-3 text-[17px]">
+          <PrimaryButton onClick={() => onStart()} className="px-7 py-3 text-[17px]">
             Start Free Diagnostic
           </PrimaryButton>
           <SecondaryButton onClick={() => scrollToId('services')} className="px-6 py-3 text-[17px]">
-            Explore Automations <ChevronRight className="h-4 w-4" />
+            Explore Services <ChevronRight className="h-4 w-4" />
           </SecondaryButton>
         </div>
 
         <Reveal
           as="dl"
-          className="mx-auto mt-20 grid max-w-3xl grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
+          className="mx-auto mt-20 grid max-w-4xl grid-cols-2 gap-y-10 lg:grid-cols-4 lg:divide-x lg:divide-white/10">
           {HERO_METRICS.map(({ value, label }) => (
-            <div key={label} className="px-6">
-              <dt className="text-3xl font-semibold tracking-tight text-white">{value}</dt>
+            <div key={label} className="px-4">
+              <dt className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{value}</dt>
               <dd className="mt-1 text-sm text-zinc-500">{label}</dd>
             </div>
           ))}
@@ -626,7 +596,7 @@ function Hero() {
       </Reveal>
 
       <Reveal as="ul" className="mx-auto mt-16 flex max-w-4xl flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-zinc-500">
-        {TICKER_ITEMS.map((t, i) => (
+        {CAPABILITIES.map((t, i) => (
           <li key={t} className="flex items-center gap-5">
             {i > 0 && <span aria-hidden="true" className="h-1 w-1 rounded-full bg-zinc-700" />}
             {t}
@@ -638,28 +608,22 @@ function Hero() {
 }
 
 function HeroConsole() {
-  const lines = [
-    { icon: Mail, text: '142 incoming emails automatically sorted' },
-    { icon: ShieldCheck, text: '37 private files properly secured' },
-    { icon: FileText, text: 'Client proposal automatically typed · 00:41s' },
-    { icon: Settings, text: 'Website checkout error fixed' },
-  ];
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setTick((n) => (n + 1) % lines.length), 2200);
+    const t = setInterval(() => setTick((n) => (n + 1) % CONSOLE_LINES.length), 2200);
     return () => clearInterval(t);
-  }, [lines.length]);
+  }, []);
 
   return (
     <Card className="p-5 text-left shadow-lg shadow-black/50 sm:p-6">
       <div className="flex items-center justify-between px-1">
         <span className="text-sm font-medium text-zinc-300">Ops Console · Sample run</span>
         <span className="flex items-center gap-1.5 text-xs text-zinc-500">
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" /> live demo
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500" /> live demo
         </span>
       </div>
       <ul className="mt-4 space-y-1">
-        {lines.map(({ icon: Icon, text }, i) => (
+        {CONSOLE_LINES.map(({ icon: Icon, text }, i) => (
           <li
             key={text}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-500 ${
@@ -671,194 +635,8 @@ function HeroConsole() {
           </li>
         ))}
       </ul>
-      <p className="mt-4 px-1 text-xs text-zinc-600">
-        Illustrative automation events. Your results depend on your stack and volume.
-      </p>
+      <p className="mt-4 px-1 text-xs text-zinc-600">Illustrative events. Real pipelines depend on your stack and volume.</p>
     </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Diagnostic tool                                                    */
-/* ------------------------------------------------------------------ */
-
-function Diagnostic({ onRequest }) {
-  const [selected, setSelected] = useState(BOTTLENECKS[0].id);
-  const [team, setTeam] = useState(3);
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | loading | success | error | fallback
-  const [error, setError] = useState('');
-
-  const b = BOTTLENECKS.find((x) => x.id === selected);
-  const weekly = b.hours * team;
-  const yearly = weekly * 48;
-
-  const summary = [
-    `Bottleneck: ${b.label}`,
-    `Recommended: ${b.play}`,
-    ...b.steps.map((s) => `- ${s}`),
-    `Team members affected: ${team}`,
-    `Estimated time reclaimed: ~${weekly} hrs/week (~${yearly.toLocaleString()} hrs/year)`,
-    `Stack: ${b.stack.join(', ')}`,
-  ].join('\n');
-
-  const send = async (e) => {
-    e.preventDefault();
-    if (!isEmail(email)) {
-      setError('Enter a valid business email so we can send your preview.');
-      setStatus('error');
-      return;
-    }
-    setError('');
-    setStatus('loading');
-    try {
-      await submitToWeb3Forms({
-        subject: `Diagnostic preview request: ${b.label}`,
-        from_name: 'Scrimmage Diagnostic Tool',
-        email,
-        replyto: email,
-        interest: b.interest,
-        message: summary,
-      });
-      setStatus('success');
-    } catch (err) {
-      if (err.code === 'not-configured') {
-        window.location.assign(buildMailto(`Diagnostic preview request: ${b.label}`, `Send my audit to: ${email}\n\n${summary}`));
-        setStatus('fallback');
-      } else {
-        setError('We could not send that just now. Use the email link below and we will reply directly.');
-        setStatus('error');
-      }
-    }
-  };
-
-  return (
-    <section id="diagnostic" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <SectionHeader
-          eyebrow="Operational Friction Diagnostic"
-          title="What is slowing your business down the most?"
-          sub="Pick your biggest bottleneck. You will see the play we would run, and a rough estimate of the hours it gives back."
-        />
-
-        <Reveal className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-10">
-          {/* Sidebar list */}
-          <div role="radiogroup" aria-label="Biggest bottleneck" className="space-y-1">
-            {BOTTLENECKS.map((opt) => {
-              const Icon = opt.icon;
-              const on = opt.id === selected;
-              return (
-                <button
-                  key={opt.id}
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => {
-                    setSelected(opt.id);
-                    setStatus('idle');
-                  }}
-                  className={`flex w-full items-start gap-3.5 rounded-2xl px-4 py-3.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-                    on ? 'bg-zinc-800' : 'hover:bg-zinc-900'
-                  }`}>
-                  <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-400'}`} />
-                  <span>
-                    <span className={`block text-[15px] font-medium ${on ? 'text-white' : 'text-zinc-200'}`}>{opt.label}</span>
-                    <span className="mt-0.5 block text-sm leading-snug text-zinc-500">{opt.symptom}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Detail panel */}
-          <Card key={b.id} className="sp-fade-in flex flex-col p-6 sm:p-8">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm font-medium text-zinc-500">Your Scrimmage Solution</span>
-              <Badge>ROI positive</Badge>
-            </div>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{b.play}</h3>
-
-            <ul className="mt-6 space-y-3">
-              {b.steps.map((s) => (
-                <li key={s} className="flex gap-3 text-[15px] text-zinc-300">
-                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
-                  <span>{s}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-8">
-              <label htmlFor="team" className="flex items-center justify-between text-[15px] text-zinc-300">
-                People affected
-                <span className="font-medium tabular-nums text-white">{team}</span>
-              </label>
-              <RangeSlider id="team" value={team} min={1} max={25} onChange={setTeam} />
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-zinc-950 p-5">
-                <p className="text-sm text-zinc-500">Est. hours reclaimed / week</p>
-                <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-white">~{weekly}</p>
-              </div>
-              <div className="rounded-2xl bg-zinc-950 p-5">
-                <p className="text-sm text-zinc-500">Est. hours reclaimed / year</p>
-                <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-white">~{yearly.toLocaleString()}</p>
-              </div>
-            </div>
-            <p className="mt-4 text-sm text-zinc-400">{b.revenue}</p>
-
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {b.stack.map((s) => (
-                <Badge key={s}>{s}</Badge>
-              ))}
-            </div>
-
-            <div className="mt-8 border-t border-white/5 pt-6">
-              {status === 'success' || status === 'fallback' ? (
-                <div className="sp-fade-in flex items-start gap-3 rounded-2xl bg-zinc-800 p-4 text-sm text-zinc-200">
-                  <Check className="h-5 w-5 shrink-0 text-white" />
-                  <span>
-                    {status === 'success'
-                      ? 'Preview sent. We will follow up with your full audit outline within one business day.'
-                      : 'Your email app opened with the preview pre-filled. Hit send and we will take it from there.'}
-                  </span>
-                </div>
-              ) : (
-                <form onSubmit={send} noValidate>
-                  <label htmlFor="diag-email" className="text-[15px] font-medium text-white">
-                    Send this audit preview to your inbox
-                  </label>
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <input
-                      id="diag-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@company.com"
-                      aria-invalid={status === 'error'}
-                      className={`${INPUT_CLS} flex-1 ${status === 'error' ? 'ring-2 ring-red-500/70' : ''}`}
-                    />
-                    <PrimaryButton type="submit" disabled={status === 'loading'} className="py-3">
-                      {status === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Send my audit
-                    </PrimaryButton>
-                  </div>
-                  {status === 'error' && (
-                    <p className="mt-2 flex items-center gap-1.5 text-sm text-red-400">
-                      <AlertTriangle className="h-4 w-4" /> {error}
-                    </p>
-                  )}
-                </form>
-              )}
-              <TextAction
-                onClick={() => onRequest(b.interest)}
-                className="mt-5">
-                Start Free Diagnostic <ChevronRight className="h-4 w-4" />
-              </TextAction>
-            </div>
-          </Card>
-        </Reveal>
-      </div>
-    </section>
   );
 }
 
@@ -866,58 +644,32 @@ function Diagnostic({ onRequest }) {
 /*  Services                                                           */
 /* ------------------------------------------------------------------ */
 
-function Services({ onRequest }) {
-  const [tab, setTab] = useState('automation');
-  const pillar = SERVICES[tab];
-
+function Services({ onStart }) {
   return (
     <section id="services" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
           eyebrow="Services"
-          title="Automation for repetitive work. Advisory for the decisions behind it."
-          sub="Most engagements begin with one pillar. The second is added once the first is delivering measurable results."
+          title="Four disciplines. One execution partner."
+          sub="Build the product, automate the operations, fix the business underneath, and run the room when it goes live."
         />
 
-        {/* Segmented control */}
-        <div className="mb-6 flex justify-center">
-          <div role="tablist" aria-label="Service pillars" className="inline-flex w-full max-w-md rounded-xl bg-zinc-900 p-1">
-            {Object.entries(SERVICES).map(([key, p]) => {
-              const on = key === tab;
-              return (
-                <button
-                  key={key}
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setTab(key)}
-                  className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-                    on ? 'bg-zinc-700 text-white shadow-lg shadow-black/50' : 'text-zinc-400 hover:text-white'
-                  }`}>
-                  <span className="truncate sm:hidden">{p.short}</span>
-                  <span className="hidden truncate sm:inline">{p.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <p className="mb-12 text-center text-zinc-400">{pillar.blurb}</p>
-
-        <div key={tab} className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {pillar.cards.map((c, i) => {
-            const Icon = c.icon;
+        <div className="grid gap-5 md:grid-cols-2">
+          {PILLARS.map((p, i) => {
+            const Icon = p.icon;
             return (
-              <Reveal key={c.title} delay={i * 100} className="h-full">
+              <Reveal key={p.id} delay={(i % 2) * 100} className="h-full">
                 <Card className="flex h-full flex-col p-7 sm:p-8">
                   <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-400">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <h3 className="mt-6 text-xl font-semibold tracking-tight text-white">{c.title}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-zinc-400">{c.summary}</p>
+                  <h3 className="mt-6 text-xl font-semibold tracking-tight text-white sm:text-2xl">{p.title}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-zinc-300">{p.offering}</p>
+                  <p className="mt-3 text-[15px] leading-relaxed text-zinc-400">{p.value}</p>
 
-                  <p className="mt-7 text-xs font-medium uppercase tracking-wide text-zinc-500">Deliverables</p>
+                  <p className="mt-7 text-xs font-medium uppercase tracking-wide text-zinc-500">Sample deliverables</p>
                   <ul className="mt-3 space-y-2.5">
-                    {c.deliverables.map((d) => (
+                    {p.deliverables.map((d) => (
                       <li key={d} className="flex gap-2.5 text-sm text-zinc-300">
                         <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
                         {d}
@@ -926,14 +678,125 @@ function Services({ onRequest }) {
                   </ul>
 
                   <div className="mb-8 mt-6 flex flex-wrap gap-1.5">
-                    {c.stack.map((s) => (
+                    {p.stack.map((s) => (
                       <Badge key={s}>{s}</Badge>
                     ))}
                   </div>
 
-                  <TextAction onClick={() => onRequest(c.interest)} className="mt-auto self-start">
+                  <TextAction onClick={() => onStart(p.id)} className="mt-auto self-start">
                     Start Free Diagnostic <ChevronRight className="h-4 w-4" />
                   </TextAction>
+                </Card>
+              </Reveal>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  PizzaDAO / global event operations                                 */
+/* ------------------------------------------------------------------ */
+
+function Events({ onStart }) {
+  return (
+    <section id="events" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <Reveal>
+          <Card className="overflow-hidden p-7 shadow-2xl shadow-black/50 sm:p-12">
+            <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-medium text-cyan-500">
+                  <Pizza className="h-4 w-4" /> Director of Operations · PizzaDAO
+                </p>
+                <h2 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                  Global Pizza Party. 100+ cities, one run‑of‑show.
+                </h2>
+                <p className="mt-5 text-lg leading-relaxed text-zinc-400">
+                  PizzaDAO is the global web3 community uniting people through pizza. As Director of Operations, I
+                  organize and execute the Global Pizza Party for Bitcoin Pizza Day (May 22), across 100+ cities and 50+
+                  countries at once.
+                </p>
+                <p className="mt-4 text-[15px] leading-relaxed text-zinc-400">
+                  That means thousands of attendees, international venue logistics, local pizzeria partnerships, sponsor
+                  activations, budgets, crypto-native ticketing and perks, and a live community run-of-show that has to
+                  work in every timezone.
+                </p>
+                <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <PrimaryButton onClick={() => onStart('events')} className="px-6 py-3">
+                    Plan Your Event
+                  </PrimaryButton>
+                  <SecondaryButton onClick={() => scrollToId('work')} className="py-3">
+                    See the case study <ChevronRight className="h-4 w-4" />
+                  </SecondaryButton>
+                </div>
+              </div>
+
+              <dl className="grid grid-cols-2 gap-3">
+                {EVENT_STATS.map(({ value, label }) => (
+                  <div key={label} className="rounded-2xl bg-zinc-950 p-5 sm:p-6">
+                    <dt className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{value}</dt>
+                    <dd className="mt-2 text-sm leading-snug text-zinc-500">{label}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <ul className="mt-12 grid gap-6 border-t border-white/5 pt-10 sm:grid-cols-3">
+              {EVENT_CROSSOVER.map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex gap-3">
+                  <Icon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
+                  <span>
+                    <span className="block text-[15px] font-medium text-white">{title}</span>
+                    <span className="text-sm leading-relaxed text-zinc-400">{body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Case studies                                                       */
+/* ------------------------------------------------------------------ */
+
+function CaseStudies() {
+  return (
+    <section id="work" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <SectionHeader
+          eyebrow="Case Studies"
+          title="Shipped, deployed and run live."
+          sub="Real-world events, production code and the automation patterns behind them."
+        />
+        <div className="grid gap-5 lg:grid-cols-3">
+          {CASE_STUDIES.map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <Reveal key={c.title} delay={i * 100} className="h-full">
+                <Card className="flex h-full flex-col p-7 sm:p-8">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-400">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-sm font-medium text-zinc-500">{c.tag}</span>
+                  </div>
+                  <h3 className="mt-6 text-xl font-semibold tracking-tight text-white">{c.title}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-zinc-400">{c.summary}</p>
+                  <ul className="mt-6 space-y-2.5">
+                    {c.points.map((pt) => (
+                      <li key={pt} className="flex gap-2.5 text-sm text-zinc-300">
+                        <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+                        {pt}
+                      </li>
+                    ))}
+                  </ul>
                 </Card>
               </Reveal>
             );
@@ -950,12 +813,12 @@ function Services({ onRequest }) {
 
 function Playbook() {
   return (
-    <section id="playbook" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+    <section className="px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          eyebrow="The Scrimmage Method"
+          eyebrow="How I Work"
           title="Film. Playbook. Execution."
-          sub="Every engagement follows the same three phases, so scope, sequence and accountability are clear from the start."
+          sub="Every engagement, from a landing page to a 100-city event, follows the same three phases."
         />
 
         <ol className="grid gap-5 lg:grid-cols-3">
@@ -990,7 +853,7 @@ function Playbook() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ROI calculator                                                     */
+/*  ROI / value calculator                                             */
 /* ------------------------------------------------------------------ */
 
 const RECOVERY_RATE = 0.6; // share of manual hours a typical automation set recovers
@@ -1008,7 +871,7 @@ function Slider({ id, label, value, min, max, step = 1, onChange, format = (v) =
   );
 }
 
-function RoiCalculator() {
+function RoiCalculator({ onStart }) {
   const [people, setPeople] = useState(5);
   const [hours, setHours] = useState(12);
   const [rate, setRate] = useState(65);
@@ -1027,9 +890,9 @@ function RoiCalculator() {
     <section id="roi" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          eyebrow="ROI Calculator"
-          title="What is manual work really costing you?"
-          sub="Move the sliders to match your team. We assume automation recovers about 60% of repetitive hours, a conservative starting point we refine during the Film Room."
+          eyebrow="Value Calculator"
+          title="Calculate Your Operational Drag & Growth Potential."
+          sub="Move the sliders to match your team. We assume automation recovers about 60% of repetitive hours, a conservative starting point we refine in the diagnostic."
         />
 
         <div className="grid gap-5 lg:grid-cols-2">
@@ -1064,13 +927,13 @@ function RoiCalculator() {
 
           <Reveal delay={100} className="h-full">
             <Card className="flex h-full flex-col p-7 sm:p-8">
-              <span className="text-sm font-medium text-zinc-500">Estimated annual value recovered</span>
+              <span className="text-sm font-medium text-zinc-500">Annual operational drag you could recover</span>
               <p className="mt-2 text-5xl font-semibold tracking-tight tabular-nums text-white sm:text-6xl">
                 {fmtMoney(r.annualValue)}
               </p>
               <div className="mt-6 h-1 overflow-hidden rounded-full bg-zinc-800" aria-hidden="true">
                 <div
-                  className="h-full rounded-full bg-white transition-all duration-500 ease-out"
+                  className="h-full rounded-full bg-cyan-500 transition-all duration-500 ease-out"
                   style={{ width: `${Math.max(pct, 2)}%` }}
                 />
               </div>
@@ -1079,7 +942,7 @@ function RoiCalculator() {
                 {[
                   { label: 'Hours back / week', value: Math.round(r.weeklyHours).toLocaleString() },
                   { label: 'Hours back / year', value: Math.round(r.annualHours).toLocaleString() },
-                  { label: 'Extra full-time employees saved', value: r.fte.toFixed(1) },
+                  { label: 'Full-time hires avoided', value: r.fte.toFixed(1) },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-2xl bg-zinc-950 p-4">
                     <dt className="text-sm text-zinc-500">{label}</dt>
@@ -1089,9 +952,9 @@ function RoiCalculator() {
               </dl>
 
               <p className="mb-8 mt-6 text-[15px] text-zinc-400">
-                That is capacity you can redirect to sales, delivery and strategy, without adding headcount.
+                That is capacity you can put back into growth: sales, delivery and new products, without adding headcount.
               </p>
-              <PrimaryButton onClick={() => scrollToId('contact')} className="mt-auto w-full py-3">
+              <PrimaryButton onClick={() => onStart('automation')} className="mt-auto w-full py-3">
                 Get Your Diagnostic Report
               </PrimaryButton>
             </Card>
@@ -1103,13 +966,35 @@ function RoiCalculator() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Diagnostic & onboarding funnel                                     */
+/*  Diagnostic & intake funnel                                         */
 /* ------------------------------------------------------------------ */
 
 const HOURLY_RATE = 150;
 const WEEKS_PER_YEAR = 50;
 
-const FUNNEL_STEPS = ['Contact & Location', 'Business Profile', 'Pain Points & Friction', 'Your Diagnostic Report'];
+const FUNNEL_STEPS = ['Contact & Location', 'What You Need', 'Scope & Details', 'Your Diagnostic Report'];
+
+const TRACKS = [
+  { id: 'web', icon: Code2, label: 'Web & App Development', question: 'Need a custom site or web app rebuilt from scratch?' },
+  {
+    id: 'automation',
+    icon: Bot,
+    label: 'AI & Workflow Automation',
+    question: 'Need AI lead automations or Facebook-to-calendar pipelines?',
+  },
+  {
+    id: 'consulting',
+    icon: Target,
+    label: 'Business & Operational Consulting',
+    question: 'Experiencing business bottlenecks or workflow friction?',
+  },
+  {
+    id: 'events',
+    icon: Globe,
+    label: 'Event Production & Global Ops',
+    question: 'Looking for an experienced event producer or operations director?',
+  },
+];
 
 const INDUSTRIES = [
   'Professional Services / Agency',
@@ -1117,107 +1002,45 @@ const INDUSTRIES = [
   'E-commerce / Retail',
   'Health / Wellness',
   'Real Estate',
+  'Web3 / Crypto',
+  'Food & Hospitality',
   'Other',
 ];
 
 // `rate` is the blended hourly cost we assume for a team of this size when valuing lost time.
 const TEAM_SIZES = [
   { id: '1', label: '1 (Solo)', rate: 75 },
-  { id: '2-5', label: '2–5 employees', rate: 50 },
-  { id: '6-15', label: '6–15 employees', rate: 45 },
-  { id: '16-50', label: '16–50 employees', rate: 40 },
+  { id: '2-5', label: '2–5 people', rate: 50 },
+  { id: '6-15', label: '6–15 people', rate: 45 },
+  { id: '16-50', label: '16–50 people', rate: 40 },
   { id: '50+', label: '50+', rate: 40 },
 ];
 
-const CLIENT_VOLUMES = ['< 10 clients/mo', '10–50 clients/mo', '50–200 clients/mo', '200+ clients/mo'];
-
-const CORE_TOOLS = ['Google Workspace', 'Microsoft 365', 'Zapier / Make', 'Slack', 'QuickBooks', 'Spreadsheets / Manual Files'];
-
-const PAIN_POINTS = [
-  {
-    id: 'inbox',
-    icon: Mail,
-    label: 'Inbox Chaos',
-    detail: 'Drowning in unread emails, missed follow-ups',
-    insight: 'Important messages are getting buried. Every missed reply can cost you a customer or a deadline.',
-    rec: 'inbox',
-  },
-  {
-    id: 'files',
-    icon: FolderOpen,
-    label: 'Disorganized Files',
-    detail: 'Can’t find documents, broken permissions, lost templates',
-    insight: 'Time goes into hunting for files, and loose sharing settings put private data at risk.',
-    rec: 'files',
-  },
-  {
-    id: 'paperwork',
-    icon: FileText,
-    label: 'Repetitive Paperwork',
-    detail: 'Copy-pasting proposals, contracts, onboarding briefs',
-    insight: 'Your team is retyping the same documents. It is slow, and every copy-paste invites a costly mistake.',
-    rec: 'paperwork',
-  },
-  {
-    id: 'leads',
-    icon: TrendingDown,
-    label: 'Losing Sales Leads',
-    detail: 'Leads fall through cracks, slow response times',
-    insight: 'Interested buyers go cold before anyone follows up. That is revenue you already paid to attract.',
-    rec: 'leads',
-  },
-  {
-    id: 'handoff',
-    icon: Users,
-    label: 'Team Handoff Friction',
-    detail: 'Unclear task ownership, repeating instructions',
-    insight: 'Work stalls between people. Without clear ownership, you end up repeating yourself and fixing dropped tasks.',
-    rec: 'advisory',
-  },
+const PLATFORMS = ['Wix', 'Squarespace', 'WordPress', 'Shopify', 'Custom code', 'No site yet'];
+const WEB_GOALS = ['Generate more leads', 'Look more credible', 'Sell online', 'Replace a slow or broken site', 'Launch a new web app'];
+const LEAD_SOURCES = ['Facebook / Instagram ads', 'Website forms', 'Email inbox', 'Phone / SMS', 'Google / Yelp', 'Spreadsheets / CRM'];
+const PAINS = ['Inbox chaos', 'Disorganized files', 'Repetitive paperwork', 'Losing sales leads', 'Team handoff friction'];
+const EVENT_TYPES = [
+  'Conference side event',
+  'Community meetup',
+  'Multi-city activation',
+  'Brand / sponsor activation',
+  'Private / corporate event',
 ];
-
-const RECOMMENDATIONS = {
-  inbox: {
-    icon: Mail,
-    title: 'Intelligent Email & Inbox Routing',
-    detail: 'Automatic sorting, urgent-message flags and pre-drafted replies so nothing slips through.',
-  },
-  files: {
-    icon: HardDrive,
-    title: 'Google Workspace Cleanup & Setup',
-    detail: 'A clean folder structure, safe sharing permissions and repaired spreadsheets.',
-  },
-  paperwork: {
-    icon: FileText,
-    title: 'Automated Paperwork & Form Generation',
-    detail: 'Online forms that fill in your proposals, contracts and welcome packets for you.',
-  },
-  leads: {
-    icon: TrendingUp,
-    title: 'Funnel Optimization & Follow-up Architecture',
-    detail: 'Find where leads drop off and set up automatic follow-ups so none go cold.',
-  },
-  advisory: {
-    icon: Users,
-    title: 'Executive Diagnostic & Advisory',
-    detail: 'Clear owners, simple handoff checklists and a step-by-step plan your team can follow.',
-  },
-};
-
-const GOALS = [
-  'Reclaiming 10+ hours a week for growth',
-  'A business that runs smoothly when I take a week off',
-  'Zero lost customer leads',
-  'Something else',
+// `mid` values turn a range into a single number for the capacity estimate.
+const ATTENDEES = [
+  { label: '< 100', mid: 75 },
+  { label: '100–500', mid: 300 },
+  { label: '500–2,000', mid: 1250 },
+  { label: '2,000+', mid: 2500 },
 ];
-
-// Map the other "start diagnostic" entry points onto a pre-selected pain point.
-const INTEREST_TO_PAIN = {
-  'Email Automation': 'inbox',
-  'Google Workspace Audit': 'files',
-  'Document AI': 'paperwork',
-  'Funnel Teardown': 'leads',
-};
+const CITY_COUNTS = [
+  { label: '1 city', mid: 1 },
+  { label: '2–5 cities', mid: 3 },
+  { label: '6–20 cities', mid: 12 },
+  { label: '20+ cities', mid: 25 },
+];
+const TIMELINES = ['ASAP', '1–3 months', '3–6 months', 'Just exploring'];
 
 const EMPTY_FUNNEL = {
   name: '',
@@ -1225,64 +1048,102 @@ const EMPTY_FUNNEL = {
   phone: '',
   location: '',
   company: '',
+  tracks: [],
   industry: '',
   teamSize: '',
-  volume: '',
-  tools: [],
+  platform: '',
+  webGoal: '',
+  leadSources: [],
   pains: [],
   hours: 10,
-  goal: '',
+  eventType: '',
+  attendees: '',
+  cities: '',
+  timeline: '',
   notes: '',
   botcheck: false,
 };
+
+const hasTrack = (f, id) => f.tracks.includes(id);
+const needsHours = (f) => hasTrack(f, 'automation') || hasTrack(f, 'consulting');
 
 function validateStep(step, f) {
   const e = {};
   if (step === 0) {
     if (f.name.trim().length < 2) e.name = 'Please enter your full name.';
     if (!isEmail(f.email)) e.email = 'Please enter a valid business email.';
-    if (f.phone.replace(/\D/g, '').length < 7) e.phone = 'Please enter a phone number we can reach you on.';
+    if (f.phone.replace(/\D/g, '').length < 7) e.phone = 'Please enter a phone number I can reach you on.';
     if (f.location.trim().length < 2) e.location = 'Please enter your city and state.';
     if (f.company.trim().length < 2) e.company = 'Please enter your company name or website.';
   }
   if (step === 1) {
+    if (!f.tracks.length) e.tracks = 'Select at least one area.';
     if (!f.industry) e.industry = 'Choose the option closest to your business.';
     if (!f.teamSize) e.teamSize = 'Choose your team size.';
-    if (!f.volume) e.volume = 'Choose your typical client volume.';
-    if (!f.tools.length) e.tools = 'Select at least one tool you use today.';
   }
   if (step === 2) {
-    if (!f.pains.length) e.pains = 'Select at least one bottleneck.';
-    if (!f.goal) e.goal = 'Choose what success looks like for you.';
-    if (f.goal === 'Something else' && f.notes.trim().length < 10) e.notes = 'Tell us a little about your goal (10+ characters).';
+    if (hasTrack(f, 'web')) {
+      if (!f.platform) e.platform = 'Choose what your site runs on today.';
+      if (!f.webGoal) e.webGoal = 'Choose the main goal for the build.';
+    }
+    if (hasTrack(f, 'automation') && !f.leadSources.length) e.leadSources = 'Select at least one lead source.';
+    if (hasTrack(f, 'consulting') && !f.pains.length) e.pains = 'Select at least one bottleneck.';
+    if (hasTrack(f, 'events')) {
+      if (!f.eventType) e.eventType = 'Choose the type of event.';
+      if (!f.attendees) e.attendees = 'Choose the expected attendance.';
+      if (!f.cities) e.cities = 'Choose how many cities.';
+    }
+    if (!f.timeline) e.timeline = 'Choose a timeline.';
   }
   return e;
 }
 
-// 2 to 3 recommended services, in the order the bottlenecks are listed.
-function buildRecommendations(pains) {
-  const keys = [];
-  PAIN_POINTS.forEach((p) => {
-    if (pains.includes(p.id) && !keys.includes(p.rec)) keys.push(p.rec);
-  });
-  for (const fallback of ['advisory', 'files']) {
-    if (keys.length >= 2) break;
-    if (!keys.includes(fallback)) keys.push(fallback);
-  }
-  return keys.slice(0, 3).map((k) => RECOMMENDATIONS[k]);
-}
-
 function buildReport(f) {
   const team = TEAM_SIZES.find((t) => t.id === f.teamSize);
-  const annualHours = f.hours * WEEKS_PER_YEAR;
   const rate = team ? team.rate : 50;
-  return {
-    bottlenecks: PAIN_POINTS.filter((p) => f.pains.includes(p.id)),
-    recommendations: buildRecommendations(f.pains),
-    annualHours,
-    rate,
-    annualValue: annualHours * rate,
-  };
+  const annualHours = needsHours(f) ? f.hours * WEEKS_PER_YEAR : 0;
+  const attendees = ATTENDEES.find((a) => a.label === f.attendees);
+  const cities = CITY_COUNTS.find((c) => c.label === f.cities);
+  const capacity = hasTrack(f, 'events') && attendees && cities ? attendees.mid * cities.mid : 0;
+
+  const engagements = [];
+  if (hasTrack(f, 'web')) {
+    engagements.push({
+      icon: Code2,
+      title: 'Custom React Platform Build',
+      detail:
+        f.platform === 'No site yet'
+          ? `A new Vite + React 19 site on Vercel, built to: ${f.webGoal.toLowerCase()}.`
+          : `Rebuild off ${f.platform} onto Vite + React 19 + Vercel, built to: ${f.webGoal.toLowerCase()}.`,
+      points: ['Sub-second load target, mobile-first', 'Contact routes and lead capture wired in', 'Full domain migration and technical SEO'],
+    });
+  }
+  if (hasTrack(f, 'automation')) {
+    engagements.push({
+      icon: Bot,
+      title: 'Lead-to-Calendar Automation Pipeline',
+      detail: `Route ${f.leadSources.join(', ')} into your CRM and calendar automatically, around the clock.`,
+      points: ['Webhook pipelines (Zapier / Make)', 'LLM lead qualification and inbox triage', 'Automated proposals and follow-ups'],
+    });
+  }
+  if (hasTrack(f, 'consulting')) {
+    engagements.push({
+      icon: Target,
+      title: 'Operational Friction Teardown',
+      detail: `A full audit targeting: ${f.pains.join(', ').toLowerCase()}.`,
+      points: ['Friction and funnel forensics', 'Workspace & permission audit', 'SOPs and a tooling roadmap'],
+    });
+  }
+  if (hasTrack(f, 'events')) {
+    engagements.push({
+      icon: Globe,
+      title: 'Event Production & Operations',
+      detail: `${f.eventType}: ${f.attendees} attendees per city across ${f.cities}.`,
+      points: ['Run-of-show and multi-city coordination', 'Venue, vendor and sponsor management', 'Ticketing pipeline and budget control'],
+    });
+  }
+
+  return { engagements, rate, annualHours, annualValue: annualHours * rate, capacity };
 }
 
 function FieldError({ id, children }) {
@@ -1369,6 +1230,17 @@ function StepHeading({ title, sub }) {
   );
 }
 
+function ScopeBlock({ icon: Icon, title, children }) {
+  return (
+    <div className="space-y-6 rounded-2xl bg-zinc-950 p-5 sm:p-6">
+      <h4 className="flex items-center gap-2 text-[15px] font-medium text-white">
+        <Icon className="h-4 w-4 text-zinc-400" /> {title}
+      </h4>
+      {children}
+    </div>
+  );
+}
+
 function DiagnosticFunnel({ prefill }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(EMPTY_FUNNEL);
@@ -1382,8 +1254,8 @@ function DiagnosticFunnel({ prefill }) {
   const [appliedPrefill, setAppliedPrefill] = useState(null);
   if (prefill && prefill !== appliedPrefill) {
     setAppliedPrefill(prefill);
-    if (prefill.pain) {
-      setForm((f) => (f.pains.includes(prefill.pain) ? f : { ...f, pains: [...f.pains, prefill.pain] }));
+    if (prefill.track) {
+      setForm((f) => (f.tracks.includes(prefill.track) ? f : { ...f, tracks: [...f.tracks, prefill.track] }));
     }
   }
 
@@ -1418,6 +1290,8 @@ function DiagnosticFunnel({ prefill }) {
 
   const report = useMemo(() => buildReport(form), [form]);
   const teamLabel = TEAM_SIZES.find((t) => t.id === form.teamSize)?.label ?? '';
+  const trackLabels = TRACKS.filter((t) => form.tracks.includes(t.id)).map((t) => t.label);
+  const hoursLabel = form.hours >= 40 ? '40+' : String(form.hours);
 
   const summary = [
     `Name: ${form.name}`,
@@ -1426,24 +1300,26 @@ function DiagnosticFunnel({ prefill }) {
     `Location: ${form.location}`,
     `Company: ${form.company}`,
     '',
+    `Looking for: ${trackLabels.join(', ')}`,
     `Industry: ${form.industry}`,
     `Team size: ${teamLabel}`,
-    `Client volume: ${form.volume}`,
-    `Tools: ${form.tools.join(', ')}`,
-    '',
-    `Bottlenecks: ${report.bottlenecks.map((b) => b.label).join(', ')}`,
-    `Hours lost per week: ${form.hours >= 40 ? '40+' : form.hours}`,
-    `Goal: ${form.goal}`,
+    hasTrack(form, 'web') ? `Current platform: ${form.platform} · Goal: ${form.webGoal}` : null,
+    hasTrack(form, 'automation') ? `Lead sources: ${form.leadSources.join(', ')}` : null,
+    hasTrack(form, 'consulting') ? `Bottlenecks: ${form.pains.join(', ')}` : null,
+    needsHours(form) ? `Hours lost per week: ${hoursLabel}` : null,
+    hasTrack(form, 'events') ? `Event: ${form.eventType} · ${form.attendees} per city · ${form.cities}` : null,
+    `Timeline: ${form.timeline}`,
     form.notes ? `Notes: ${form.notes}` : null,
     '',
-    `Recommended: ${report.recommendations.map((r) => r.title).join('; ')}`,
-    `Hours recovered per year: ${report.annualHours.toLocaleString()}`,
-    `Estimated annual value: ${fmtMoney(report.annualValue)} (at $${report.rate}/hr blended)`,
-    `Rate: $${HOURLY_RATE}/hour`,
+    `Recommended: ${report.engagements.map((r) => r.title).join('; ')}`,
+    report.annualHours ? `Hours recovered per year: ${report.annualHours.toLocaleString()}` : null,
+    report.annualHours ? `Estimated annual value: ${fmtMoney(report.annualValue)} (at $${report.rate}/hr blended)` : null,
+    report.capacity ? `Estimated event capacity: ~${report.capacity.toLocaleString()} attendees` : null,
+    `Rate: $${HOURLY_RATE}/hour (events scoped per production)`,
   ]
     .filter((l) => l !== null)
     .join('\n');
-  const mailSubject = `Diagnostic intake: ${form.company || form.name}`;
+  const mailSubject = `${SITE_DOMAIN} diagnostic: ${form.company || form.name}`;
 
   const submit = async () => {
     if (form.botcheck) return;
@@ -1452,24 +1328,30 @@ function DiagnosticFunnel({ prefill }) {
     try {
       await submitToWeb3Forms({
         subject: mailSubject,
-        from_name: 'Scrimmage Productions Diagnostic',
+        from_name: `${SITE_DOMAIN} Diagnostic`,
         name: form.name,
         email: form.email,
         replyto: form.email,
         phone: form.phone,
         location: form.location,
         company: form.company,
+        looking_for: trackLabels.join(', '),
         industry: form.industry,
         team_size: teamLabel,
-        client_volume: form.volume,
-        tools: form.tools.join(', '),
-        bottlenecks: report.bottlenecks.map((b) => b.label).join(', '),
-        hours_lost_per_week: form.hours >= 40 ? '40+' : String(form.hours),
-        goal: form.goal,
+        current_platform: hasTrack(form, 'web') ? form.platform : undefined,
+        web_goal: hasTrack(form, 'web') ? form.webGoal : undefined,
+        lead_sources: hasTrack(form, 'automation') ? form.leadSources.join(', ') : undefined,
+        bottlenecks: hasTrack(form, 'consulting') ? form.pains.join(', ') : undefined,
+        hours_lost_per_week: needsHours(form) ? hoursLabel : undefined,
+        event_type: hasTrack(form, 'events') ? form.eventType : undefined,
+        attendees_per_city: hasTrack(form, 'events') ? form.attendees : undefined,
+        cities: hasTrack(form, 'events') ? form.cities : undefined,
+        timeline: form.timeline,
         notes: form.notes,
-        recommendations: report.recommendations.map((r) => r.title).join('; '),
-        hours_recovered_per_year: report.annualHours,
-        estimated_annual_value: fmtMoney(report.annualValue),
+        recommendations: report.engagements.map((r) => r.title).join('; '),
+        hours_recovered_per_year: report.annualHours || undefined,
+        estimated_annual_value: report.annualHours ? fmtMoney(report.annualValue) : undefined,
+        estimated_event_capacity: report.capacity || undefined,
         hourly_rate: `$${HOURLY_RATE}/hour`,
         message: summary,
       });
@@ -1502,8 +1384,8 @@ function DiagnosticFunnel({ prefill }) {
         </h3>
         <p className="mt-3 max-w-md text-zinc-400">
           {status === 'success'
-            ? 'Your diagnostic dossier has been transmitted to Scrimmage Productions LLC. We will review your bottleneck analysis and reach out within 1 business day.'
-            : 'Your email app opened with your diagnostic pre-filled. Hit send and we will reach out within 1 business day.'}
+            ? 'Your diagnostic has been sent. I will review it and reach out within 1 business day with next steps.'
+            : 'Your email app opened with your diagnostic pre-filled. Hit send and I will reach out within 1 business day.'}
         </p>
         <SecondaryButton onClick={reset} className="mt-8 min-h-[44px]">
           Start a new diagnostic
@@ -1512,6 +1394,13 @@ function DiagnosticFunnel({ prefill }) {
     );
   }
 
+  const tiles = [
+    report.annualHours && { label: 'Hours saved per year', value: report.annualHours.toLocaleString() },
+    report.annualHours && { label: 'Estimated value per year', value: fmtMoney(report.annualValue) },
+    report.capacity && { label: 'Event capacity unlocked', value: `~${report.capacity.toLocaleString()}` },
+    hasTrack(form, 'web') && { label: 'Page-load target', value: '< 1s' },
+  ].filter(Boolean);
+
   return (
     <div ref={topRef} className="scroll-mt-20">
       <StepIndicator step={step} />
@@ -1519,7 +1408,7 @@ function DiagnosticFunnel({ prefill }) {
       <div key={step} className="sp-fade-in mt-8">
         {step === 0 && (
           <>
-            <StepHeading title="Let's start with the basics." sub="Where can we send your customized diagnostic report?" />
+            <StepHeading title="Let's start with the basics." sub="Where should I send your diagnostic report?" />
             <input
               type="checkbox"
               name="botcheck"
@@ -1585,11 +1474,35 @@ function DiagnosticFunnel({ prefill }) {
 
         {step === 1 && (
           <>
-            <StepHeading
-              title="Tell us about your business."
-              sub="This helps us understand your operational scale and current volume."
-            />
+            <StepHeading title="What do you need?" sub="Pick everything that applies. Each one adds its own section to your report." />
             <div className="space-y-8">
+              <fieldset id="tracks" tabIndex={-1} className="outline-none" aria-describedby={errors.tracks ? 'tracks-err' : undefined}>
+                <legend className="mb-3 text-sm font-medium text-zinc-300">Areas (select all that apply)</legend>
+                <div role="group" className="grid gap-2 sm:grid-cols-2">
+                  {TRACKS.map((t) => {
+                    const Icon = t.icon;
+                    const on = form.tracks.includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggle('tracks', t.id)}
+                        className={`flex min-h-[44px] items-start gap-3 rounded-2xl p-4 text-left transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                          on ? 'bg-zinc-800 ring-1 ring-cyan-500' : 'bg-zinc-800/60 hover:bg-zinc-800'
+                        }`}>
+                        <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-400'}`} />
+                        <span className="flex-1">
+                          <span className="block text-[15px] font-medium text-white">{t.label}</span>
+                          <span className="mt-0.5 block text-sm leading-snug text-zinc-500">{t.question}</span>
+                        </span>
+                        {on && <CheckCircle2 className="h-5 w-5 shrink-0 text-cyan-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <FieldError id="tracks">{errors.tracks}</FieldError>
+              </fieldset>
               <PillGroup id="industry" label="Industry / Business Type" error={errors.industry}>
                 {INDUSTRIES.map((o) => (
                   <Pill key={o} selected={form.industry === o} onClick={() => set('industry', o)}>
@@ -1604,94 +1517,116 @@ function DiagnosticFunnel({ prefill }) {
                   </Pill>
                 ))}
               </PillGroup>
-              <PillGroup id="volume" label="Client / Customer Volume" error={errors.volume}>
-                {CLIENT_VOLUMES.map((o) => (
-                  <Pill key={o} selected={form.volume === o} onClick={() => set('volume', o)}>
-                    {o}
-                  </Pill>
-                ))}
-              </PillGroup>
-              <PillGroup id="tools" label="Core Tools in Use (select all that apply)" multi error={errors.tools}>
-                {CORE_TOOLS.map((o) => (
-                  <Pill key={o} multi selected={form.tools.includes(o)} onClick={() => toggle('tools', o)}>
-                    {o}
-                  </Pill>
-                ))}
-              </PillGroup>
             </div>
           </>
         )}
 
         {step === 2 && (
           <>
-            <StepHeading
-              title="Where is the friction?"
-              sub="Select the primary bottlenecks costing you time, energy, and revenue."
-            />
-            <div className="space-y-8">
-              <fieldset id="pains" tabIndex={-1} className="outline-none" aria-describedby={errors.pains ? 'pains-err' : undefined}>
-                <legend className="mb-3 text-sm font-medium text-zinc-300">
-                  What stresses you the most on a daily basis? (select all that apply)
-                </legend>
-                <div role="group" className="grid gap-2 sm:grid-cols-2">
-                  {PAIN_POINTS.map((p) => {
-                    const Icon = p.icon;
-                    const on = form.pains.includes(p.id);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => toggle('pains', p.id)}
-                        className={`flex min-h-[44px] items-start gap-3 rounded-2xl p-4 text-left transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-                          on ? 'bg-zinc-800 ring-1 ring-cyan-500' : 'bg-zinc-800/60 hover:bg-zinc-800'
-                        }`}>
-                        <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-cyan-500' : 'text-zinc-400'}`} />
-                        <span className="flex-1">
-                          <span className="block text-[15px] font-medium text-white">{p.label}</span>
-                          <span className="mt-0.5 block text-sm leading-snug text-zinc-500">{p.detail}</span>
-                        </span>
-                        {on && <CheckCircle2 className="h-5 w-5 shrink-0 text-cyan-500" />}
-                      </button>
-                    );
-                  })}
+            <StepHeading title="Scope it out." sub="A few specifics for each area, so your report is built on real numbers." />
+            <div className="space-y-4">
+              {hasTrack(form, 'web') && (
+                <ScopeBlock icon={Code2} title="Web & App Development">
+                  <PillGroup id="platform" label="What does your site run on today?" error={errors.platform}>
+                    {PLATFORMS.map((o) => (
+                      <Pill key={o} selected={form.platform === o} onClick={() => set('platform', o)}>
+                        {o}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                  <PillGroup id="webGoal" label="Main goal for the build" error={errors.webGoal}>
+                    {WEB_GOALS.map((o) => (
+                      <Pill key={o} selected={form.webGoal === o} onClick={() => set('webGoal', o)}>
+                        {o}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                </ScopeBlock>
+              )}
+
+              {hasTrack(form, 'automation') && (
+                <ScopeBlock icon={Bot} title="AI & Workflow Automation">
+                  <PillGroup id="leadSources" label="Where do your leads come from? (select all)" multi error={errors.leadSources}>
+                    {LEAD_SOURCES.map((o) => (
+                      <Pill key={o} multi selected={form.leadSources.includes(o)} onClick={() => toggle('leadSources', o)}>
+                        {o}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                </ScopeBlock>
+              )}
+
+              {hasTrack(form, 'consulting') && (
+                <ScopeBlock icon={Target} title="Business & Operational Consulting">
+                  <PillGroup id="pains" label="Where is the friction? (select all)" multi error={errors.pains}>
+                    {PAINS.map((o) => (
+                      <Pill key={o} multi selected={form.pains.includes(o)} onClick={() => toggle('pains', o)}>
+                        {o}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                </ScopeBlock>
+              )}
+
+              {needsHours(form) && (
+                <div className="rounded-2xl bg-zinc-950 p-5 sm:p-6">
+                  <label htmlFor="hours" className="flex items-center justify-between gap-3 text-sm font-medium text-zinc-300">
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-zinc-400" /> Hours lost per week to manual busywork
+                    </span>
+                    <span className="text-[15px] tabular-nums text-white">{hoursLabel} hrs</span>
+                  </label>
+                  <RangeSlider id="hours" value={form.hours} min={2} max={40} onChange={(v) => set('hours', v)} />
                 </div>
-                <FieldError id="pains">{errors.pains}</FieldError>
-              </fieldset>
+              )}
 
-              <div>
-                <label htmlFor="hours" className="flex items-center justify-between gap-3 text-sm font-medium text-zinc-300">
-                  <span className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-zinc-400" /> Estimated hours lost per week to repetitive busywork
-                  </span>
-                  <span className="text-[15px] tabular-nums text-white">{form.hours >= 40 ? '40+' : form.hours} hrs</span>
-                </label>
-                <RangeSlider id="hours" value={form.hours} min={2} max={40} onChange={(v) => set('hours', v)} />
-              </div>
+              {hasTrack(form, 'events') && (
+                <ScopeBlock icon={Globe} title="Event Production & Global Ops">
+                  <PillGroup id="eventType" label="Type of event" error={errors.eventType}>
+                    {EVENT_TYPES.map((o) => (
+                      <Pill key={o} selected={form.eventType === o} onClick={() => set('eventType', o)}>
+                        {o}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                  <PillGroup id="attendees" label="Expected attendees (per city)" error={errors.attendees}>
+                    {ATTENDEES.map((o) => (
+                      <Pill key={o.label} selected={form.attendees === o.label} onClick={() => set('attendees', o.label)}>
+                        {o.label}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                  <PillGroup id="cities" label="How many cities?" error={errors.cities}>
+                    {CITY_COUNTS.map((o) => (
+                      <Pill key={o.label} selected={form.cities === o.label} onClick={() => set('cities', o.label)}>
+                        {o.label}
+                      </Pill>
+                    ))}
+                  </PillGroup>
+                </ScopeBlock>
+              )}
 
-              <PillGroup id="goal" label="What does success look like for your business in 6 months?" error={errors.goal}>
-                {GOALS.map((o) => (
-                  <Pill key={o} selected={form.goal === o} onClick={() => set('goal', o)}>
-                    {o}
-                  </Pill>
-                ))}
-              </PillGroup>
-
-              <div>
-                <label htmlFor="notes" className="mb-2 block text-sm font-medium text-zinc-300">
-                  {form.goal === 'Something else' ? 'Describe your goal' : 'Anything else we should know? (optional)'}
-                </label>
-                <textarea
-                  id="notes"
-                  rows={3}
-                  value={form.notes}
-                  onChange={(e) => set('notes', e.target.value)}
-                  placeholder="For example: we want to stop losing quotes in email."
-                  aria-invalid={!!errors.notes}
-                  aria-describedby={errors.notes ? 'notes-err' : undefined}
-                  className={`${INPUT_CLS} resize-y ${errors.notes ? 'ring-2 ring-red-500/70' : ''}`}
-                />
-                <FieldError id="notes">{errors.notes}</FieldError>
+              <div className="space-y-6 pt-4">
+                <PillGroup id="timeline" label="When do you want to start?" error={errors.timeline}>
+                  {TIMELINES.map((o) => (
+                    <Pill key={o} selected={form.timeline === o} onClick={() => set('timeline', o)}>
+                      {o}
+                    </Pill>
+                  ))}
+                </PillGroup>
+                <div>
+                  <label htmlFor="notes" className="mb-2 block text-sm font-medium text-zinc-300">
+                    Anything else I should know? (optional)
+                  </label>
+                  <textarea
+                    id="notes"
+                    rows={3}
+                    value={form.notes}
+                    onChange={(e) => set('notes', e.target.value)}
+                    placeholder="Links, deadlines, budget range, the thing that keeps breaking..."
+                    className={`${INPUT_CLS} resize-y`}
+                  />
+                </div>
               </div>
             </div>
           </>
@@ -1701,77 +1636,68 @@ function DiagnosticFunnel({ prefill }) {
           <div>
             <p className="text-sm font-medium text-zinc-500">Your Diagnostic Report</p>
             <h3 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-              Operational Assessment for {form.company}
+              Diagnostic Report for {form.company}
             </h3>
             <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-zinc-500">
-              <Building className="h-4 w-4" /> {form.industry} · {teamLabel} · {form.volume}
+              <Building className="h-4 w-4" /> {form.industry} · {teamLabel} · Timeline: {form.timeline}
             </p>
 
-            <h4 className="mt-8 text-sm font-medium text-zinc-300">Identified critical bottlenecks</h4>
-            <ul className="mt-3 space-y-2">
-              {report.bottlenecks.map((b) => (
-                <li key={b.id} className="flex gap-3 rounded-2xl bg-zinc-950 p-4">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
-                  <span>
-                    <span className="block text-[15px] font-medium text-white">{b.label}</span>
-                    <span className="mt-0.5 block text-sm leading-relaxed text-zinc-400">{b.insight}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <h4 className="mt-8 text-sm font-medium text-zinc-300">Recommended Scrimmage action plan</h4>
+            <h4 className="mt-8 text-sm font-medium text-zinc-300">Recommended engagements</h4>
             <ol className="mt-3 space-y-2">
-              {report.recommendations.map((r, i) => {
+              {report.engagements.map((r, i) => {
                 const Icon = r.icon;
                 return (
-                  <li key={r.title} className="flex gap-3 rounded-2xl bg-zinc-950 p-4">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800 text-zinc-300">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span>
-                      <span className="block text-[15px] font-medium text-white">
-                        {i + 1}. {r.title}
+                  <li key={r.title} className="rounded-2xl bg-zinc-950 p-4 sm:p-5">
+                    <div className="flex gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800 text-zinc-300">
+                        <Icon className="h-4 w-4" />
                       </span>
-                      <span className="mt-0.5 block text-sm leading-relaxed text-zinc-400">{r.detail}</span>
-                    </span>
+                      <span>
+                        <span className="block text-[15px] font-medium text-white">
+                          {i + 1}. {r.title}
+                        </span>
+                        <span className="mt-0.5 block text-sm leading-relaxed text-zinc-400">{r.detail}</span>
+                      </span>
+                    </div>
+                    <ul className="mt-3 grid gap-1.5 pl-12 sm:grid-cols-3 sm:gap-3">
+                      {r.points.map((pt) => (
+                        <li key={pt} className="flex gap-2 text-xs leading-snug text-zinc-400">
+                          <Check className="h-3.5 w-3.5 shrink-0 text-zinc-500" /> {pt}
+                        </li>
+                      ))}
+                    </ul>
                   </li>
                 );
               })}
             </ol>
 
-            <h4 className="mt-8 text-sm font-medium text-zinc-300">Estimated annual value recovered</h4>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-2xl bg-zinc-950 p-4 sm:p-5">
-                <p className="text-sm text-zinc-500">Hours saved per year</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-white sm:text-4xl">
-                  {report.annualHours.toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-zinc-950 p-4 sm:p-5">
-                <p className="text-sm text-zinc-500">Estimated value</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-white sm:text-4xl">
-                  {fmtMoney(report.annualValue)}
-                </p>
-              </div>
+            <h4 className="mt-8 text-sm font-medium text-zinc-300">Projected impact</h4>
+            <div className={`mt-3 grid gap-2 ${tiles.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {tiles.map((t) => (
+                <div key={t.label} className="rounded-2xl bg-zinc-950 p-4 sm:p-5">
+                  <p className="text-sm text-zinc-500">{t.label}</p>
+                  <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-white sm:text-4xl">{t.value}</p>
+                </div>
+              ))}
             </div>
             <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-              {form.hours >= 40 ? '40+' : form.hours} hours a week × {WEEKS_PER_YEAR} weeks, valued at an estimated blended
-              cost of ${report.rate}/hour for a team of your size.
+              {report.annualHours
+                ? `${hoursLabel} hours a week × ${WEEKS_PER_YEAR} weeks, valued at an estimated blended cost of $${report.rate}/hour for a team of your size. `
+                : ''}
+              {report.capacity ? `Event capacity uses the midpoint of your attendance and city ranges.` : ''}
             </p>
 
             <div className="mt-8 rounded-2xl bg-zinc-950 p-5">
               <p className="text-sm text-zinc-500">Pricing & engagement model</p>
               <p className="mt-1 text-[15px] font-medium text-white">
-                Standard Consulting & Implementation Rate: <span className="tabular-nums">${HOURLY_RATE} / hour</span>
+                Development, automation & consulting: <span className="tabular-nums">${HOURLY_RATE} / hour</span>
               </p>
-              <p className="mt-2 text-sm text-zinc-400">
-                Engagements are scoped in clear, milestone-driven sprints with zero surprise fees.
-              </p>
+              <p className="mt-1 text-sm text-zinc-400">Event production is scoped and quoted per production.</p>
+              <p className="mt-2 text-sm text-zinc-400">Engagements run in clear, milestone-driven sprints with zero surprise fees.</p>
             </div>
 
             <p className="mt-6 flex items-center gap-2 text-sm text-zinc-500">
-              <Mail className="h-4 w-4 shrink-0" /> We will follow up at {form.email}.
+              <Mail className="h-4 w-4 shrink-0" /> I will follow up at {form.email}.
             </p>
 
             {status === 'error' && (
@@ -1780,7 +1706,7 @@ function DiagnosticFunnel({ prefill }) {
                 <span>
                   {serverError} Your diagnostic was not sent. Try again, or{' '}
                   <a href={buildMailto(mailSubject, summary)} className="underline underline-offset-2 hover:text-red-200">
-                    email it to us directly
+                    email it to me directly
                   </a>
                   .
                 </span>
@@ -1810,7 +1736,7 @@ function DiagnosticFunnel({ prefill }) {
               </>
             ) : (
               <>
-                Register & Submit Diagnostic for Onboarding <ArrowRight className="h-4 w-4" />
+                Submit Diagnostic & Request Kickoff <ArrowRight className="h-4 w-4" />
               </>
             )}
           </PrimaryButton>
@@ -1820,46 +1746,242 @@ function DiagnosticFunnel({ prefill }) {
   );
 }
 
-function Contact({ prefill }) {
+function Diagnostic({ prefill }) {
   return (
-    <section id="contact" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+    <section id="diagnostic" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <SectionHeader
           eyebrow="Free Diagnostic"
-          title="Get your free operational diagnostic."
-          sub="Four short steps. You will see your bottlenecks, a recommended plan and transparent pricing before you submit anything."
+          title="Get your free diagnostic report."
+          sub="Four short steps. Build, automate, fix or produce: you will see a recommended plan, projected impact and transparent pricing before you submit anything."
         />
-
         <Reveal>
           <div className="rounded-3xl border border-white/5 bg-zinc-900 p-6 shadow-2xl sm:p-10">
             <DiagnosticFunnel prefill={prefill} />
           </div>
         </Reveal>
+      </div>
+    </section>
+  );
+}
 
-        <Reveal delay={100}>
-          <ul className="mt-12 grid gap-6 sm:grid-cols-3">
-            {[
-              { icon: Ear, title: 'Listen first', body: 'A focused session on your goals, tools and team, before any recommendation.' },
-              { icon: Search, title: 'Root cause, not symptoms', body: 'We trace friction to its source so fixes stick.' },
-              { icon: ShieldCheck, title: 'Confidential by default', body: 'Your workflows and data stay between us.' },
-            ].map(({ icon: Icon, title, body }) => (
-              <li key={title} className="flex gap-3">
-                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
-                <span>
-                  <span className="block text-[15px] font-medium text-white">{title}</span>
-                  <span className="text-sm text-zinc-400">{body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-10 text-center text-sm text-zinc-500">
-            Prefer email?{' '}
+/* ------------------------------------------------------------------ */
+/*  Contact                                                            */
+/* ------------------------------------------------------------------ */
+
+const EMPTY_MESSAGE = { name: '', email: '', message: '', botcheck: false };
+
+function validateMessage(f) {
+  const e = {};
+  if (f.name.trim().length < 2) e['msg-name'] = 'Please enter your name.';
+  if (!isEmail(f.email)) e['msg-email'] = 'Please enter a valid email.';
+  if (f.message.trim().length < 10) e['msg-body'] = 'Give me a sentence or two (10+ characters).';
+  return e;
+}
+
+function Contact() {
+  const [form, setForm] = useState(EMPTY_MESSAGE);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState(false);
+  const [status, setStatus] = useState('idle'); // idle | loading | success | error | fallback
+  const [serverError, setServerError] = useState('');
+
+  const update = (key) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (touched) setErrors(validateMessage(next));
+      return next;
+    });
+  };
+
+  const mailSubject = `Message from ${SITE_DOMAIN}${form.name ? `: ${form.name}` : ''}`;
+  const mailBody = `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`;
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setTouched(true);
+    const v = validateMessage(form);
+    setErrors(v);
+    if (Object.keys(v).length) {
+      document.getElementById(Object.keys(v)[0])?.focus();
+      return;
+    }
+    if (form.botcheck) return;
+    setStatus('loading');
+    setServerError('');
+    try {
+      await submitToWeb3Forms({
+        subject: mailSubject,
+        from_name: `${SITE_DOMAIN} Contact`,
+        name: form.name,
+        email: form.email,
+        replyto: form.email,
+        message: form.message,
+      });
+      setStatus('success');
+      setForm(EMPTY_MESSAGE);
+      setTouched(false);
+    } catch (err) {
+      if (err.code === 'not-configured') {
+        window.location.assign(buildMailto(mailSubject, mailBody));
+        setStatus('fallback');
+      } else {
+        setServerError(err.message || 'Something went wrong.');
+        setStatus('error');
+      }
+    }
+  };
+
+  const inputCls = (k) => `${INPUT_CLS} min-h-[44px] ${errors[k] ? 'ring-2 ring-red-500/70' : ''}`;
+
+  return (
+    <section id="contact" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+        <div>
+          <SectionHeader
+            center={false}
+            eyebrow="Contact"
+            title="Have something specific in mind?"
+            sub="Skip the diagnostic and send a direct message: a build, an automation, an audit or an event. I reply within 1 business day."
+          />
+          <Reveal delay={100}>
+            <ul className="space-y-5">
+              {[
+                { icon: Zap, title: 'Fast turnaround', body: 'Scoped in days, shipped in milestone sprints.' },
+                { icon: ShieldCheck, title: 'Confidential by default', body: 'Your workflows, data and plans stay between us.' },
+                { icon: Globe, title: 'Remote-first, global reach', body: 'Working across time zones, on-site when the event calls for it.' },
+              ].map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex gap-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-400">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block text-[15px] font-medium text-white">{title}</span>
+                    <span className="text-sm text-zinc-400">{body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="rounded font-medium text-cyan-500 transition-colors duration-200 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
-              {CONTACT_EMAIL}
+              className="mt-8 inline-flex items-center gap-2 rounded-md text-[15px] font-medium text-cyan-500 transition-colors duration-200 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+              <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
             </a>
-          </p>
+          </Reveal>
+        </div>
+
+        <Reveal delay={150} className="h-full">
+          <Card className="h-full p-6 shadow-lg shadow-black/50 sm:p-10">
+            {status === 'success' || status === 'fallback' ? (
+              <div className="sp-fade-in flex min-h-[360px] flex-col items-center justify-center text-center">
+                <span className="sp-pop grid h-16 w-16 place-items-center rounded-full bg-zinc-800">
+                  <Check className="h-8 w-8 text-white" />
+                </span>
+                <h3 className="mt-6 text-2xl font-semibold tracking-tight text-white">
+                  {status === 'success' ? 'Message received.' : 'Almost there.'}
+                </h3>
+                <p className="mt-3 max-w-sm text-zinc-400">
+                  {status === 'success'
+                    ? 'It is in my inbox. Expect a reply within 1 business day.'
+                    : 'Your email app opened with your message pre-filled. Hit send and I will reply within 1 business day.'}
+                </p>
+                <SecondaryButton onClick={() => setStatus('idle')} className="mt-8 min-h-[44px]">
+                  Send another message
+                </SecondaryButton>
+              </div>
+            ) : (
+              <form onSubmit={onSubmit} noValidate className="space-y-5">
+                <input
+                  type="checkbox"
+                  name="botcheck"
+                  checked={form.botcheck}
+                  onChange={update('botcheck')}
+                  className="hidden"
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="msg-name" className="mb-2 block text-sm font-medium text-zinc-300">
+                      Name
+                    </label>
+                    <input
+                      id="msg-name"
+                      value={form.name}
+                      onChange={update('name')}
+                      autoComplete="name"
+                      placeholder="Jordan Rivera"
+                      aria-invalid={!!errors['msg-name']}
+                      aria-describedby={errors['msg-name'] ? 'msg-name-err' : undefined}
+                      className={inputCls('msg-name')}
+                    />
+                    <FieldError id="msg-name">{errors['msg-name']}</FieldError>
+                  </div>
+                  <div>
+                    <label htmlFor="msg-email" className="mb-2 block text-sm font-medium text-zinc-300">
+                      Email
+                    </label>
+                    <input
+                      id="msg-email"
+                      type="email"
+                      value={form.email}
+                      onChange={update('email')}
+                      autoComplete="email"
+                      placeholder="jordan@company.com"
+                      aria-invalid={!!errors['msg-email']}
+                      aria-describedby={errors['msg-email'] ? 'msg-email-err' : undefined}
+                      className={inputCls('msg-email')}
+                    />
+                    <FieldError id="msg-email">{errors['msg-email']}</FieldError>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="msg-body" className="mb-2 block text-sm font-medium text-zinc-300">
+                    Message
+                  </label>
+                  <textarea
+                    id="msg-body"
+                    rows={6}
+                    value={form.message}
+                    onChange={update('message')}
+                    placeholder="What are you building, automating, fixing or producing?"
+                    aria-invalid={!!errors['msg-body']}
+                    aria-describedby={errors['msg-body'] ? 'msg-body-err' : undefined}
+                    className={`${inputCls('msg-body')} resize-y`}
+                  />
+                  <FieldError id="msg-body">{errors['msg-body']}</FieldError>
+                </div>
+
+                {status === 'error' && (
+                  <div role="alert" className="flex items-start gap-3 rounded-2xl bg-red-500/10 p-4 text-sm text-red-300">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      {serverError} Your message was not sent. Try again, or email me directly with the button below.
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
+                  <PrimaryButton type="submit" disabled={status === 'loading'} className="min-h-[44px] flex-1 py-3">
+                    {status === 'loading' ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Sending...
+                      </>
+                    ) : (
+                      <>
+                        Send Message <Send className="h-4 w-4" />
+                      </>
+                    )}
+                  </PrimaryButton>
+                  <a href={buildMailto(mailSubject, mailBody)} className={`${SECONDARY_CLS} min-h-[44px] py-3`}>
+                    <Mail className="h-4 w-4" /> Email me directly
+                  </a>
+                </div>
+                <p className="text-xs text-zinc-500">I only use your details to reply. No newsletters, no list selling.</p>
+              </form>
+            )}
+          </Card>
         </Reveal>
       </div>
     </section>
@@ -1870,7 +1992,7 @@ function Contact({ prefill }) {
 /*  Footer                                                             */
 /* ------------------------------------------------------------------ */
 
-function Footer() {
+function Footer({ onStart }) {
   const [legal, setLegal] = useState(null);
   const footLink =
     'rounded text-sm text-zinc-400 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500';
@@ -1881,8 +2003,8 @@ function Footer() {
           <div>
             <Logo tagline onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-zinc-500">
-              Precision business architecture and automated workflows. We identify operational friction, remove it, and
-              return measurable hours to your team.
+              Full-stack development, AI automation, operations consulting and global event production. Systems that
+              remove drag and scale.
             </p>
           </div>
           <div>
@@ -1902,7 +2024,7 @@ function Footer() {
             <a href={`mailto:${CONTACT_EMAIL}`} className={`mt-4 block break-all ${footLink}`}>
               {CONTACT_EMAIL}
             </a>
-            <PrimaryButton onClick={() => scrollToId('contact')} className="mt-5 px-4 py-2 text-sm">
+            <PrimaryButton onClick={() => onStart()} className="mt-5 px-4 py-2 text-sm">
               Start Free Diagnostic
             </PrimaryButton>
           </div>
@@ -1920,13 +2042,15 @@ function Footer() {
               </button>
             </div>
             {legal === 'privacy'
-              ? 'We collect only what you submit through our forms (name, email, company and message) and use it solely to respond to your inquiry. We do not sell or share your information. Contact us to request deletion at any time.'
-              : 'Content on this site is provided for general information and does not constitute a binding offer. Engagements are governed by a separate written agreement between your organization and Scrimmage Productions LLC.'}
+              ? `${SITE_DOMAIN} collects only what you submit through its forms and uses it solely to respond to your inquiry. Your information is never sold or shared. Email us to request deletion at any time.`
+              : `Content on ${SITE_DOMAIN} is provided for general information and does not constitute a binding offer. Engagements are governed by a separate written agreement with Scrimmage Productions LLC.`}
           </div>
         )}
 
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-white/5 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center">
-          <p>© 2026 Scrimmage Productions LLC. All Rights Reserved.</p>
+          <p>
+            © 2026 Scrimmage Productions LLC · {SITE_DOMAIN}. All Rights Reserved.
+          </p>
           <div className="flex gap-5">
             <button onClick={() => setLegal('privacy')} className="transition-colors duration-200 hover:text-white">
               Privacy Policy
@@ -2066,7 +2190,7 @@ function LoadingScreen({ phase, onSkip }) {
     <div
       role="status"
       aria-live="polite"
-      aria-label={`Loading Scrimmage Productions, ${pct}%`}
+      aria-label={`Loading ${SITE_DOMAIN}, ${pct}%`}
       onClick={onSkip}
       className={`fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center overflow-hidden ${
         bursting ? 'pointer-events-none' : ''
@@ -2145,7 +2269,7 @@ function LoadingScreen({ phase, onSkip }) {
       </div>
 
       <div className={`relative mt-10 flex flex-col items-center gap-1.5 ${bursting ? 'sp-label-out' : ''}`}>
-        <span className="text-sm font-medium tracking-tight text-zinc-400">Scrimmage Productions</span>
+        <span className="text-sm font-medium tracking-tight text-zinc-400">{SITE_DOMAIN}</span>
         <span className="text-xs tabular-nums text-zinc-600">{pct}%</span>
       </div>
     </div>
@@ -2291,10 +2415,10 @@ export default function App() {
     return () => io.disconnect();
   }, []);
 
-  // Every "Start Free Diagnostic" entry point lands on the funnel, pre-selecting a matching pain point.
-  const startDiagnostic = (interest) => {
-    setPrefill({ pain: INTEREST_TO_PAIN[interest], at: Date.now() });
-    scrollToId('contact');
+  // Every "Start Free Diagnostic" entry point lands on the funnel, optionally pre-selecting a service track.
+  const startDiagnostic = (track) => {
+    if (track) setPrefill({ track, at: Date.now() });
+    scrollToId('diagnostic');
   };
 
   return (
@@ -2305,14 +2429,16 @@ export default function App() {
         <div className={loadPhase === 'burst' ? 'sp-reveal' : undefined}>
           <NavBar active={active} />
           <main>
-            <Hero />
-            <Services onRequest={startDiagnostic} />
-            <Diagnostic onRequest={startDiagnostic} />
+            <Hero onStart={startDiagnostic} />
+            <Services onStart={startDiagnostic} />
+            <Events onStart={startDiagnostic} />
+            <CaseStudies />
             <Playbook />
-            <RoiCalculator />
-            <Contact prefill={prefill} />
+            <RoiCalculator onStart={startDiagnostic} />
+            <Diagnostic prefill={prefill} />
+            <Contact />
           </main>
-          <Footer />
+          <Footer onStart={startDiagnostic} />
         </div>
       </RevealReadyContext.Provider>
     </div>
