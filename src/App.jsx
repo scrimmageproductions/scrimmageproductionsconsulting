@@ -156,6 +156,21 @@ const GLYPHS = {
 };
 
 const TITLE = 'SCRIMMY';
+
+// Boot sequence on first entry (per session): a scanline sweeps the title from 100ms to 500ms, each
+// column of blocks ignites from faint blue to white as it passes, then the hero text fades in at 600ms.
+const BOOT_KEY = 'scrimmy_assembled';
+const BOOT_SCAN_START = 100;
+const BOOT_SCAN_SPAN = 340; // ignition delay of the last column, after the start
+const BOOT_TOTAL_MS = 950;
+const shouldBoot = () => {
+  if (typeof window === 'undefined' || prefersReducedMotion() || window.scrollY > 0) return false;
+  try {
+    return sessionStorage.getItem(BOOT_KEY) === null;
+  } catch {
+    return false;
+  }
+};
 const CELL = 10;
 const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
@@ -192,12 +207,13 @@ const TITLE_BLOCKS = TITLE.split('').flatMap((ch, li) =>
         on: on === '1',
         t: (BLOCK_START + (seed / 17) * BLOCK_SPREAD).toFixed(3),
         d: 40 + ((col * 11 + y * 3) % 9) * 14,
+        ig: `${Math.round(BOOT_SCAN_START + (col / (TITLE_COLS - 1)) * BOOT_SCAN_SPAN)}ms`,
       };
     }),
   ),
 );
 
-function DigitalTitle() {
+function DigitalTitle({ booting = false }) {
   return (
     <svg viewBox={`0 0 ${TITLE_COLS * CELL} ${7 * CELL}`} className="h-auto w-full overflow-visible" role="img" aria-label="SCRIMMY">
       {TITLE_BLOCKS.map((b) =>
@@ -210,8 +226,8 @@ function DigitalTitle() {
             height={CELL - 1.5}
             rx={1}
             fill="#ffffff"
-            className="sp-block"
-            style={{ '--t': b.t, '--d': b.d }}
+            className={booting ? 'sp-block sp-ignite' : 'sp-block'}
+            style={{ '--t': b.t, '--d': b.d, '--ig': b.ig }}
           />
         ) : (
           <rect key={b.key} x={b.x + 4} y={b.y + 4} width={2} height={2} fill="#1d4ed8" opacity={0.35} />
@@ -903,9 +919,22 @@ function Hero() {
   const textRefs = useRef([]);
   const cueRef = useRef(null);
   const globeRef = useRef(null);
+  const [booting, setBooting] = useState(shouldBoot);
   const addText = (el) => {
     if (el && !textRefs.current.includes(el)) textRefs.current.push(el);
   };
+
+  // Mark the boot as seen for this session, then drop the boot classes once it has finished.
+  useEffect(() => {
+    if (!booting) return undefined;
+    try {
+      sessionStorage.setItem(BOOT_KEY, 'true');
+    } catch {
+      // Storage unavailable: the sequence may play again next load.
+    }
+    const t = setTimeout(() => setBooting(false), BOOT_TOTAL_MS);
+    return () => clearTimeout(t);
+  }, [booting]);
 
   useEffect(() => {
     if (prefersReducedMotion()) return undefined;
@@ -972,7 +1001,9 @@ function Hero() {
         {/* Dot globe, drawn behind the title as it dissolves */}
         <canvas ref={globeRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
-          <p ref={addText} className="flex items-center gap-2.5 will-change-[opacity,transform]">
+          <p
+            ref={addText}
+            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-in' : ''}`}>
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -980,11 +1011,17 @@ function Hero() {
             <Mono className="text-blue-400">SYSTEM_ONLINE // {SITE_DOMAIN}</Mono>
           </p>
 
-          <h1 className="mt-8">
-            <DigitalTitle />
+          <h1 className="relative mt-8">
+            <DigitalTitle booting={booting} />
+            {booting && (
+              <span
+                aria-hidden="true"
+                className="sp-scan pointer-events-none absolute -bottom-3 -top-3 w-[2px] bg-blue-400 shadow-[0_0_12px_#3b82f6,0_0_28px_rgba(59,130,246,0.6)]"
+              />
+            )}
           </h1>
 
-          <div ref={addText} className="will-change-[opacity,transform]">
+          <div ref={addText} className={`will-change-[opacity,transform] ${booting ? 'sp-boot-in' : ''}`}>
             <ul className="mt-8 flex flex-wrap gap-2" aria-label="Also known as">
               {ALIASES.map((a) => (
                 <li key={a}>
@@ -1021,7 +1058,7 @@ function Hero() {
         <button
           ref={cueRef}
           onClick={() => scrollToId('about')}
-          className={`absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
+          className={`${booting ? 'sp-boot-in' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
           <Mono className="text-[10px]">Scroll</Mono>
           <ChevronDown className="sp-bob h-4 w-4" />
@@ -1449,69 +1486,6 @@ function Footer() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Pre-flight loader                                                  */
-/* ------------------------------------------------------------------ */
-
-const LOADER_MS = 700; // progress fill
-const LOADER_FADE_MS = 400; // hand-off fade
-
-function InitialLoader({ fading }) {
-  const [pct, setPct] = useState(0);
-
-  useEffect(() => {
-    const start = performance.now();
-    let raf = 0;
-    const tick = (now) => {
-      const t = Math.min((now - start) / LOADER_MS, 1);
-      setPct(Math.round((1 - (1 - t) ** 3) * 100)); // ease-out cubic
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label={`Loading ${SITE_DOMAIN}`}
-      className={`fixed inset-0 z-[100] flex flex-col bg-[#000000] transition-opacity ease-out ${
-        fading ? 'pointer-events-none opacity-0' : 'opacity-100'
-      }`}
-      style={{ transitionDuration: `${LOADER_FADE_MS}ms` }}>
-      <div className="flex h-14 items-center justify-between gap-4 border-b border-zinc-800/80 px-4 sm:px-6 lg:px-8">
-        <span className="font-mono text-[11px] tracking-wider text-zinc-500">[ SCRIMMY.XYZ // SYSTEM_INIT ]</span>
-        <span className="hidden font-mono text-[11px] tracking-wider text-zinc-600 sm:inline">QUAD CITIES, USA // 2026</span>
-      </div>
-
-      <div className="flex flex-1 items-center px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-6xl">
-          {/* Bounding frame roughly the size of the hero title, with + reticles on the corners */}
-          <div aria-hidden="true" className="relative border border-zinc-900 p-5 sm:p-8">
-            {['-left-[5px] -top-[9px]', '-right-[5px] -top-[9px]', '-bottom-[9px] -left-[5px]', '-bottom-[9px] -right-[5px]'].map((c) => (
-              <span key={c} className={`absolute font-mono text-sm leading-none text-blue-500/60 ${c}`}>
-                +
-              </span>
-            ))}
-            <div className="sp-bone aspect-[41/7] w-full border border-zinc-800 bg-zinc-900" />
-          </div>
-
-          <div className="mt-6 flex items-center gap-4">
-            <div aria-hidden="true" className="h-[2px] flex-1 overflow-hidden bg-zinc-900">
-              {/* Width comes from the same per-frame value as the counter, so the two never drift apart. */}
-              <div className="h-full bg-blue-500 shadow-[0_0_12px_#3b82f6]" style={{ width: `${pct}%` }} />
-            </div>
-            <span className="whitespace-nowrap font-mono text-[11px] tabular-nums tracking-wider text-zinc-400">
-              INITIALIZING UI... [{String(pct).padStart(3, '\u2007')}%]
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  App                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -1537,6 +1511,18 @@ const GLOBAL_CSS = `
   .sp-breathe { animation: sp-breathe 3.2s ease-in-out infinite; }
   @keyframes sp-beam { from { transform: translateX(-100%); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(300%); opacity: 0; } }
   .sp-beam { animation: sp-beam 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
+  /* Hero boot: blocks ignite column by column (delay --ig), the scanline sweeps, then text fades in.
+     The text fade only fills backwards, so once it ends the scroll-driven inline opacity takes over again. */
+  @keyframes sp-ignite {
+    from { fill: #1d4ed8; fill-opacity: 0.3; }
+    55% { fill: #93c5fd; fill-opacity: 1; }
+    to { fill: #ffffff; fill-opacity: 1; }
+  }
+  .sp-ignite { animation: sp-ignite 180ms ease-out var(--ig) both; }
+  @keyframes sp-scan { 0% { left: 0%; opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+  .sp-scan { animation: sp-scan 400ms linear 100ms both; }
+  @keyframes sp-boot-in { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+  .sp-boot-in { animation: sp-boot-in 300ms ease-out 600ms backwards; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
@@ -1554,27 +1540,6 @@ const GLOBAL_CSS = `
 
 export default function App() {
   const [active, setActive] = useState('');
-  // run → fade → done. Reduced-motion visitors skip straight to the site.
-  const [loader, setLoader] = useState(() => (prefersReducedMotion() ? 'done' : 'run'));
-
-  useEffect(() => {
-    if (loader === 'done') return undefined;
-    // Lock scrolling on <html>: the mobile menu already manages <body> overflow, and the two would clash.
-    const root = document.documentElement;
-    root.style.overflow = 'hidden';
-    const fade = setTimeout(() => {
-      setLoader('fade');
-      root.style.overflow = '';
-    }, LOADER_MS + 80);
-    const done = setTimeout(() => setLoader('done'), LOADER_MS + 80 + LOADER_FADE_MS);
-    return () => {
-      clearTimeout(fade);
-      clearTimeout(done);
-      root.style.overflow = '';
-    };
-    // Runs once on mount; the timers move it through its phases.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Highlight the nav link for the section in view.
   useEffect(() => {
@@ -1602,7 +1567,6 @@ export default function App() {
         <Contact />
       </main>
       <Footer />
-      {loader !== 'done' && <InitialLoader fading={loader === 'fade'} />}
     </div>
   );
 }
