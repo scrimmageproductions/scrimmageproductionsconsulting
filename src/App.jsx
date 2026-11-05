@@ -559,6 +559,40 @@ function FrameCard({ children }) {
   );
 }
 
+// Loading placeholder with the same frame and padding as FrameCard. Not used on the page yet
+// (nothing loads asynchronously); exported for <Suspense> fallbacks or future data-driven cards.
+// Bones share one calm dark-blue sweep; it stops under reduced motion.
+const BONE_BORDER = 'border border-[#1f1f23]'; // between zinc-800 and zinc-900
+
+export function CardSkeleton({ tags = 3 }) {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Loading"
+      className="relative flex h-full min-h-[22rem] flex-col border border-zinc-800/80 bg-zinc-950/70 p-7 sm:p-8">
+      {CORNERS.map((c) => (
+        <span key={c} aria-hidden="true" className={`pointer-events-none absolute h-3 w-3 border-zinc-700 ${c}`} />
+      ))}
+      <div aria-hidden="true" className="flex h-full flex-1 flex-col">
+        <span className="font-mono text-[10px] tracking-wider text-zinc-600">[ LOADING ]</span>
+        <div className={`sp-bone mt-6 h-6 w-3/5 bg-zinc-900 ${BONE_BORDER}`} />
+        <div className="mb-6 mt-5 space-y-2.5">
+          <div className={`sp-bone h-3.5 w-full bg-zinc-900/70 ${BONE_BORDER}`} />
+          <div className={`sp-bone h-3.5 w-full bg-zinc-900/70 ${BONE_BORDER}`} />
+          <div className={`sp-bone h-3.5 w-2/3 bg-zinc-900/70 ${BONE_BORDER}`} />
+        </div>
+        <div className="mt-auto flex flex-wrap gap-1.5 border-t border-zinc-800/60 pt-6">
+          {Array.from({ length: tags }, (_, i) => (
+            <div key={i} className={`sp-bone h-6 w-20 rounded-sm bg-zinc-900 ${BONE_BORDER}`} />
+          ))}
+        </div>
+      </div>
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
+
 function Chip({ children }) {
   return (
     <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-[11px] text-zinc-400">
@@ -1440,9 +1474,17 @@ const GLOBAL_CSS = `
   .sp-breathe { animation: sp-breathe 3.2s ease-in-out infinite; }
   @keyframes sp-beam { from { transform: translateX(-100%); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(300%); opacity: 0; } }
   .sp-beam { animation: sp-beam 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
+  /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
+  @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
+  .sp-bone {
+    background-image: linear-gradient(90deg, transparent, rgba(23,37,84,0.4) 40%, rgba(59,130,246,0.1) 50%, rgba(23,37,84,0.4) 60%, transparent);
+    background-size: 50% 100%;
+    background-repeat: no-repeat;
+    animation: sp-bone 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .sp-ping, .sp-bob, .sp-breathe { animation: none; }
+    .sp-ping, .sp-bob, .sp-breathe, .sp-bone { animation: none; }
     .sp-beam { animation: none; opacity: 0; }
   }
 `;
