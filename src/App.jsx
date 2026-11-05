@@ -920,7 +920,11 @@ function About() {
 
           <Reveal delay={100}>
             <h2 className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Builder. Operator. Organizer.
+              Builder. Operator.{' '}
+              {/* Terminal-style highlight: the blue stays in the frame and fill, the word stays pure white */}
+              <span className="mt-2 inline-block rounded-sm border border-blue-500/30 bg-blue-950/40 px-2 text-white">
+                Organizer.
+              </span>
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-slate-400">
               I&apos;m Scrimmy, also known as Young Scrimmage and Don Scrimmy Jon, based in the Quad Cities. I bring
