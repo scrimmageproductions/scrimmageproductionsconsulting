@@ -51,16 +51,24 @@ const ECOSYSTEMS = [
   {
     icon: Pizza,
     org: 'PizzaDAO',
-    role: 'Core Organizer',
-    body: 'Running the Global Pizza Party on Bitcoin Pizza Day (May 22) in 100+ cities and 50+ countries. I coordinate thousand-attendee logistics, local indie pizzeria deals and global sponsor activations: decentralizing joy.',
-    points: ['Global Pizza Party, 100+ cities', 'Indie pizzeria partnerships', 'Global sponsor activations'],
+    role: 'Director of Operations',
+    body: 'Started as a note-taker and climbed the ranks to lead operations for the largest global pizza party in existence. Spearheaded multi-timezone logistics, international communications, and cross-border marketing to coordinate simultaneous celebrations across 400+ cities and 100+ countries—onboarding the world by decentralizing joy.',
+    points: [
+      '400+ cities & 100+ countries coordinated',
+      'Global run-of-show, comms & marketing lead',
+      'International venue & indie pizzeria logistics',
+    ],
   },
   {
     icon: Mountain,
-    org: 'Avalanche',
-    role: 'Avax Team · Ecosystem Support',
-    body: 'Direct ecosystem support, working with global networks of builders and projects to integrate subnets, tokenomics and blockchain infrastructure.',
-    points: ['Builder & project support', 'Subnets and tokenomics', 'Blockchain infrastructure'],
+    org: 'Avax Team1 USA',
+    role: 'Collaborator',
+    body: 'Active collaborator pushing the Avalanche ecosystem forward. Fresh to the team, yet already architecting and executing high-impact, scaled cross-community partnerships that expand builder mindshare and drive strategic value across Avax Team1.',
+    points: [
+      'High-impact ecosystem collaborations',
+      'Avalanche community & network expansion',
+      'Builder activation & strategic partnerships',
+    ],
   },
   {
     icon: Landmark,
