@@ -965,11 +965,19 @@ function About() {
           <Reveal delay={100}>
             <h2 className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Builder. Operator.{' '}
-              {/* Terminal-style highlight: the blue stays in the frame and fill, the word stays pure white */}
-              <span className="mt-2 inline-block rounded-sm border border-blue-500/30 bg-blue-950/40 px-2 text-white">
-                Organizer.
+              {/* The cursor sits outside the gradient word (a text-clipped background would hide it) and
+                  the pair never wraps apart. The small bottom padding keeps the "g" descender inside the gradient. */}
+              <span className="inline-block whitespace-nowrap">
+                <span className="-mb-[0.12em] inline-block bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text pb-[0.12em] text-transparent">
+                  Organizer.
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="ml-1.5 inline-block h-[0.85em] w-2.5 animate-pulse bg-blue-500 align-baseline shadow-[0_0_10px_rgba(59,130,246,0.8)] motion-reduce:animate-none"
+                />
               </span>
             </h2>
+            <div aria-hidden="true" className="mt-4 max-w-md border-b border-blue-500/20" />
             <p className="mt-5 text-lg leading-relaxed text-slate-400">
               I&apos;m Scrimmy, also known as Young Scrimmage and Don Scrimmy Jon, based in the Quad Cities. I bring
               people together in real life, help builders ship on-chain, and organize communities around better
