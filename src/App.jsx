@@ -1672,15 +1672,15 @@ const GLOBAL_CSS = `
   /* Phosphor static over the hero for strike 1 only (70ms, gone at the recoil): two layers of thresholded
      SVG noise, sparse white and denser blue, jumping position every ~23ms so the grain crackles. */
   @keyframes sp-boot-static {
-    0% { opacity: 1; background-position: 0 0, 0 0; }
-    33% { opacity: 1; background-position: 37px 11px, -19px 29px; }
-    66%, 100% { opacity: 1; background-position: -13px 41px, 23px -7px; }
+    0% { opacity: 0.5; background-position: 0 0, 0 0; }
+    33% { opacity: 0.5; background-position: 37px 11px, -19px 29px; }
+    66%, 100% { opacity: 0.5; background-position: -13px 41px, 23px -7px; }
   }
   .sp-boot-static {
     opacity: 0;
     background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 14 -10.5'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E"),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23 0 0 0 0 0.51 0 0 0 0 0.96 0 0 0 12 -7'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E");
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 15 -11.5'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23 0 0 0 0 0.51 0 0 0 0 0.96 0 0 0 13 -9'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E");
     animation: sp-boot-static 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
   }
   /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
