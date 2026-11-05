@@ -160,10 +160,12 @@ const TITLE = 'SCRIMMY';
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
 //                +0-350ms     coordinate hold: 30% opacity under a dot-matrix grid, greyscale, high contrast
-//                +350-420ms   strike 1: 3px chromatic split, brightness 1.4 / contrast 1.25, 16px blue glow on
-//                             the pills, -1.2deg skew; SCRIMMY blooms blue and eases back by +450ms
+//                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, an arc surge of
+//                             brightness 1.6 / contrast 1.4 for 40ms then 1.4 / 1.25, and a sync jitter of
+//                             +3px (30ms) then -2px (40ms); the hero grid flashes blue for 60ms and SCRIMMY
+//                             blooms blue, easing back by +450ms
 //                +420-470ms   sync recoil: 40% dot-matrix, no shadow
-//                +470-560ms   strike 2 / lock: 1px split, no skew, blue rim outline, dense dot-matrix
+//                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
 //                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
 //                             overdrive ease out
 //                +750-1000ms  tight 8px rim glow on the badges and primary buttons
@@ -1085,6 +1087,13 @@ function Hero({ booting }) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
         />
+        {/* Same grid in electric blue at 0.25, flashed for 60ms by the first power strike */}
+        {booting && (
+          <div
+            aria-hidden="true"
+            className="sp-boot-gridpulse pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.25)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
+          />
+        )}
         {/* Dot globe, drawn behind the title as it dissolves */}
         <canvas ref={globeRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
@@ -1606,9 +1615,11 @@ const GLOBAL_CSS = `
     0% { opacity: 0; }
     0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
     ${stampAt(350)} {
-      opacity: 1; filter: brightness(1.4) contrast(1.25); transform: skewX(-1.2deg);
+      opacity: 1; filter: brightness(1.6) contrast(1.4); transform: translateX(3px);
       text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff;
     }
+    ${stampAt(380)} { transform: translateX(-2px); }
+    ${stampAt(390)} { filter: brightness(1.4) contrast(1.25); }
     ${stampAt(420)} { opacity: 0.4; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
     ${stampAt(470)}, ${stampAt(560)} {
       opacity: 1; filter: brightness(1.15) contrast(1.1); transform: none;
@@ -1647,6 +1658,9 @@ const GLOBAL_CSS = `
     ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
     ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
   }
+  /* The hero grid lines flash electric blue for 60ms on strike 1; hidden outside the animation. */
+  @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
+  .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 60ms step-end ${BOOT_REVEAL_MS + 350}ms; }
   /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
   @keyframes sp-boot-title {
     from { filter: brightness(1.3) drop-shadow(0 0 12px #3b82f6); }
