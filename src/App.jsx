@@ -52,22 +52,22 @@ const ECOSYSTEMS = [
     icon: Pizza,
     org: 'PizzaDAO',
     role: 'Core Organizer',
-    body: 'A core organizer and key face of PizzaDAO. I orchestrate the Global Pizza Party for Bitcoin Pizza Day (May 22) across 100+ cities in 50+ countries, using Web3 to onboard everyday people by decentralizing joy.',
-    points: ['Global Pizza Party, 100+ cities', 'Local pizzeria partnerships', 'Everyday onboarding to Web3'],
+    body: 'Running the Global Pizza Party on Bitcoin Pizza Day (May 22) in 100+ cities and 50+ countries. I coordinate thousand-attendee logistics, local indie pizzeria deals and global sponsor activations: decentralizing joy.',
+    points: ['Global Pizza Party, 100+ cities', 'Indie pizzeria partnerships', 'Global sponsor activations'],
   },
   {
     icon: Mountain,
     org: 'Avalanche',
     role: 'Avax Team · Ecosystem Support',
-    body: 'Direct ecosystem support for a global network of builders, developers and projects integrating tokenomics, subnets and high-throughput blockchain infrastructure.',
-    points: ['Builder & project support', 'Tokenomics and subnets', 'High-throughput infrastructure'],
+    body: 'Direct ecosystem support, working with global networks of builders and projects to integrate subnets, tokenomics and blockchain infrastructure.',
+    points: ['Builder & project support', 'Subnets and tokenomics', 'Blockchain infrastructure'],
   },
   {
     icon: Landmark,
     org: 'Stand With Crypto',
     role: 'Iowa Chapter President',
-    body: 'Organizing the crypto grassroots community in Iowa: running voter education and advocating for clear, sensible digital asset policy.',
-    points: ['Grassroots organizing', 'Voter education', 'Digital asset policy advocacy'],
+    body: 'Grassroots community mobilization across Iowa, voter education, and advocacy for clearer digital asset policy.',
+    points: ['Grassroots mobilization', 'Voter education', 'Digital asset policy advocacy'],
   },
 ];
 
@@ -76,22 +76,22 @@ const SERVICES = [
     n: '01',
     icon: CalendarRange,
     title: 'Event Planning & Global Production',
-    body: 'High-stakes run-of-show design, multi-city logistics, venue and indie vendor deals, sponsor integrations, and crypto-native ticketing.',
-    tags: ['Run-of-show', 'Multi-city', 'Vendors & venues', 'Sponsors', 'Ticketing'],
+    body: 'High-stakes run-of-shows, multi-city logistics, venue and vendor deals, and crypto-native ticketing.',
+    tags: ['Run-of-show', 'Multi-city', 'Venues & vendors', 'Ticketing'],
   },
   {
     n: '02',
     icon: Megaphone,
     title: 'Marketing & Business Consulting',
-    body: 'Operational friction audits, grassroots community flywheels, go-to-market strategy, workflow automation, and tech stack triage.',
-    tags: ['Ops audits', 'Community', 'GTM', 'Automation', 'Stack triage'],
+    body: 'Operations and campaign metrics, grassroots community building, tech audits, and pipeline automation.',
+    tags: ['Ops metrics', 'Campaigns', 'Community', 'Tech audits', 'Automation'],
   },
   {
     n: '03',
     icon: Code2,
     title: 'High-Velocity Website Development',
-    body: 'Bespoke Vite + React 19 builds, custom domain routing, local SEO architecture, and automated lead-to-calendar pipelines. No bloated Wix or Squarespace templates.',
-    tags: ['Vite', 'React 19', 'Local SEO', 'Domains', 'Lead pipelines'],
+    body: 'Custom Vite + React 19 builds, SEO tuning, contact forms, and lead capture. Sub-second performance.',
+    tags: ['Vite', 'React 19', 'SEO', 'Lead capture'],
   },
 ];
 
@@ -144,24 +144,28 @@ const CELL = 10;
 const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 
-// Every lit block gets a fixed dissolve threshold, so the title breaks apart unevenly as you scroll.
+// Each lit block gets a fixed start point (--t) and drop distance (--d), so the title
+// detaches unevenly: pixels let go at different moments and slide down at different rates.
 const TITLE_BLOCKS = TITLE.split('').flatMap((ch, li) =>
   GLYPHS[ch].flatMap((row, y) =>
-    row.split('').flatMap((on, x) => {
+    row.split('').map((on, x) => {
       const col = li * (5 + GAP_COLS) + x;
-      const t = 0.12 + (((col * 7 + y * 13 + li * 5) % 17) / 17) * 0.7;
-      return [{ key: `${li}-${x}-${y}`, x: col * CELL, y: y * CELL, on: on === '1', t: t.toFixed(3) }];
+      const seed = (col * 7 + y * 13 + li * 5) % 17;
+      return {
+        key: `${li}-${x}-${y}`,
+        x: col * CELL,
+        y: y * CELL,
+        on: on === '1',
+        t: (0.02 + (seed / 17) * 0.55).toFixed(3),
+        d: 40 + ((col * 11 + y * 3) % 9) * 14,
+      };
     }),
   ),
 );
 
 function DigitalTitle() {
   return (
-    <svg
-      viewBox={`0 0 ${TITLE_COLS * CELL} ${7 * CELL}`}
-      className="h-auto w-full"
-      role="img"
-      aria-label="SCRIMMY">
+    <svg viewBox={`0 0 ${TITLE_COLS * CELL} ${7 * CELL}`} className="h-auto w-full overflow-visible" role="img" aria-label="SCRIMMY">
       {TITLE_BLOCKS.map((b) =>
         b.on ? (
           <rect
@@ -173,13 +177,163 @@ function DigitalTitle() {
             rx={1}
             fill="#ffffff"
             className="sp-block"
-            style={{ '--t': b.t }}
+            style={{ '--t': b.t, '--d': b.d }}
           />
         ) : (
           <rect key={b.key} x={b.x + 4} y={b.y + 4} width={2} height={2} fill="#1d4ed8" opacity={0.35} />
         ),
       )}
     </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pixel portrait                                                     */
+/* ------------------------------------------------------------------ */
+
+// 80x80 brightness map (0-9) sampled from a black-and-white photo of Scrimmy.
+const PORTRAIT_SIZE = 80;
+const PORTRAIT = [
+  '00000000000011111100001000000010011111111111011111111000000010000000000000000000',
+  '00000000000111101100000000000000011111111111001111111000000010000000000000000000',
+  '00000000000010000100000000000010011111011111001111111000000000000000000000000000',
+  '00000000010010011010000000000000011111111111001111111000000000000000000000000000',
+  '00000000000000011110001100000000111111111111001111111000000000000000000000000000',
+  '00000000000000001110001100000000111110101100001111111000000000000000000000000000',
+  '00000000000000001111001100000001210111011012110101111000000000000000000000000000',
+  '00000000000000011111001100001013434423224223432110011000000000000000000000000000',
+  '00000000000000001110001010001112224222433322333221100000000000000000000000000000',
+  '00000000000000001110001110000111011122343234312323221000000000000000000000000000',
+  '00000000000000101110001111110036432245455433321111121100000000000000000000000000',
+  '00000000000000001110001001101599998889998753222111011110000000000000000000000000',
+  '00000000000000001110000001027999999999999984313121000121100000000000000000000000',
+  '00000000000000011110000110389999999999999996424312100100100000000000000000000000',
+  '00000000000000011110001103999999999999999997766333311000001000000000000000000000',
+  '00000000000000010100001018999999999999999997987555410000000000000000000000000000',
+  '00000000000000000000000179999999999999999987677764321100000000000000000000000000',
+  '00000000000000000000001699989999999999999975355433211000000000000000000000000000',
+  '00000000000000000000018999999999999999999864453322211000000000000000000000000000',
+  '00000000000000000001179899999999999999987754442221210000000000000000000000000000',
+  '00000000000000001110178999999989888888777654332221110000000000000000000000000000',
+  '00000000000000001101048789999988887777666554332221110000000000000000000000000000',
+  '00000000000000000000025323699988877776666654443212210000000000000000000000000000',
+  '00000000000000000000133200267998777776655554443222110000000000000000000000000000',
+  '00000000000000000000113101246898777676554444333322110000000000000000000000000000',
+  '00000000000000000001001001445678876667654333332322110000000000000000000000000000',
+  '00000000000000000000162013223456776666654333333322110000000000000000000000000000',
+  '00000000000000000001895113100011355667754443333322111000000000000000000000000000',
+  '00000000000000000028985332002101011123554444343222221110000000000000000000000000',
+  '00000000000000000189997653111222333211000121223322221111110000000000000000000000',
+  '00000000000000001799887775134543233333321000000132121122110000000000000000000000',
+  '00000000000000004999986465354555555655654332125578312111110000000000000000000000',
+  '00000000000000002479986435776667677666654332477114721100000000000000000000000000',
+  '00000000000000000026875655567777777766654322453034531000000000000000000000000000',
+  '00000000000000000000344566555667777665554324541387510100000000000000000000000000',
+  '00000000000000001000115556666666666555444457961058600100000000000000000000000000',
+  '00000000000000000000377545555555555445444578941448410000000000000000000000000000',
+  '00000000000000000000168644444434445554555577412686210000000000000000000000000000',
+  '00000000000000000000037643232333455555555555268774100000000000000000000000000000',
+  '00000000000000000000114553212234445555554435998651000000000000000000000000000000',
+  '00000000000000000000001243111233444455543332677410000000000000000000000000000000',
+  '00000000000000000140000023212233334455543321111000000000000000000000000000000000',
+  '00000000000000000264310013332222334444443211000011000000000000000000000000000000',
+  '00000000000000000142321124443222333444432111000111000000000000000000000000000000',
+  '00000000000000000011012234433222233333332111001111000100000000000000000000000000',
+  '00000000000000000000012333332222222222221111011111001200000000000000000000000000',
+  '00000000000000000002122222332222221111111111111111111310000000000000000000000000',
+  '00000000000000000026664333333221111111111111111122211120110000000000000000000000',
+  '00000000000000000036666654443321100000000011111223321130000000000000000000000000',
+  '00000011222222222223445554332211000000000001112233441130000000000000000000000000',
+  '00013333322222111100122222111000000000000011222334442330000000000000000000000000',
+  '00001000000000000000000000000000000000000111222334432420000000000000000000000000',
+  '00000000111111100000000000000000000000000112223334424420000000000000000000000000',
+  '00001111111110000000000000000000000000000112222334334320000000000000000000000000',
+  '00001111111000000000000000000000000000000122222343343230000000000100000000000000',
+  '00010111110000000000000000000000000000001222222333322240000000000111100000000000',
+  '00000011100000000000000000000000000000112222222223222430000000000111111000000000',
+  '00000000000000000000000000000000000011122222222232121610000000000011111110000000',
+  '00000000000000000000000000000000000011122222223421112700000000000001111111100000',
+  '00000000000000000000000000000000000011122222233211114400000000000000111111111100',
+  '00000000000000000000000000001000001001112222332121114000000000000000011111111111',
+  '00000000000000000000000000003000001111111224432222114000000000000000001111111111',
+  '00000000000000000000000000015100012320111354333221144000000000000000000111111111',
+  '00000000000000000000000000028300123100010254332112171000000000000000000011111111',
+  '00000000000000000000000000029610121000020034321122480000000000000000000001001111',
+  '00000000000000000000000000029941220000000003322232870000000000000000000000000011',
+  '00000000000000000000000000029982210000000000323325950000000000000000000000000000',
+  '00000000000000000000000000019994200000010000133349940000000000000000000000000000',
+  '00000000000000000000000000008996100000000000023269920000000000000000000000000000',
+  '00000000000000000000000000007996132100000000003499920000000000000000000000000000',
+  '00000000000000000000000000005997011200000000001599810000000000000000000000000000',
+  '00000000000000000000000000004998121100000021110698700000000000000000000000000000',
+  '00000000000000000000000000003998122000000011100887500000000000000000000000000000',
+  '00000000000000000000000000012899222200000000002977400000000000000000000000000000',
+  '00000000000000000000000000012899313200000000013978400000000000000000000000000000',
+  '00000000000000000000000000011799402100000001124999200000000000000000000000000000',
+  '00000000000000000000000001011599502100000002324998100000000000000000000000000000',
+  '00000000000000000000000002111499602100000001325997000000000000000000000000000000',
+  '00000000000000000000000003121399701000000001325996000000000000000000000000000000',
+  '00000000000000000000000003221289701000000001414994000100000000000000000000000000',
+].join('');
+
+const portraitColor = (level) => (level >= 8 ? '#ffffff' : level >= 6 ? '#93c5fd' : level >= 3 ? '#3b82f6' : '#1e40af');
+
+function PixelPortrait() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const draw = () => {
+      const size = canvas.clientWidth;
+      if (!size) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(size * dpr);
+      canvas.height = Math.round(size * dpr);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, size, size);
+      const cell = size / PORTRAIT_SIZE;
+      for (let i = 0; i < PORTRAIT.length; i += 1) {
+        const level = PORTRAIT.charCodeAt(i) - 48;
+        if (level < 2) continue; // keep the background pure black
+        const r = cell * (0.1 + level * 0.042);
+        ctx.fillStyle = portraitColor(level);
+        ctx.beginPath();
+        ctx.arc((i % PORTRAIT_SIZE) * cell + cell / 2, Math.floor(i / PORTRAIT_SIZE) * cell + cell / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+    draw();
+    const ro = new ResizeObserver(draw);
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <figure className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
+      <canvas
+        ref={canvasRef}
+        role="img"
+        aria-label="Pixel portrait of Scrimmy built from blue and white dots"
+        className="h-full w-full [mask-image:radial-gradient(ellipse_at_45%_45%,black_55%,transparent_85%)]"
+      />
+      {/* Scanlines and a faint blue grid, so the portrait reads as rendered on a display */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.35)_0px,rgba(0,0,0,0.35)_1px,transparent_1px,transparent_3px)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.08)_1px,transparent_1px)] [background-size:32px_32px]"
+      />
+      <figcaption className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 border-t border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-400 backdrop-blur">
+        <span>IMG // scrimmy.raw</span>
+        <span className="text-blue-400">
+          {PORTRAIT_SIZE}×{PORTRAIT_SIZE}
+        </span>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -419,12 +573,13 @@ function NavBar({ active }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Hero: digital title that scales and dissolves on scroll            */
+/*  Hero: digital title that drops apart downward on scroll            */
 /* ------------------------------------------------------------------ */
 
 function Hero() {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
+  const cueRef = useRef(null);
 
   useEffect(() => {
     if (prefersReducedMotion()) return undefined;
@@ -437,17 +592,23 @@ function Hero() {
       // 0 at the top of the page, 1 once the pinned hero has been scrolled past.
       const travel = Math.max(section.offsetHeight - window.innerHeight, 1);
       const p = Math.min(Math.max(-section.getBoundingClientRect().top / travel, 0), 1);
+      // One CSS variable drives every block; no React re-renders while scrolling.
       stage.style.setProperty('--p', p.toFixed(4));
-      stage.style.transform = `scale(${1 + p * 0.35})`;
-      stage.style.opacity = String(1 - Math.max(0, (p - 0.55) / 0.45));
+      stage.style.transform = `translate3d(0, ${(p * 14).toFixed(2)}vh, 0) scale(${(1 + p * 0.06).toFixed(4)})`;
+      stage.style.opacity = String(1 - Math.max(0, (p - 0.6) / 0.4));
       stage.style.pointerEvents = p >= 0.98 ? 'none' : '';
+      // The scroll hint has done its job as soon as scrolling starts.
+      if (cueRef.current) {
+        cueRef.current.style.opacity = String(Math.max(0, 1 - p * 6));
+        cueRef.current.style.visibility = p > 0.17 ? 'hidden' : '';
+      }
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
     };
     update();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('scroll', onScroll);
@@ -463,7 +624,7 @@ function Hero() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
         />
-        <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-center will-change-transform">
+        <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
           <p className="flex items-center gap-2.5">
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
@@ -509,6 +670,7 @@ function Hero() {
         </div>
 
         <button
+          ref={cueRef}
           onClick={() => scrollToId('about')}
           className={`absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
@@ -521,29 +683,38 @@ function Hero() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  About                                                              */
+/*  About + pixel portrait                                             */
 /* ------------------------------------------------------------------ */
 
 function About() {
   return (
     <section id="about" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <SectionHeader
-          index="01"
-          eyebrow="About"
-          title="Builder. Operator. Organizer."
-          sub="I'm Scrimmy, also known as Young Scrimmage and Don Scrimmy Jon, based in the Quad Cities. I bring people together in real life, help builders ship on-chain, and organize communities around better technology and policy."
-        />
-        <Reveal>
-          <dl className="grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3">
-            {ABOUT_STATS.map(({ value, label }) => (
-              <div key={label} className="bg-black p-6 sm:p-8">
-                <dt className="text-4xl font-bold tracking-tight text-white sm:text-5xl">{value}</dt>
-                <dd className="mt-2 font-mono text-xs uppercase tracking-wider text-slate-400">{label}</dd>
-              </div>
-            ))}
-          </dl>
-        </Reveal>
+      <div className="mx-auto max-w-6xl border-t border-white/10 pt-6">
+        <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+          <Reveal className="mx-auto w-full max-w-md lg:max-w-none">
+            <PixelPortrait />
+          </Reveal>
+
+          <Reveal delay={100}>
+            <Mono className="text-blue-400">01 // About</Mono>
+            <h2 className="mt-4 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
+              Builder. Operator. Organizer.
+            </h2>
+            <p className="mt-5 text-lg leading-relaxed text-slate-400">
+              I&apos;m Scrimmy, also known as Young Scrimmage and Don Scrimmy Jon, based in the Quad Cities. I bring
+              people together in real life, help builders ship on-chain, and organize communities around better
+              technology and policy.
+            </p>
+            <dl className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3">
+              {ABOUT_STATS.map(({ value, label }) => (
+                <div key={label} className="bg-black p-5 sm:p-6">
+                  <dt className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{value}</dt>
+                  <dd className="mt-2 font-mono text-[11px] uppercase tracking-wider text-slate-400">{label}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+        </div>
       </div>
     </section>
   );
@@ -573,8 +744,8 @@ function Ecosystems() {
                     <span className="grid h-11 w-11 place-items-center rounded-xl bg-blue-600/10 text-blue-400">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="rounded-full border border-blue-500/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-blue-300">
-                      Active
+                    <span className="flex items-center gap-1.5 rounded-full border border-blue-500/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-blue-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Active
                     </span>
                   </div>
                   <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{e.org}</h3>
@@ -619,7 +790,7 @@ function Services() {
               <Reveal key={s.n} delay={i * 100} className="h-full">
                 <Card className="flex h-full flex-col p-7 transition-colors duration-200 hover:border-blue-500/30 sm:p-8">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-medium text-blue-400">{s.n} /</span>
+                    <span className="font-mono text-4xl font-bold tracking-tight text-blue-500">{s.n}</span>
                     <Icon className="h-5 w-5 text-slate-500" />
                   </div>
                   <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{s.title}</h3>
@@ -707,6 +878,7 @@ function Contact() {
       setForm(EMPTY_FORM);
       setTouched(false);
     } catch (err) {
+      // Keep the form filled so nothing is lost, and offer the same message by email.
       setServerError(err.message || 'Something went wrong.');
       setStatus('error');
     }
@@ -911,8 +1083,13 @@ function Footer() {
 const GLOBAL_CSS = `
   html { scroll-behavior: smooth; }
   body { background: #000; }
-  /* Each block fades out once scroll progress (--p) passes its own threshold (--t). */
-  .sp-block { opacity: clamp(0, calc((var(--t) - var(--p, 0)) * 8), 1); }
+  /* Downward dissolve: once scroll progress (--p) passes a block's start (--t), it slides down
+     by up to --d units and fades out. --q is that block's own 0-1 progress. */
+  .sp-block {
+    --q: clamp(0, calc((var(--p, 0) - var(--t)) * 3.5), 1);
+    transform: translate3d(0, calc(var(--q) * var(--d) * 1px), 0);
+    opacity: calc(1 - var(--q));
+  }
   @keyframes sp-ping { 75%, 100% { transform: scale(2.2); opacity: 0; } }
   @keyframes sp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
   .sp-ping { animation: sp-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
