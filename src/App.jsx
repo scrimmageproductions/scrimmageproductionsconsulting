@@ -32,7 +32,7 @@ const NAV_LINKS = [
   { id: 'contact', label: 'Contact' },
 ];
 
-const ALIASES = ['Young Scrimmage', 'Don Scrimmy Jon'];
+const ALIASES = ['Young Scrimmage', 'Don Scrimmy John'];
 const HOME_BASE = 'Quad Cities, USA';
 
 const EXECUTION_MATRIX = [
@@ -158,8 +158,10 @@ const TITLE = 'SCRIMMY';
 //   0-1440ms   raster pass: each of the 41 pixel columns ignites 32ms after the one to its left
 //              (faint cell → #3b82f6 flash → white over 160ms), from S's first column to Y's last
 //   1440-1690  SCRIMMY rests alone, fully white
-//   1690       nav bar, status pill, aliases, intro and buttons all fade in together
-//   2050       boot classes are removed and the normal interactive state and scroll dissolve take over
+//   1690       hardware reveal: nav slips down (320ms), eyebrow and badges clip-wipe left to right (200ms),
+//              intro snaps up 12px (180ms), buttons pop in with an ignition flare on "Work With Me"
+//   2050       boot classes and delays are removed, leaving no entrance transform or clip-path behind,
+//              so the scroll-driven dissolve takes over cleanly
 const BOOT_KEY = 'scrimmy_assembled';
 const BOOT_COL_STEP = 32;
 const BOOT_IGNITE_MS = 160;
@@ -178,7 +180,8 @@ const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 // The moment the last column has settled and the lock pause is over.
 const BOOT_REVEAL_MS = (TITLE_COLS - 1) * BOOT_COL_STEP + BOOT_IGNITE_MS + BOOT_LOCK_MS;
-const bootDelay = (booting) => (booting ? { animationDelay: `${BOOT_REVEAL_MS}ms` } : undefined);
+const bootDelay = (booting, offset = 0) =>
+  booting ? { animationDelay: `${BOOT_REVEAL_MS + offset}ms` } : undefined;
 
 // Hero scroll timeline, as a share of the pinned hero's scroll distance (0-1):
 //   0 → TEXT_FADE_END    eyebrow, pills, intro and buttons fade out (capped at 180px of scroll)
@@ -1079,7 +1082,7 @@ function Hero({ booting }) {
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
           <p
             ref={addText}
-            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-fade' : ''}`}
+            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-wipe' : ''}`}
             style={bootDelay(booting)}>
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
@@ -1094,8 +1097,8 @@ function Hero({ booting }) {
 
           <div ref={addText} className="will-change-[opacity,transform]">
             <ul
-              className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-rise' : ''}`}
-              style={bootDelay(booting)}
+              className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-wipe' : ''}`}
+              style={bootDelay(booting, 40)}
               aria-label="Also known as">
               {ALIASES.map((a) => (
                 <li key={a}>
@@ -1114,16 +1117,19 @@ function Hero({ booting }) {
             </ul>
 
             <p
-              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-fade' : ''}`}
-              style={bootDelay(booting)}>
+              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-snap' : ''}`}
+              style={bootDelay(booting, 80)}>
               Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
               marketing and operations, and ship high-velocity websites.
             </p>
 
             <div
-              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-fade' : ''}`}
-              style={bootDelay(booting)}>
-              <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
+              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-pop' : ''}`}
+              style={bootDelay(booting, 120)}>
+              <PrimaryButton
+                onClick={() => scrollToId('contact')}
+                className={`px-6 py-3 ${booting ? 'sp-boot-flare' : ''}`}
+                style={bootDelay(booting, 120)}>
                 Work With Me <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
               <SecondaryButton onClick={() => scrollToId('ecosystems')} className="px-6 py-3">
@@ -1136,8 +1142,8 @@ function Hero({ booting }) {
         <button
           ref={cueRef}
           onClick={() => scrollToId('about')}
-          style={bootDelay(booting)}
-          className={`${booting ? 'sp-boot-fade' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
+          style={bootDelay(booting, 120)}
+          className={`${booting ? 'sp-boot-pop' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
           <Mono className="text-[10px]">Scroll</Mono>
           <ChevronDown className="sp-bob h-4 w-4" />
@@ -1168,7 +1174,7 @@ function About() {
             </h2>
             <div aria-hidden="true" className="mt-4 max-w-md border-b border-blue-500/20" />
             <p className="mt-5 text-lg leading-relaxed text-slate-400">
-              I&apos;m Scrimmy, also known as Young Scrimmage and Don Scrimmy Jon, based in the Quad Cities. I bring
+              I&apos;m Scrimmy, also known as Young Scrimmage and Don Scrimmy John, based in the Quad Cities. I bring
               people together in real life, help builders ship on-chain, and organize communities around better
               technology and policy.
             </p>
@@ -1586,11 +1592,31 @@ const GLOBAL_CSS = `
     100% { fill: #ffffff; fill-opacity: 1; }
   }
   .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
-  @keyframes sp-boot-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes sp-boot-rise { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
-  .sp-boot-fade { animation: sp-boot-fade 300ms ease-out backwards; }
-  .sp-boot-rise { animation: sp-boot-rise 300ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-  .sp-boot-nav { animation: sp-boot-fade 500ms ease-out backwards; }
+  /* Hardware reveal once SCRIMMY has locked. Each runs after its animation-delay and fills only
+     backwards, so it holds the hidden state while waiting and leaves nothing behind when it ends.
+     The snap and pop flip opacity on in the first 0.1% so they appear at once instead of dissolving. */
+  @keyframes sp-boot-nav { from { transform: translate3d(0, -100%, 0); } to { transform: none; } }
+  @keyframes sp-boot-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
+  @keyframes sp-boot-snap {
+    0% { opacity: 0; transform: translate3d(0, 12px, 0); }
+    0.1% { opacity: 1; transform: translate3d(0, 12px, 0); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes sp-boot-pop {
+    0% { opacity: 0; transform: scale(0.96); }
+    0.1% { opacity: 1; transform: scale(0.96); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes sp-boot-flare {
+    0% { background-color: #93c5fd; box-shadow: 0 0 0 2px #60a5fa, 0 0 28px 6px rgba(59,130,246,0.85); }
+    45% { background-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6, 0 0 18px 2px rgba(59,130,246,0.5); }
+    100% { background-color: #2563eb; box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  }
+  .sp-boot-nav { animation: sp-boot-nav 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+  .sp-boot-wipe { animation: sp-boot-wipe 200ms cubic-bezier(0.4, 0, 0.6, 1) backwards; }
+  .sp-boot-snap { animation: sp-boot-snap 180ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+  .sp-boot-pop { animation: sp-boot-pop 160ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+  .sp-boot-flare { animation: sp-boot-flare 220ms ease-out backwards; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
