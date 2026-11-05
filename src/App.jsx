@@ -424,11 +424,55 @@ function Mono({ children, className = '' }) {
   return <span className={`font-mono text-xs uppercase tracking-[0.18em] ${className}`}>{children}</span>;
 }
 
-function SectionHeader({ title, sub }) {
+// Hairline ruler with tick marks and corner crosshairs. A faint blue beam sweeps across it once,
+// the first time it scrolls into view.
+function BlueprintRule() {
+  const ref = useRef(null);
+  const [sweep, setSweep] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || prefersReducedMotion() || !('IntersectionObserver' in window)) return undefined;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setSweep(true);
+        io.disconnect();
+      }
+    }, REVEAL_OBSERVER_OPTIONS);
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <Reveal className="mb-14 border-t border-white/10 pt-10">
-      <h2 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">{title}</h2>
+    <div ref={ref} aria-hidden="true" className="pointer-events-none relative h-2 border-t border-zinc-800/80">
+      {/* minor ticks every 24px, major ticks every 120px */}
+      <div className="absolute inset-x-0 top-0 h-1 bg-[repeating-linear-gradient(90deg,rgba(63,63,70,0.8)_0_1px,transparent_1px_24px)]" />
+      <div className="absolute inset-x-0 top-0 h-2 bg-[repeating-linear-gradient(90deg,rgba(63,63,70,0.9)_0_1px,transparent_1px_120px)]" />
+      <span className="absolute -left-1.5 -top-[11px] font-mono text-sm leading-none text-blue-500/50">+</span>
+      <span className="absolute -right-1.5 -top-[11px] font-mono text-sm leading-none text-blue-500/50">+</span>
+      <div className="absolute inset-x-0 -top-px h-px overflow-hidden">
+        <div className={`h-px w-1/3 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent ${sweep ? 'sp-beam' : 'opacity-0'}`} />
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ title, sub, blueprint = false, cursor = false, telemetry }) {
+  return (
+    <Reveal className={`mb-14 ${blueprint ? '' : 'border-t border-white/10 pt-10'}`}>
+      {blueprint && <BlueprintRule />}
+      <h2
+        className={`max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl ${blueprint ? 'pt-9' : ''}`}>
+        {title}
+        {cursor && (
+          <span
+            aria-hidden="true"
+            className="ml-1 inline-block h-7 w-2.5 animate-pulse bg-blue-500 align-middle motion-reduce:animate-none"
+          />
+        )}
+      </h2>
       {sub && <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">{sub}</p>}
+      {telemetry && <p className="mt-4 font-mono text-[11px] tracking-wide text-zinc-500">{telemetry}</p>}
     </Reveal>
   );
 }
@@ -956,10 +1000,7 @@ function About() {
 function ActiveTag() {
   return (
     <span className="inline-flex items-center gap-1.5 border border-zinc-800 bg-black px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-blue-300">
-      <span className="relative flex h-1.5 w-1.5">
-        <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-500" />
-      </span>
+      <span className="sp-breathe inline-flex h-1.5 w-1.5 rounded-full bg-blue-500" />
       Active
     </span>
   );
@@ -970,8 +1011,11 @@ function Ecosystems() {
     <section id="ecosystems" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
+          blueprint
+          cursor
           title="Where I build and organize."
           sub="Real roles in real communities: producing global events, supporting builders, and organizing for clear crypto policy."
+          telemetry={`[SYS_ENV: PRODUCTION] // DEPLOYED_NODES: ${String(ECOSYSTEMS.length).padStart(2, '0')} // ACTIVE_STATE: RUNNING`}
         />
         <div className="grid gap-4 lg:grid-cols-3">
           {ECOSYSTEMS.map((e, i) => (
@@ -1341,9 +1385,18 @@ const GLOBAL_CSS = `
   @keyframes sp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
   .sp-ping { animation: sp-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
   .sp-bob { animation: sp-bob 1.8s ease-in-out infinite; }
+  /* Live-node breathing. All dots mount together, so they share one slow phase. */
+  @keyframes sp-breathe {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(59,130,246,0.55); }
+    50% { opacity: 0.35; box-shadow: 0 0 6px 2px rgba(59,130,246,0); }
+  }
+  .sp-breathe { animation: sp-breathe 3.2s ease-in-out infinite; }
+  @keyframes sp-beam { from { transform: translateX(-100%); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(300%); opacity: 0; } }
+  .sp-beam { animation: sp-beam 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .sp-ping, .sp-bob { animation: none; }
+    .sp-ping, .sp-bob, .sp-breathe { animation: none; }
+    .sp-beam { animation: none; opacity: 0; }
   }
 `;
 
