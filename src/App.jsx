@@ -158,15 +158,16 @@ const TITLE = 'SCRIMMY';
 //   0-1440ms   raster pass: each of the 41 pixel columns ignites 32ms after the one to its left
 //              (faint cell → #3b82f6 flash → white over 160ms), from S's first column to Y's last
 //   1440-1690  SCRIMMY rests alone, fully white
-//   1690       hardware reveal: nav slips down (320ms), eyebrow and badges clip-wipe left to right (200ms),
-//              intro snaps up 12px (180ms), buttons pop in with an ignition flare on "Work With Me"
-//   2050       boot classes and delays are removed, leaving no entrance transform or clip-path behind,
-//              so the scroll-driven dissolve takes over cleanly
+//   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
+//                +0-100ms    30% opacity through a dot-matrix mask, high contrast, no colour
+//                +100-200ms  one electric-blue (#3b82f6) voltage surge
+//                +220ms      solid final state
+//   2090       (+400ms) boot classes and delays are removed, so the normal interactive state and the
+//              scroll-driven dissolve take over with no filter, mask or opacity left behind
 const BOOT_KEY = 'scrimmy_assembled';
 const BOOT_COL_STEP = 32;
 const BOOT_IGNITE_MS = 160;
 const BOOT_LOCK_MS = 250;
-const BOOT_TOTAL_MS = 2050;
 const shouldBoot = () => {
   if (typeof window === 'undefined' || prefersReducedMotion() || window.scrollY > 0) return false;
   try {
@@ -180,8 +181,9 @@ const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 // The moment the last column has settled and the lock pause is over.
 const BOOT_REVEAL_MS = (TITLE_COLS - 1) * BOOT_COL_STEP + BOOT_IGNITE_MS + BOOT_LOCK_MS;
-const bootDelay = (booting, offset = 0) =>
-  booting ? { animationDelay: `${BOOT_REVEAL_MS + offset}ms` } : undefined;
+const BOOT_STAMP_MS = 350;
+const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 400;
+const bootDelay = (booting) => (booting ? { animationDelay: `${BOOT_REVEAL_MS}ms` } : undefined);
 
 // Hero scroll timeline, as a share of the pinned hero's scroll distance (0-1):
 //   0 → TEXT_FADE_END    eyebrow, pills, intro and buttons fade out (capped at 180px of scroll)
@@ -759,7 +761,7 @@ function NavBar({ active, booting = false }) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl ${booting ? 'sp-boot-nav pointer-events-none' : ''}`}
+        className={`sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl ${booting ? 'sp-boot-stamp' : ''}`}
         style={bootDelay(booting)}>
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Primary">
           <button
@@ -1082,7 +1084,7 @@ function Hero({ booting }) {
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
           <p
             ref={addText}
-            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-wipe' : ''}`}
+            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-stamp' : ''}`}
             style={bootDelay(booting)}>
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
@@ -1097,8 +1099,8 @@ function Hero({ booting }) {
 
           <div ref={addText} className="will-change-[opacity,transform]">
             <ul
-              className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-wipe' : ''}`}
-              style={bootDelay(booting, 40)}
+              className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-stamp' : ''}`}
+              style={bootDelay(booting)}
               aria-label="Also known as">
               {ALIASES.map((a) => (
                 <li key={a}>
@@ -1117,19 +1119,16 @@ function Hero({ booting }) {
             </ul>
 
             <p
-              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-snap' : ''}`}
-              style={bootDelay(booting, 80)}>
+              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-stamp' : ''}`}
+              style={bootDelay(booting)}>
               Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
               marketing and operations, and ship high-velocity websites.
             </p>
 
             <div
-              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-pop' : ''}`}
-              style={bootDelay(booting, 120)}>
-              <PrimaryButton
-                onClick={() => scrollToId('contact')}
-                className={`px-6 py-3 ${booting ? 'sp-boot-flare' : ''}`}
-                style={bootDelay(booting, 120)}>
+              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-stamp' : ''}`}
+              style={bootDelay(booting)}>
+              <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
                 Work With Me <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
               <SecondaryButton onClick={() => scrollToId('ecosystems')} className="px-6 py-3">
@@ -1142,8 +1141,8 @@ function Hero({ booting }) {
         <button
           ref={cueRef}
           onClick={() => scrollToId('about')}
-          style={bootDelay(booting, 120)}
-          className={`${booting ? 'sp-boot-pop' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
+          style={bootDelay(booting)}
+          className={`${booting ? 'sp-boot-stamp' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
           <Mono className="text-[10px]">Scroll</Mono>
           <ChevronDown className="sp-bob h-4 w-4" />
@@ -1592,31 +1591,24 @@ const GLOBAL_CSS = `
     100% { fill: #ffffff; fill-opacity: 1; }
   }
   .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
-  /* Hardware reveal once SCRIMMY has locked. Each runs after its animation-delay and fills only
-     backwards, so it holds the hidden state while waiting and leaves nothing behind when it ends.
-     The snap and pop flip opacity on in the first 0.1% so they appear at once instead of dissolving. */
-  @keyframes sp-boot-nav { from { transform: translate3d(0, -100%, 0); } to { transform: none; } }
-  @keyframes sp-boot-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
-  @keyframes sp-boot-snap {
-    0% { opacity: 0; transform: translate3d(0, 12px, 0); }
-    0.1% { opacity: 1; transform: translate3d(0, 12px, 0); }
-    100% { opacity: 1; transform: none; }
+  /* Phosphor stamp-in once SCRIMMY has locked. Every element runs the same keyframes at the same delay.
+     step-end holds each keyframe until the next one, so the phases cut over hard instead of tweening.
+     Filling backwards keeps the element hidden and unclickable while it waits; once it ends nothing remains. */
+  @keyframes sp-boot-stamp {
+    0% { opacity: 0; }
+    0.1% {
+      opacity: 0.3; filter: grayscale(1) contrast(2);
+      -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
+      mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
+    }
+    28.6% {
+      opacity: 1; -webkit-mask-image: none; mask-image: none;
+      filter: sepia(1) saturate(6) hue-rotate(180deg) brightness(1.15) drop-shadow(0 0 1px #3b82f6) drop-shadow(0 0 6px #3b82f6);
+    }
+    57.1% { opacity: 1; filter: brightness(1.15); }
+    62.9%, 100% { opacity: 1; filter: none; }
   }
-  @keyframes sp-boot-pop {
-    0% { opacity: 0; transform: scale(0.96); }
-    0.1% { opacity: 1; transform: scale(0.96); }
-    100% { opacity: 1; transform: none; }
-  }
-  @keyframes sp-boot-flare {
-    0% { background-color: #93c5fd; box-shadow: 0 0 0 2px #60a5fa, 0 0 28px 6px rgba(59,130,246,0.85); }
-    45% { background-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6, 0 0 18px 2px rgba(59,130,246,0.5); }
-    100% { background-color: #2563eb; box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-  }
-  .sp-boot-nav { animation: sp-boot-nav 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .sp-boot-wipe { animation: sp-boot-wipe 200ms cubic-bezier(0.4, 0, 0.6, 1) backwards; }
-  .sp-boot-snap { animation: sp-boot-snap 180ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .sp-boot-pop { animation: sp-boot-pop 160ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .sp-boot-flare { animation: sp-boot-flare 220ms ease-out backwards; }
+  .sp-boot-stamp { pointer-events: none; animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end backwards; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
