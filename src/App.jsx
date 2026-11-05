@@ -157,12 +157,18 @@ const GLYPHS = {
 
 const TITLE = 'SCRIMMY';
 
-// Boot sequence on first entry (per session): a scanline sweeps the title from 100ms to 500ms, each
-// column of blocks ignites from faint blue to white as it passes, then the hero text fades in at 600ms.
+// Boot sequence on first entry (per session):
+//   0-1100ms   letters ignite one by one, S at 0ms through Y at 900ms (faint blue → blue flare → white)
+//   1100-1400  SCRIMMY rests alone, fully formed
+//   1400/1500/1600  status pill, then alias badges, then intro + buttons fade in
+//   1950       boot classes are removed and the scroll-driven dissolve takes over
 const BOOT_KEY = 'scrimmy_assembled';
-const BOOT_SCAN_START = 100;
-const BOOT_SCAN_SPAN = 340; // ignition delay of the last column, after the start
-const BOOT_TOTAL_MS = 950;
+const BOOT_LETTER_STEP = 150;
+const BOOT_IGNITE_MS = 200;
+const BOOT_PILL_MS = 1400;
+const BOOT_ALIAS_MS = 1500;
+const BOOT_INTRO_MS = 1600;
+const BOOT_TOTAL_MS = 1950;
 const shouldBoot = () => {
   if (typeof window === 'undefined' || prefersReducedMotion() || window.scrollY > 0) return false;
   try {
@@ -207,7 +213,7 @@ const TITLE_BLOCKS = TITLE.split('').flatMap((ch, li) =>
         on: on === '1',
         t: (BLOCK_START + (seed / 17) * BLOCK_SPREAD).toFixed(3),
         d: 40 + ((col * 11 + y * 3) % 9) * 14,
-        ig: `${Math.round(BOOT_SCAN_START + (col / (TITLE_COLS - 1)) * BOOT_SCAN_SPAN)}ms`,
+        ig: `${li * BOOT_LETTER_STEP}ms`,
       };
     }),
   ),
@@ -920,6 +926,7 @@ function Hero() {
   const cueRef = useRef(null);
   const globeRef = useRef(null);
   const [booting, setBooting] = useState(shouldBoot);
+  const bootDelay = (ms) => (booting ? { animationDelay: `${ms}ms` } : undefined);
   const addText = (el) => {
     if (el && !textRefs.current.includes(el)) textRefs.current.push(el);
   };
@@ -1003,7 +1010,8 @@ function Hero() {
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
           <p
             ref={addText}
-            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-in' : ''}`}>
+            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-fade' : ''}`}
+            style={bootDelay(BOOT_PILL_MS)}>
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -1011,18 +1019,15 @@ function Hero() {
             <Mono className="text-blue-400">SYSTEM_ONLINE // {SITE_DOMAIN}</Mono>
           </p>
 
-          <h1 className="relative mt-8">
+          <h1 className="mt-8">
             <DigitalTitle booting={booting} />
-            {booting && (
-              <span
-                aria-hidden="true"
-                className="sp-scan pointer-events-none absolute -bottom-3 -top-3 w-[2px] bg-blue-400 shadow-[0_0_12px_#3b82f6,0_0_28px_rgba(59,130,246,0.6)]"
-              />
-            )}
           </h1>
 
-          <div ref={addText} className={`will-change-[opacity,transform] ${booting ? 'sp-boot-in' : ''}`}>
-            <ul className="mt-8 flex flex-wrap gap-2" aria-label="Also known as">
+          <div ref={addText} className="will-change-[opacity,transform]">
+            <ul
+              className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-rise' : ''}`}
+              style={bootDelay(BOOT_ALIAS_MS)}
+              aria-label="Also known as">
               {ALIASES.map((a) => (
                 <li key={a}>
                   <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
@@ -1039,12 +1044,16 @@ function Hero() {
               </li>
             </ul>
 
-            <p className="mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl">
+            <p
+              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-fade' : ''}`}
+              style={bootDelay(BOOT_INTRO_MS)}>
               Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
               marketing and operations, and ship high-velocity websites.
             </p>
 
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <div
+              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-fade' : ''}`}
+              style={bootDelay(BOOT_INTRO_MS)}>
               <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
                 Work With Me <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
@@ -1058,7 +1067,8 @@ function Hero() {
         <button
           ref={cueRef}
           onClick={() => scrollToId('about')}
-          className={`${booting ? 'sp-boot-in' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
+          style={bootDelay(BOOT_INTRO_MS)}
+          className={`${booting ? 'sp-boot-fade' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
           <Mono className="text-[10px]">Scroll</Mono>
           <ChevronDown className="sp-bob h-4 w-4" />
@@ -1511,18 +1521,18 @@ const GLOBAL_CSS = `
   .sp-breathe { animation: sp-breathe 3.2s ease-in-out infinite; }
   @keyframes sp-beam { from { transform: translateX(-100%); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(300%); opacity: 0; } }
   .sp-beam { animation: sp-beam 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
-  /* Hero boot: blocks ignite column by column (delay --ig), the scanline sweeps, then text fades in.
-     The text fade only fills backwards, so once it ends the scroll-driven inline opacity takes over again. */
+  /* Hero boot: each letter's blocks ignite at their letter's delay (--ig): faint blue → blue flare → white.
+     The text fades only fill backwards, so once they end the scroll-driven inline opacity takes over again. */
   @keyframes sp-ignite {
-    from { fill: #1d4ed8; fill-opacity: 0.3; }
-    55% { fill: #93c5fd; fill-opacity: 1; }
-    to { fill: #ffffff; fill-opacity: 1; }
+    0% { fill: #3b82f6; fill-opacity: 0.1; }
+    45% { fill: #3b82f6; fill-opacity: 1; }
+    100% { fill: #ffffff; fill-opacity: 1; }
   }
-  .sp-ignite { animation: sp-ignite 180ms ease-out var(--ig) both; }
-  @keyframes sp-scan { 0% { left: 0%; opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
-  .sp-scan { animation: sp-scan 400ms linear 100ms both; }
-  @keyframes sp-boot-in { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
-  .sp-boot-in { animation: sp-boot-in 300ms ease-out 600ms backwards; }
+  .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
+  @keyframes sp-boot-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sp-boot-rise { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
+  .sp-boot-fade { animation: sp-boot-fade 300ms ease-out backwards; }
+  .sp-boot-rise { animation: sp-boot-rise 300ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
