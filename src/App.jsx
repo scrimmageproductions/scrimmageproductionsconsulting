@@ -159,10 +159,12 @@ const TITLE = 'SCRIMMY';
 //              (faint cell → #3b82f6 flash → white over 160ms), from S's first column to Y's last
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
-//                +0-100ms    30% opacity through a dot-matrix mask, high contrast, no colour
-//                +100-200ms  one electric-blue (#3b82f6) voltage surge
-//                +220ms      solid final state
-//   2090       (+400ms) boot classes and delays are removed, so the normal interactive state and the
+//                +0-180ms    coordinate strike: 30% opacity through a dot-matrix mask, greyscale, high contrast
+//                +180ms      primary electric-blue (#3b82f6) strike with a 2px raster jitter
+//                +320ms      one-frame dip back to a 60% dot-matrix, then a tighter second blue bloom
+//                +420-550ms  the bloom decays smoothly into the final state
+//                +550ms      hard cut to normal styling
+//   2540       (+850ms) boot classes and delays are removed, so the normal interactive state and the
 //              scroll-driven dissolve take over with no filter, mask or opacity left behind
 const BOOT_KEY = 'scrimmy_assembled';
 const BOOT_COL_STEP = 32;
@@ -181,8 +183,10 @@ const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 // The moment the last column has settled and the lock pause is over.
 const BOOT_REVEAL_MS = (TITLE_COLS - 1) * BOOT_COL_STEP + BOOT_IGNITE_MS + BOOT_LOCK_MS;
-const BOOT_STAMP_MS = 350;
-const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 400;
+const BOOT_STAMP_MS = 550;
+const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 850;
+// Keyframe offset for a point in the stamp-in, given in ms from its start.
+const stampAt = (ms) => `${((ms / BOOT_STAMP_MS) * 100).toFixed(2)}%`;
 const bootDelay = (booting) => (booting ? { animationDelay: `${BOOT_REVEAL_MS}ms` } : undefined);
 
 // Hero scroll timeline, as a share of the pinned hero's scroll distance (0-1):
@@ -1592,23 +1596,39 @@ const GLOBAL_CSS = `
   }
   .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
   /* Phosphor stamp-in once SCRIMMY has locked. Every element runs the same keyframes at the same delay.
-     step-end holds each keyframe until the next one, so the phases cut over hard instead of tweening.
-     Filling backwards keeps the element hidden and unclickable while it waits; once it ends nothing remains. */
+     step-end holds each keyframe until the next, so the strikes cut over hard; only the decay
+     (420-550ms) eases. Filling backwards keeps the element hidden while it waits, and the hold on
+     pointer-events comes from the class, so nothing is left once the class is removed. */
   @keyframes sp-boot-stamp {
     0% { opacity: 0; }
-    0.1% {
-      opacity: 0.3; filter: grayscale(1) contrast(2);
+    0.1%, ${stampAt(320)} {
+      opacity: 0.3; transform: none; filter: grayscale(1) contrast(2);
       -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
       mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
     }
-    28.6% {
-      opacity: 1; -webkit-mask-image: none; mask-image: none;
-      filter: sepia(1) saturate(6) hue-rotate(180deg) brightness(1.15) drop-shadow(0 0 1px #3b82f6) drop-shadow(0 0 6px #3b82f6);
+    ${stampAt(180)} {
+      opacity: 1; transform: translate3d(2px, 0, 0); -webkit-mask-image: none; mask-image: none;
+      filter: sepia(1) saturate(8) hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 2px #3b82f6) drop-shadow(0 0 10px #3b82f6);
     }
-    57.1% { opacity: 1; filter: brightness(1.15); }
-    62.9%, 100% { opacity: 1; filter: none; }
+    ${stampAt(230)} {
+      opacity: 1; transform: none;
+      filter: sepia(1) saturate(8) hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 2px #3b82f6) drop-shadow(0 0 10px #3b82f6);
+    }
+    ${stampAt(320)} { opacity: 0.6; }
+    ${stampAt(337)}, ${stampAt(420)} {
+      opacity: 1; transform: none; -webkit-mask-image: none; mask-image: none;
+      filter: sepia(1) saturate(6) hue-rotate(180deg) brightness(1.1) drop-shadow(0 0 1px #3b82f6) drop-shadow(0 0 4px #3b82f6);
+    }
+    ${stampAt(420)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    100% {
+      opacity: 1; transform: none;
+      filter: sepia(0) saturate(1) hue-rotate(0deg) brightness(1) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
+    }
   }
-  .sp-boot-stamp { pointer-events: none; animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end backwards; }
+  .sp-boot-stamp {
+    pointer-events: none;
+    animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end backwards;
+  }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
