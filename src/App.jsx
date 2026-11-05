@@ -90,21 +90,18 @@ const ECOSYSTEMS = [
 const SERVICES = [
   {
     n: '01',
-    tag: 'PROD',
     title: 'Event Production & Logistics',
     body: 'Full-scale live and decentralized event management. I coordinate multi-city runs-of-show, secure local venue and vendor contracts, direct sponsor activations, and handle crypto-native ticketing across time zones.',
     tags: ['RUN-OF-SHOW', '400+ CITIES', 'SPONSORS', 'VENDORS'],
   },
   {
     n: '02',
-    tag: 'ADVISORY',
     title: 'Operations & Marketing Consulting',
     body: "Fixing what's broken in your business. I audit internal toolchains, clear operational bottlenecks, structure ecosystem partnerships, and wire up automated lead-routing pipelines so work stops slipping through the cracks.",
     tags: ['WORKFLOW AUDITS', 'PARTNERSHIPS', 'LEAD ROUTING', 'PIPELINES'],
   },
   {
     n: '03',
-    tag: 'DEV & DESIGN',
     title: 'Custom Web & Creative Solutions',
     body: 'Bespoke digital architecture, clean interfaces, and custom creative solutions for your business or idea. This entire site is proof of work\u2014hand-coded performance, tailored styling, and zero generic template drag. If you can envision it, we can build it together.',
     tags: ['BESPOKE DESIGN', 'REACT 19', 'CUSTOM STACK', 'PROOF OF WORK'],
@@ -537,7 +534,7 @@ function TypedText({ text }) {
   );
 }
 
-function SectionHeader({ title, sub, blueprint = false, typewriter = false, telemetry }) {
+function SectionHeader({ title, sub, blueprint = false, typewriter = false }) {
   return (
     <Reveal className={`mb-14 ${blueprint ? '' : 'border-t border-white/10 pt-10'}`}>
       {blueprint && <BlueprintRule />}
@@ -546,7 +543,6 @@ function SectionHeader({ title, sub, blueprint = false, typewriter = false, tele
         {typewriter ? <TypedText text={title} /> : title}
       </h2>
       {sub && <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">{sub}</p>}
-      {telemetry && <p className="mt-4 font-mono text-[11px] tracking-wide text-zinc-500">{telemetry}</p>}
     </Reveal>
   );
 }
@@ -1133,14 +1129,13 @@ function Ecosystems() {
           typewriter
           title="Where I build and organize."
           sub="Real roles in real communities: producing global events, supporting builders, and organizing for clear crypto policy."
-          telemetry={`[SYS_ENV: PRODUCTION] // DEPLOYED_NODES: ${String(ECOSYSTEMS.length).padStart(2, '0')} // ACTIVE_STATE: RUNNING`}
         />
         <div className="grid gap-4 lg:grid-cols-3">
           {ECOSYSTEMS.map((e, i) => (
             <Reveal key={e.org} delay={i * 100} className="h-full">
               <FrameCard>
 
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/80 p-2">
                     <img
                       src={e.logo}
@@ -1152,12 +1147,7 @@ function Ecosystems() {
                       className={`h-full w-full object-contain ${e.logoClass ?? ''}`}
                     />
                   </span>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                      // Node_{String(i + 1).padStart(2, '0')}
-                    </span>
-                    <ActiveTag />
-                  </div>
+                  <ActiveTag />
                 </div>
 
                 <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{e.org}</h3>
@@ -1199,13 +1189,7 @@ function Services() {
           {SERVICES.map((s, i) => (
             <Reveal key={s.n} delay={i * 100} className="h-full">
               <FrameCard>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-mono text-xs font-medium tracking-wider text-blue-400">
-                    [ {s.n} // {s.tag} ]
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">// SVC_{s.n}</span>
-                </div>
-                <h3 className="mt-6 text-xl font-bold text-white">{s.title}</h3>
+                <h3 className="text-xl font-bold text-white">{s.title}</h3>
                 <p className="mb-6 mt-3 text-sm leading-relaxed text-zinc-400">{s.body}</p>
                 <div className="mt-auto flex flex-wrap gap-1.5 border-t border-zinc-800/60 pt-6">
                   {s.tags.map((t) => (
