@@ -160,13 +160,13 @@ const TITLE = 'SCRIMMY';
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
 //                +0-350ms     coordinate hold: 30% opacity under a dot-matrix grid, greyscale, high contrast
-//                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, an arc surge of
-//                             brightness 1.6 / contrast 1.4 for 40ms then 1.4 / 1.25, and a sync jitter of
-//                             +3px (30ms) then -2px (40ms); text gets a white static core and blue halo, the
-//                             hero grid flashes blue for 60ms, the viewport inverts to white for 25ms, a
-//                             buzzing 2px blue interlace covers the hero, three raster tears cut across it
-//                             (SCRIMMY +24px, intro -18px, buttons +16px; 25/20/25ms), and SCRIMMY blooms
-//                             blue, easing back by +450ms
+//                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, a voltage spike of
+//                             brightness 2 / contrast 1.3 with a 16px cyan glow for 30ms (SCRIMMY too, which
+//                             then eases back by +450ms) then 1.4 / 1.25, and a sync jitter of +3px (30ms)
+//                             then -2px (40ms); text gets a white static core and blue halo, the hero grid
+//                             flashes cyan at 0.65 for 30ms, a buzzing 2px blue interlace covers the hero,
+//                             and three raster tears cut across it (SCRIMMY +24px, intro -18px, buttons
+//                             +16px; 25/20/25ms). The page background stays black throughout
 //                +420-470ms   sync recoil: 40% dot-matrix, no shadow
 //                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
 //                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
@@ -1173,11 +1173,11 @@ function Hero({ booting }) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
         />
-        {/* Same grid in electric blue at 0.25, flashed for 60ms by the first power strike */}
+        {/* Same grid in overdriven cyan at 0.65, flashed for 30ms by the first power strike */}
         {booting && (
           <div
             aria-hidden="true"
-            className="sp-boot-gridpulse pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.25)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
+            className="sp-boot-gridpulse pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.65)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
           />
         )}
         {/* Dot globe, drawn behind the title as it dissolves */}
@@ -1669,17 +1669,17 @@ const GLOBAL_CSS = `
     0% { opacity: 0; }
     0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
     ${stampAt(350)} {
-      opacity: 1; filter: brightness(1.6) contrast(1.4); transform: translateX(3px);
+      opacity: 1; filter: brightness(2) contrast(1.3) drop-shadow(0 0 16px #00f0ff); transform: translateX(3px);
       text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff, 0 0 8px rgba(59, 130, 246, 0.8);
     }
     ${stampAt(380)} { transform: translateX(-2px); }
-    ${stampAt(390)} { filter: brightness(1.4) contrast(1.25); }
+    ${stampAt(380)} { filter: brightness(1.4) contrast(1.25); }
     ${stampAt(420)} { opacity: 0.4; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
     ${stampAt(470)}, ${stampAt(560)} {
       opacity: 1; filter: brightness(1.15) contrast(1.1); transform: none;
       text-shadow: -1px 0 #3b82f6, 1px 0 #ffffff;
+      animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
     ${stampAt(750)}, 100% {
       opacity: 1; filter: brightness(1) contrast(1); transform: none;
       text-shadow: 0 0 #3b82f6, 0 0 #ffffff;
@@ -1690,8 +1690,7 @@ const GLOBAL_CSS = `
     0.1% { opacity: 1; --sp-dot: 1.1px; }
     ${stampAt(350)} { opacity: 0; }
     ${stampAt(420)} { opacity: 1; --sp-dot: 1.1px; }
-    ${stampAt(470)}, ${stampAt(560)} { opacity: 1; --sp-dot: 1.3px; }
-    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(470)}, ${stampAt(560)} { opacity: 1; --sp-dot: 1.3px; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
     ${stampAt(750)}, 100% { opacity: 1; --sp-dot: 2.4px; }
   }
   /* Rim on the pill shapes. sp-boot-rim keeps the 8px settle glow (badges, primary buttons, status dot);
@@ -1700,21 +1699,19 @@ const GLOBAL_CSS = `
     0% { box-shadow: none; }
     ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.2); }
     ${stampAt(420)} { box-shadow: none; }
-    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6, 0 0 8px rgba(59, 130, 246, 0.3); }
-    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6, 0 0 8px rgba(59, 130, 246, 0.3); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
     ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 0 8px rgba(59, 130, 246, 0.3); }
   }
   @keyframes sp-boot-rim-strike {
     0% { box-shadow: none; }
     ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.2); }
     ${stampAt(420)} { box-shadow: none; }
-    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6; }
-    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
     ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
   }
-  /* The hero grid lines flash electric blue for 60ms on strike 1; hidden outside the animation. */
+  /* The hero grid lines flash overdriven cyan for 30ms on strike 1; hidden outside the animation. */
   @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
-  .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 60ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 30ms step-end ${BOOT_REVEAL_MS + 350}ms; }
   /* Strike 1 fracture, three hard-cut bursts over 70ms on a black-backed copy of the stage (positions
      measured by Hero):
        A  0-25ms   36px band through SCRIMMY, +24px, cyan/magenta 6px split
@@ -1764,20 +1761,13 @@ const GLOBAL_CSS = `
     85.7%, 100% { opacity: 1; transform: translateY(1px); }
   }
   .sp-boot-interlace { opacity: 0; animation: sp-boot-interlace 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* Photonic arc: the whole viewport inverts to white for 25ms as the first tear hits. */
-  @keyframes sp-boot-arc { from, to { opacity: 1; } }
-  .sp-boot-arc {
-    opacity: 0;
-    -webkit-backdrop-filter: invert(1) hue-rotate(180deg) brightness(1.5);
-    backdrop-filter: invert(1) hue-rotate(180deg) brightness(1.5);
-    animation: sp-boot-arc 25ms step-end ${BOOT_REVEAL_MS + 350}ms;
-  }
-  /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
+  /* SCRIMMY catches the same power strike: a 30ms cyan core bloom, then eases off by +450ms. */
   @keyframes sp-boot-title {
-    from { filter: brightness(1.3) drop-shadow(0 0 12px #3b82f6); }
-    to { filter: brightness(1) drop-shadow(0 0 0 rgba(59, 130, 246, 0)); }
+    0% { filter: brightness(2) contrast(1.3) drop-shadow(0 0 16px #00f0ff); }
+    30% { filter: brightness(2) contrast(1.3) drop-shadow(0 0 16px #00f0ff); animation-timing-function: ease-out; }
+    100% { filter: brightness(1) contrast(1) drop-shadow(0 0 0 rgba(0, 240, 255, 0)); }
   }
-  .sp-boot-title { animation: sp-boot-title 100ms ease-out ${BOOT_REVEAL_MS + 350}ms; }
+  .sp-boot-title { animation: sp-boot-title 100ms step-end ${BOOT_REVEAL_MS + 350}ms; }
   .sp-boot-stamp {
     pointer-events: none;
     animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
@@ -1849,7 +1839,6 @@ export default function App() {
     <div className="relative min-h-screen bg-black font-sans text-slate-400 antialiased selection:bg-blue-600/40 selection:text-white">
       <style>{GLOBAL_CSS}</style>
       <NavBar active={active} booting={booting} />
-      {booting && <div aria-hidden="true" className="sp-boot-arc pointer-events-none fixed inset-0 z-[60]" />}
       <main>
         <Hero booting={booting} />
         <About />
