@@ -1449,6 +1449,69 @@ function Footer() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Pre-flight loader                                                  */
+/* ------------------------------------------------------------------ */
+
+const LOADER_MS = 700; // progress fill
+const LOADER_FADE_MS = 400; // hand-off fade
+
+function InitialLoader({ fading }) {
+  const [pct, setPct] = useState(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now) => {
+      const t = Math.min((now - start) / LOADER_MS, 1);
+      setPct(Math.round((1 - (1 - t) ** 3) * 100)); // ease-out cubic
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={`Loading ${SITE_DOMAIN}`}
+      className={`fixed inset-0 z-[100] flex flex-col bg-[#000000] transition-opacity ease-out ${
+        fading ? 'pointer-events-none opacity-0' : 'opacity-100'
+      }`}
+      style={{ transitionDuration: `${LOADER_FADE_MS}ms` }}>
+      <div className="flex h-14 items-center justify-between gap-4 border-b border-zinc-800/80 px-4 sm:px-6 lg:px-8">
+        <span className="font-mono text-[11px] tracking-wider text-zinc-500">[ SCRIMMY.XYZ // SYSTEM_INIT ]</span>
+        <span className="hidden font-mono text-[11px] tracking-wider text-zinc-600 sm:inline">QUAD CITIES, USA // 2026</span>
+      </div>
+
+      <div className="flex flex-1 items-center px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-6xl">
+          {/* Bounding frame roughly the size of the hero title, with + reticles on the corners */}
+          <div aria-hidden="true" className="relative border border-zinc-900 p-5 sm:p-8">
+            {['-left-[5px] -top-[9px]', '-right-[5px] -top-[9px]', '-bottom-[9px] -left-[5px]', '-bottom-[9px] -right-[5px]'].map((c) => (
+              <span key={c} className={`absolute font-mono text-sm leading-none text-blue-500/60 ${c}`}>
+                +
+              </span>
+            ))}
+            <div className="sp-bone aspect-[41/7] w-full border border-zinc-800 bg-zinc-900" />
+          </div>
+
+          <div className="mt-6 flex items-center gap-4">
+            <div aria-hidden="true" className="h-[2px] flex-1 overflow-hidden bg-zinc-900">
+              {/* Width comes from the same per-frame value as the counter, so the two never drift apart. */}
+              <div className="h-full bg-blue-500 shadow-[0_0_12px_#3b82f6]" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="whitespace-nowrap font-mono text-[11px] tabular-nums tracking-wider text-zinc-400">
+              INITIALIZING UI... [{String(pct).padStart(3, '\u2007')}%]
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  App                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -1491,6 +1554,27 @@ const GLOBAL_CSS = `
 
 export default function App() {
   const [active, setActive] = useState('');
+  // run → fade → done. Reduced-motion visitors skip straight to the site.
+  const [loader, setLoader] = useState(() => (prefersReducedMotion() ? 'done' : 'run'));
+
+  useEffect(() => {
+    if (loader === 'done') return undefined;
+    // Lock scrolling on <html>: the mobile menu already manages <body> overflow, and the two would clash.
+    const root = document.documentElement;
+    root.style.overflow = 'hidden';
+    const fade = setTimeout(() => {
+      setLoader('fade');
+      root.style.overflow = '';
+    }, LOADER_MS + 80);
+    const done = setTimeout(() => setLoader('done'), LOADER_MS + 80 + LOADER_FADE_MS);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(done);
+      root.style.overflow = '';
+    };
+    // Runs once on mount; the timers move it through its phases.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Highlight the nav link for the section in view.
   useEffect(() => {
@@ -1518,6 +1602,7 @@ export default function App() {
         <Contact />
       </main>
       <Footer />
+      {loader !== 'done' && <InitialLoader fading={loader === 'fade'} />}
     </div>
   );
 }
