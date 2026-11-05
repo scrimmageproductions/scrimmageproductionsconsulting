@@ -160,9 +160,12 @@ const TITLE = 'SCRIMMY';
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
 //                +0-180ms    coordinate strike: 30% opacity through a dot-matrix mask, greyscale, high contrast
-//                +180ms      primary electric-blue (#3b82f6) strike with a 2px raster jitter
-//                +320ms      one-frame dip back to a 60% dot-matrix, then a tighter second blue bloom
-//                +420-550ms  the bloom decays smoothly into the final state
+//                +180-260ms  voltage strike: chromatic text split, blue box glow on bordered parts and
+//                            brightness 1.4 / contrast 1.2, while a 1px cathode line sweeps down through
+//                            the aliases, intro and buttons (120ms)
+//                +260-320ms  strike holds at brightness 1.2
+//                +320ms      one-frame dip back to a 60% dot-matrix with the split and glow cut
+//                +340-550ms  tight electric-blue rim glow
 //                +550ms      hard cut to normal styling
 //   2540       (+850ms) boot classes and delays are removed, so the normal interactive state and the
 //              scroll-driven dissolve take over with no filter, mask or opacity left behind
@@ -187,7 +190,6 @@ const BOOT_STAMP_MS = 550;
 const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 850;
 // Keyframe offset for a point in the stamp-in, given in ms from its start.
 const stampAt = (ms) => `${((ms / BOOT_STAMP_MS) * 100).toFixed(2)}%`;
-const bootDelay = (booting) => (booting ? { animationDelay: `${BOOT_REVEAL_MS}ms` } : undefined);
 
 // Hero scroll timeline, as a share of the pinned hero's scroll distance (0-1):
 //   0 → TEXT_FADE_END    eyebrow, pills, intro and buttons fade out (capped at 180px of scroll)
@@ -765,8 +767,7 @@ function NavBar({ active, booting = false }) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl ${booting ? 'sp-boot-stamp' : ''}`}
-        style={bootDelay(booting)}>
+        className={`sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl ${booting ? 'sp-boot-stamp' : ''}`}>
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Primary">
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -1088,8 +1089,7 @@ function Hero({ booting }) {
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
           <p
             ref={addText}
-            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-stamp' : ''}`}
-            style={bootDelay(booting)}>
+            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-stamp' : ''}`}>
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -1101,10 +1101,15 @@ function Hero({ booting }) {
             <DigitalTitle booting={booting} />
           </h1>
 
-          <div ref={addText} className="will-change-[opacity,transform]">
+          <div ref={addText} className="relative will-change-[opacity,transform]">
+            {booting && (
+              <span
+                aria-hidden="true"
+                className="sp-boot-scan pointer-events-none absolute inset-x-0 z-10 h-[1px] bg-white shadow-[0_0_12px_#3b82f6]"
+              />
+            )}
             <ul
               className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-stamp' : ''}`}
-              style={bootDelay(booting)}
               aria-label="Also known as">
               {ALIASES.map((a) => (
                 <li key={a}>
@@ -1123,15 +1128,13 @@ function Hero({ booting }) {
             </ul>
 
             <p
-              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-stamp' : ''}`}
-              style={bootDelay(booting)}>
+              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-stamp' : ''}`}>
               Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
               marketing and operations, and ship high-velocity websites.
             </p>
 
             <div
-              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-stamp' : ''}`}
-              style={bootDelay(booting)}>
+              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-stamp' : ''}`}>
               <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
                 Work With Me <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
@@ -1145,7 +1148,6 @@ function Hero({ booting }) {
         <button
           ref={cueRef}
           onClick={() => scrollToId('about')}
-          style={bootDelay(booting)}
           className={`${booting ? 'sp-boot-stamp' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
           <Mono className="text-[10px]">Scroll</Mono>
@@ -1595,40 +1597,54 @@ const GLOBAL_CSS = `
     100% { fill: #ffffff; fill-opacity: 1; }
   }
   .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
-  /* Phosphor stamp-in once SCRIMMY has locked. Every element runs the same keyframes at the same delay.
-     step-end holds each keyframe until the next, so the strikes cut over hard; only the decay
-     (420-550ms) eases. Filling backwards keeps the element hidden while it waits, and the hold on
-     pointer-events comes from the class, so nothing is left once the class is removed. */
+  /* Phosphor stamp-in once SCRIMMY has locked. Every element runs the same keyframes, delayed to the
+     lock, and step-end holds each keyframe until the next, so every phase cuts over hard. Filling
+     backwards keeps the element hidden while it waits; pointer-events comes from the class, so nothing
+     is left once the boot classes are removed. Text shadows inherit down to the copy; the box glow
+     (sp-boot-rim) runs on the bordered pill shapes inside: badges, buttons and the status dot. */
   @keyframes sp-boot-stamp {
     0% { opacity: 0; }
-    0.1%, ${stampAt(320)} {
-      opacity: 0.3; transform: none; filter: grayscale(1) contrast(2);
+    0.1% {
+      opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none;
       -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
       mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
     }
     ${stampAt(180)} {
-      opacity: 1; transform: translate3d(2px, 0, 0); -webkit-mask-image: none; mask-image: none;
-      filter: sepia(1) saturate(8) hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 2px #3b82f6) drop-shadow(0 0 10px #3b82f6);
+      opacity: 1; filter: brightness(1.4) contrast(1.2); -webkit-mask-image: none; mask-image: none;
+      text-shadow: -2px 0 #3b82f6, 2px 0 rgba(255, 255, 255, 0.8);
     }
-    ${stampAt(230)} {
-      opacity: 1; transform: none;
-      filter: sepia(1) saturate(8) hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 2px #3b82f6) drop-shadow(0 0 10px #3b82f6);
+    ${stampAt(260)} { filter: brightness(1.2); }
+    ${stampAt(320)} {
+      opacity: 0.6; filter: grayscale(1) brightness(1); text-shadow: none;
+      -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
+      mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
     }
-    ${stampAt(320)} { opacity: 0.6; }
-    ${stampAt(337)}, ${stampAt(420)} {
-      opacity: 1; transform: none; -webkit-mask-image: none; mask-image: none;
-      filter: sepia(1) saturate(6) hue-rotate(180deg) brightness(1.1) drop-shadow(0 0 1px #3b82f6) drop-shadow(0 0 4px #3b82f6);
+    ${stampAt(340)}, 100% {
+      opacity: 1; filter: none; -webkit-mask-image: none; mask-image: none;
+      text-shadow: 0 0 6px rgba(59, 130, 246, 0.35);
     }
-    ${stampAt(420)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-    100% {
-      opacity: 1; transform: none;
-      filter: sepia(0) saturate(1) hue-rotate(0deg) brightness(1) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
-    }
+  }
+  @keyframes sp-boot-rim {
+    0% { box-shadow: none; }
+    ${stampAt(180)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), inset 0 0 8px rgba(59, 130, 246, 0.2); }
+    ${stampAt(320)} { box-shadow: none; }
+    ${stampAt(340)}, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
+  }
+  /* Cathode filament: a 1px line fired down through the lower block on the first strike. */
+  @keyframes sp-boot-scan {
+    0% { top: 0; opacity: 0; }
+    0.1% { top: 0; opacity: 1; }
+    99.9% { top: 100%; opacity: 1; }
+    100% { top: 100%; opacity: 0; }
   }
   .sp-boot-stamp {
     pointer-events: none;
-    animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end backwards;
+    animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
+  .sp-boot-stamp :is(button, span).rounded-full {
+    animation: sp-boot-rim ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
+  }
+  .sp-boot-scan { animation: sp-boot-scan 120ms linear ${BOOT_REVEAL_MS + 180}ms both; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
