@@ -162,8 +162,9 @@ const TITLE = 'SCRIMMY';
 //                +0-350ms     coordinate hold: 30% opacity under a dot-matrix grid, greyscale, high contrast
 //                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, an arc surge of
 //                             brightness 1.6 / contrast 1.4 for 40ms then 1.4 / 1.25, and a sync jitter of
-//                             +3px (30ms) then -2px (40ms); the hero grid flashes blue for 60ms and SCRIMMY
-//                             blooms blue, easing back by +450ms
+//                             +3px (30ms) then -2px (40ms); text gets a white static core and blue halo, the
+//                             hero grid flashes blue for 60ms over blue-and-white static grain (70ms, to the
+//                             recoil), and SCRIMMY blooms blue, easing back by +450ms
 //                +420-470ms   sync recoil: 40% dot-matrix, no shadow
 //                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
 //                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
@@ -1094,6 +1095,13 @@ function Hero({ booting }) {
             className="sp-boot-gridpulse pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.25)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
           />
         )}
+        {/* Blue-and-white static grain under that flash, until the recoil */}
+        {booting && (
+          <div
+            aria-hidden="true"
+            className="sp-boot-static pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
+          />
+        )}
         {/* Dot globe, drawn behind the title as it dissolves */}
         <canvas ref={globeRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
@@ -1616,7 +1624,7 @@ const GLOBAL_CSS = `
     0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
     ${stampAt(350)} {
       opacity: 1; filter: brightness(1.6) contrast(1.4); transform: translateX(3px);
-      text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff;
+      text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff, 0 0 8px rgba(59, 130, 246, 0.8);
     }
     ${stampAt(380)} { transform: translateX(-2px); }
     ${stampAt(390)} { filter: brightness(1.4) contrast(1.25); }
@@ -1661,6 +1669,20 @@ const GLOBAL_CSS = `
   /* The hero grid lines flash electric blue for 60ms on strike 1; hidden outside the animation. */
   @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
   .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 60ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  /* Phosphor static over the hero for strike 1 only (70ms, gone at the recoil): two layers of thresholded
+     SVG noise, sparse white and denser blue, jumping position every ~23ms so the grain crackles. */
+  @keyframes sp-boot-static {
+    0% { opacity: 1; background-position: 0 0, 0 0; }
+    33% { opacity: 1; background-position: 37px 11px, -19px 29px; }
+    66%, 100% { opacity: 1; background-position: -13px 41px, 23px -7px; }
+  }
+  .sp-boot-static {
+    opacity: 0;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 14 -10.5'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23 0 0 0 0 0.51 0 0 0 0 0.96 0 0 0 12 -7'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: sp-boot-static 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
+  }
   /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
   @keyframes sp-boot-title {
     from { filter: brightness(1.3) drop-shadow(0 0 12px #3b82f6); }
