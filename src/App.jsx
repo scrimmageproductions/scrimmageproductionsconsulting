@@ -104,10 +104,10 @@ const SERVICES = [
   },
   {
     n: '03',
-    tag: 'DEV',
-    title: 'Custom Web Development',
-    body: 'Hand-crafted React and Vite applications deployed on Vercel. Fast, responsive, clean code built for conversion—zero bloated Wix templates, broken plugins, or fragile drag-and-drop page builders.',
-    tags: ['REACT 19', 'VITE', 'TAILWIND', 'VERCEL'],
+    tag: 'DEV & DESIGN',
+    title: 'Custom Web & Creative Solutions',
+    body: 'Bespoke digital architecture, clean interfaces, and custom creative solutions for your business or idea. This entire site is proof of work\u2014hand-coded performance, tailored styling, and zero generic template drag. If you can envision it, we can build it together.',
+    tags: ['BESPOKE DESIGN', 'REACT 19', 'CUSTOM STACK', 'PROOF OF WORK'],
   },
 ];
 
