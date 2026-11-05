@@ -158,17 +158,16 @@ const GLYPHS = {
 const TITLE = 'SCRIMMY';
 
 // Boot sequence on first entry (per session):
-//   0-1100ms   letters ignite one by one, S at 0ms through Y at 900ms (faint blue → blue flare → white)
-//   1100-1400  SCRIMMY rests alone, fully formed
-//   1400/1500/1600  status pill, then alias badges, then intro + buttons fade in
-//   1950       boot classes are removed and the scroll-driven dissolve takes over
+//   0-1440ms   raster pass: each of the 41 pixel columns ignites 32ms after the one to its left
+//              (faint cell → #3b82f6 flash → white over 160ms), from S's first column to Y's last
+//   1440-1690  SCRIMMY rests alone, fully white
+//   1690       nav bar, status pill, aliases, intro and buttons all fade in together
+//   2050       boot classes are removed and the normal interactive state and scroll dissolve take over
 const BOOT_KEY = 'scrimmy_assembled';
-const BOOT_LETTER_STEP = 150;
-const BOOT_IGNITE_MS = 200;
-const BOOT_PILL_MS = 1400;
-const BOOT_ALIAS_MS = 1500;
-const BOOT_INTRO_MS = 1600;
-const BOOT_TOTAL_MS = 1950;
+const BOOT_COL_STEP = 32;
+const BOOT_IGNITE_MS = 160;
+const BOOT_LOCK_MS = 250;
+const BOOT_TOTAL_MS = 2050;
 const shouldBoot = () => {
   if (typeof window === 'undefined' || prefersReducedMotion() || window.scrollY > 0) return false;
   try {
@@ -180,6 +179,9 @@ const shouldBoot = () => {
 const CELL = 10;
 const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
+// The moment the last column has settled and the lock pause is over.
+const BOOT_REVEAL_MS = (TITLE_COLS - 1) * BOOT_COL_STEP + BOOT_IGNITE_MS + BOOT_LOCK_MS;
+const bootDelay = (booting) => (booting ? { animationDelay: `${BOOT_REVEAL_MS}ms` } : undefined);
 
 // Hero scroll timeline, as a share of the pinned hero's scroll distance (0-1):
 //   0 → TEXT_FADE_END    eyebrow, pills, intro and buttons fade out (capped at 180px of scroll)
@@ -213,7 +215,7 @@ const TITLE_BLOCKS = TITLE.split('').flatMap((ch, li) =>
         on: on === '1',
         t: (BLOCK_START + (seed / 17) * BLOCK_SPREAD).toFixed(3),
         d: 40 + ((col * 11 + y * 3) % 9) * 14,
-        ig: `${li * BOOT_LETTER_STEP}ms`,
+        ig: `${col * BOOT_COL_STEP}ms`,
       };
     }),
   ),
@@ -652,7 +654,7 @@ const INPUT_CLS = `w-full min-h-[44px] rounded-xl border border-white/10 bg-[#09
 /*  Navigation                                                         */
 /* ------------------------------------------------------------------ */
 
-function NavBar({ active }) {
+function NavBar({ active, booting = false }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -674,7 +676,9 @@ function NavBar({ active }) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl">
+      <header
+        className={`sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl ${booting ? 'sp-boot-nav pointer-events-none' : ''}`}
+        style={bootDelay(booting)}>
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Primary">
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -919,29 +923,15 @@ function drawGlobe(canvas, p) {
 /*  Hero: digital title that drops apart downward on scroll            */
 /* ------------------------------------------------------------------ */
 
-function Hero() {
+function Hero({ booting }) {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
   const textRefs = useRef([]);
   const cueRef = useRef(null);
   const globeRef = useRef(null);
-  const [booting, setBooting] = useState(shouldBoot);
-  const bootDelay = (ms) => (booting ? { animationDelay: `${ms}ms` } : undefined);
   const addText = (el) => {
     if (el && !textRefs.current.includes(el)) textRefs.current.push(el);
   };
-
-  // Mark the boot as seen for this session, then drop the boot classes once it has finished.
-  useEffect(() => {
-    if (!booting) return undefined;
-    try {
-      sessionStorage.setItem(BOOT_KEY, 'true');
-    } catch {
-      // Storage unavailable: the sequence may play again next load.
-    }
-    const t = setTimeout(() => setBooting(false), BOOT_TOTAL_MS);
-    return () => clearTimeout(t);
-  }, [booting]);
 
   useEffect(() => {
     if (prefersReducedMotion()) return undefined;
@@ -1011,7 +1001,7 @@ function Hero() {
           <p
             ref={addText}
             className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-fade' : ''}`}
-            style={bootDelay(BOOT_PILL_MS)}>
+            style={bootDelay(booting)}>
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -1026,7 +1016,7 @@ function Hero() {
           <div ref={addText} className="will-change-[opacity,transform]">
             <ul
               className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-rise' : ''}`}
-              style={bootDelay(BOOT_ALIAS_MS)}
+              style={bootDelay(booting)}
               aria-label="Also known as">
               {ALIASES.map((a) => (
                 <li key={a}>
@@ -1046,14 +1036,14 @@ function Hero() {
 
             <p
               className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-fade' : ''}`}
-              style={bootDelay(BOOT_INTRO_MS)}>
+              style={bootDelay(booting)}>
               Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
               marketing and operations, and ship high-velocity websites.
             </p>
 
             <div
               className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-fade' : ''}`}
-              style={bootDelay(BOOT_INTRO_MS)}>
+              style={bootDelay(booting)}>
               <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
                 Work With Me <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
@@ -1067,7 +1057,7 @@ function Hero() {
         <button
           ref={cueRef}
           onClick={() => scrollToId('about')}
-          style={bootDelay(BOOT_INTRO_MS)}
+          style={bootDelay(booting)}
           className={`${booting ? 'sp-boot-fade' : ''} absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded text-slate-500 transition-colors duration-200 hover:text-white ${FOCUS}`}
           aria-label="Scroll to About">
           <Mono className="text-[10px]">Scroll</Mono>
@@ -1521,11 +1511,11 @@ const GLOBAL_CSS = `
   .sp-breathe { animation: sp-breathe 3.2s ease-in-out infinite; }
   @keyframes sp-beam { from { transform: translateX(-100%); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(300%); opacity: 0; } }
   .sp-beam { animation: sp-beam 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
-  /* Hero boot: each letter's blocks ignite at their letter's delay (--ig): faint blue → blue flare → white.
+  /* Hero boot: each block ignites at its column's delay (--ig): faint cell → blue flash → white.
      The text fades only fill backwards, so once they end the scroll-driven inline opacity takes over again. */
   @keyframes sp-ignite {
     0% { fill: #3b82f6; fill-opacity: 0.1; }
-    45% { fill: #3b82f6; fill-opacity: 1; }
+    35% { fill: #3b82f6; fill-opacity: 1; }
     100% { fill: #ffffff; fill-opacity: 1; }
   }
   .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
@@ -1533,6 +1523,7 @@ const GLOBAL_CSS = `
   @keyframes sp-boot-rise { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
   .sp-boot-fade { animation: sp-boot-fade 300ms ease-out backwards; }
   .sp-boot-rise { animation: sp-boot-rise 300ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .sp-boot-nav { animation: sp-boot-fade 500ms ease-out backwards; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
@@ -1550,6 +1541,19 @@ const GLOBAL_CSS = `
 
 export default function App() {
   const [active, setActive] = useState('');
+  const [booting, setBooting] = useState(shouldBoot);
+
+  // Mark the boot as seen for this session, then drop the boot classes once it has finished.
+  useEffect(() => {
+    if (!booting) return undefined;
+    try {
+      sessionStorage.setItem(BOOT_KEY, 'true');
+    } catch {
+      // Storage unavailable: the sequence may play again next load.
+    }
+    const t = setTimeout(() => setBooting(false), BOOT_TOTAL_MS);
+    return () => clearTimeout(t);
+  }, [booting]);
 
   // Highlight the nav link for the section in view.
   useEffect(() => {
@@ -1568,9 +1572,9 @@ export default function App() {
   return (
     <div className="relative min-h-screen bg-black font-sans text-slate-400 antialiased selection:bg-blue-600/40 selection:text-white">
       <style>{GLOBAL_CSS}</style>
-      <NavBar active={active} />
+      <NavBar active={active} booting={booting} />
       <main>
-        <Hero />
+        <Hero booting={booting} />
         <About />
         <Ecosystems />
         <Services />
