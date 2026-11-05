@@ -342,6 +342,10 @@ const PORTRAIT_POP_ROWS = 3;
 
 function PixelPortrait() {
   const canvasRef = useRef(null);
+  const figureRef = useRef(null);
+  const scanRef = useRef(null);
+  const captionRef = useRef(null);
+  const [instant] = useState(prefersReducedMotion);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -351,6 +355,17 @@ function PixelPortrait() {
     let drawnSize = 0;
 
     // Draws every row above the raster line; rows near the line get the pop colours.
+    // Clip the whole card to the raster line, move the scanline with it, and finish cleanly at 100%.
+    const frame = () => {
+      const done = progress >= 1;
+      if (figureRef.current) figureRef.current.style.clipPath = done ? 'none' : `inset(0 0 ${(100 - progress * 100).toFixed(2)}% 0)`;
+      if (scanRef.current) {
+        scanRef.current.style.top = `${(progress * 100).toFixed(2)}%`;
+        scanRef.current.style.opacity = progress > 0 && !done ? '1' : '0';
+      }
+      if (captionRef.current) captionRef.current.style.opacity = done ? '1' : '0';
+    };
+
     const draw = () => {
       const size = canvas.clientWidth;
       if (!size) return;
@@ -391,6 +406,7 @@ function PixelPortrait() {
         const endTop = Math.min(vh * PORTRAIT_END - rect.height / 2, startTop - 1);
         progress = Math.min(Math.max((startTop - rect.top) / (startTop - endTop), 0), 1);
         draw();
+        frame();
         // Fully assembled: lock it and stop listening, so it never re-triggers while the bio is read.
         if (progress >= 1) window.removeEventListener('scroll', onScroll);
       });
@@ -414,29 +430,47 @@ function PixelPortrait() {
   }, []);
 
   return (
-    <figure className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
-      <canvas
-        ref={canvasRef}
-        role="img"
-        aria-label="Pixel portrait of Scrimmy built from blue and white dots"
-        className="h-full w-full [mask-image:radial-gradient(ellipse_at_45%_45%,black_55%,transparent_85%)]"
-      />
-      {/* Scanlines and a faint blue grid, so the portrait reads as rendered on a display */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.35)_0px,rgba(0,0,0,0.35)_1px,transparent_1px,transparent_3px)]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.08)_1px,transparent_1px)] [background-size:32px_32px]"
-      />
-      <figcaption className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 border-t border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-400 backdrop-blur">
-        <span>IMG // scrimmy.raw</span>
-        <span className="text-blue-400">
-          {PORTRAIT_SIZE}×{PORTRAIT_SIZE}
-        </span>
-      </figcaption>
-    </figure>
+    <div className="relative">
+      <figure
+        ref={figureRef}
+        className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-black"
+        // Hidden until the raster starts (set before first paint so the empty card never flashes).
+        style={instant ? undefined : { clipPath: 'inset(0 0 100% 0)' }}>
+        <canvas
+          ref={canvasRef}
+          role="img"
+          aria-label="Pixel portrait of Scrimmy built from blue and white dots"
+          className="h-full w-full [mask-image:radial-gradient(ellipse_at_45%_45%,black_55%,transparent_85%)]"
+        />
+        {/* Scanlines and a faint blue grid, so the portrait reads as rendered on a display */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.35)_0px,rgba(0,0,0,0.35)_1px,transparent_1px,transparent_3px)]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.08)_1px,transparent_1px)] [background-size:32px_32px]"
+        />
+        <figcaption
+          ref={captionRef}
+          style={instant ? undefined : { opacity: 0 }}
+          className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 border-t border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-400 backdrop-blur transition-opacity duration-150">
+          <span>IMG // scrimmy.raw</span>
+          <span className="text-blue-400">
+            {PORTRAIT_SIZE}×{PORTRAIT_SIZE}
+          </span>
+        </figcaption>
+      </figure>
+      {/* Print-head line at the raster's leading edge; outside the figure so the clip never hides it */}
+      {!instant && (
+        <span
+          ref={scanRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 h-px -translate-y-px bg-blue-500 opacity-0 shadow-[0_0_8px_#3b82f6] transition-opacity duration-150"
+          style={{ top: '0%' }}
+        />
+      )}
+    </div>
   );
 }
 
