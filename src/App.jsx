@@ -333,36 +333,84 @@ const PORTRAIT = [
 
 const portraitColor = (level) => (level >= 8 ? '#ffffff' : level >= 6 ? '#93c5fd' : level >= 3 ? '#3b82f6' : '#1e40af');
 
+// Scroll-linked raster: rows draw top to bottom as the card moves from 20% into the viewport (its top
+// at 80% of the viewport height) until its centre reaches 55% of the viewport height.
+const PORTRAIT_START = 0.8;
+const PORTRAIT_END = 0.55;
+// The newest row shows as a faint blue cell, the next two flash electric blue, then each settles.
+const PORTRAIT_POP_ROWS = 3;
+
 function PixelPortrait() {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
+    let progress = prefersReducedMotion() ? 1 : 0;
+    let drawnRows = -1;
+    let drawnSize = 0;
+
+    // Draws every row above the raster line; rows near the line get the pop colours.
     const draw = () => {
       const size = canvas.clientWidth;
       if (!size) return;
+      const rows = progress >= 1 ? PORTRAIT_SIZE + PORTRAIT_POP_ROWS : Math.floor(progress * PORTRAIT_SIZE);
+      if (rows === drawnRows && size === drawnSize) return; // nothing new to paint
+      drawnRows = rows;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(size * dpr);
-      canvas.height = Math.round(size * dpr);
+      if (size !== drawnSize) {
+        canvas.width = Math.round(size * dpr);
+        canvas.height = Math.round(size * dpr);
+        drawnSize = size;
+      }
       const ctx = canvas.getContext('2d');
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, size, size);
       const cell = size / PORTRAIT_SIZE;
-      for (let i = 0; i < PORTRAIT.length; i += 1) {
+      const last = Math.min(rows, PORTRAIT_SIZE) * PORTRAIT_SIZE;
+      for (let i = 0; i < last; i += 1) {
         const level = PORTRAIT.charCodeAt(i) - 48;
         if (level < 2) continue; // keep the background pure black
+        const age = rows - Math.floor(i / PORTRAIT_SIZE); // 1 = newest row
+        ctx.fillStyle = age <= 1 ? 'rgba(30,64,175,0.55)' : age < PORTRAIT_POP_ROWS + 1 ? '#3b82f6' : portraitColor(level);
         const r = cell * (0.1 + level * 0.042);
-        ctx.fillStyle = portraitColor(level);
         ctx.beginPath();
         ctx.arc((i % PORTRAIT_SIZE) * cell + cell / 2, Math.floor(i / PORTRAIT_SIZE) * cell + cell / 2, r, 0, Math.PI * 2);
         ctx.fill();
       }
     };
+
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const rect = canvas.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const startTop = vh * PORTRAIT_START;
+        const endTop = Math.min(vh * PORTRAIT_END - rect.height / 2, startTop - 1);
+        progress = Math.min(Math.max((startTop - rect.top) / (startTop - endTop), 0), 1);
+        draw();
+        // Fully assembled: lock it and stop listening, so it never re-triggers while the bio is read.
+        if (progress >= 1) window.removeEventListener('scroll', onScroll);
+      });
+    };
+
     draw();
-    const ro = new ResizeObserver(draw);
+    if (progress < 1) {
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+    const ro = new ResizeObserver(() => {
+      drawnRows = -1;
+      draw();
+    });
     ro.observe(canvas);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+    };
   }, []);
 
   return (
