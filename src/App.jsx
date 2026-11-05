@@ -1014,16 +1014,7 @@ function About() {
 
           <Reveal delay={100}>
             <h2 className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Builder. Operator.{' '}
-              {/* The cursor sits outside the gradient word (a text-clipped background would hide it) and
-                  the pair never wraps apart. The small bottom padding keeps the "g" descender inside the gradient. */}
-              <span className="inline-block whitespace-nowrap">
-                <span className="sp-shimmer -mb-[0.12em] inline-block pb-[0.12em]">Organizer.</span>
-                <span
-                  aria-hidden="true"
-                  className="sp-blink ml-1.5 inline-block h-[0.85em] w-2 bg-white align-baseline shadow-[0_0_8px_#60a5fa,0_0_20px_#3b82f6,0_0_35px_rgba(59,130,246,0.6)]"
-                />
-              </span>
+              Builder. Operator. Organizer<span className="text-blue-500">.</span>
             </h2>
             <div aria-hidden="true" className="mt-4 max-w-md border-b border-blue-500/20" />
             <p className="mt-5 text-lg leading-relaxed text-slate-400">
@@ -1449,24 +1440,9 @@ const GLOBAL_CSS = `
   .sp-breathe { animation: sp-breathe 3.2s ease-in-out infinite; }
   @keyframes sp-beam { from { transform: translateX(-100%); opacity: 1; } 85% { opacity: 1; } to { transform: translateX(300%); opacity: 0; } }
   .sp-beam { animation: sp-beam 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
-  /* Shell cursor: hard on/off, no fade. */
-  @keyframes sp-blink { to { visibility: hidden; } }
-  .sp-blink { animation: sp-blink 1.06s steps(2, start) infinite; }
-  /* White-to-blue gradient text with a light band that sweeps across every 6s, then rests. */
-  @keyframes sp-shimmer { 0%, 65% { background-position: 160% 0, 0 0; } 100% { background-position: -60% 0, 0 0; } }
-  .sp-shimmer {
-    background-image: linear-gradient(110deg, transparent 38%, rgba(255,255,255,0.95) 50%, transparent 62%), linear-gradient(90deg, #ffffff, #dbeafe 45%, #60a5fa);
-    background-size: 250% 100%, 100% 100%;
-    background-repeat: no-repeat;
-    background-position: 160% 0, 0 0;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: sp-shimmer 6s ease-in-out infinite;
-  }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .sp-ping, .sp-bob, .sp-breathe, .sp-blink, .sp-shimmer { animation: none; }
+    .sp-ping, .sp-bob, .sp-breathe { animation: none; }
     .sp-beam { animation: none; opacity: 0; }
   }
 `;
