@@ -159,16 +159,14 @@ const TITLE = 'SCRIMMY';
 //              (faint cell → #3b82f6 flash → white over 160ms), from S's first column to Y's last
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
-//                +0-180ms    coordinate strike: 30% opacity through a dot-matrix mask, greyscale, high contrast
-//                +180-260ms  voltage strike: chromatic text split, blue box glow on bordered parts and
-//                            brightness 1.4 / contrast 1.2, while a 1px cathode line sweeps down through
-//                            the aliases, intro and buttons (120ms)
-//                +260-320ms  strike holds at brightness 1.2
-//                +320ms      one-frame dip back to a 60% dot-matrix with the split and glow cut
-//                +340-550ms  tight electric-blue rim glow
-//                +550ms      hard cut to normal styling
-//   2540       (+850ms) boot classes and delays are removed, so the normal interactive state and the
-//              scroll-driven dissolve take over with no filter, mask or opacity left behind
+//                +0-350ms     coordinate hold: 30% opacity through a dot-matrix mask, greyscale, high contrast
+//                +350-600ms   voltage strike: chromatic text split, blue box glow on bordered parts and
+//                             brightness 1.4 / contrast 1.2 across nav and hero together
+//                +600-750ms   recoil: split, overdrive and dot-matrix dropped
+//                +750-1000ms  tight electric-blue rim glow on badges and buttons
+//                +1000ms      hard cut to normal styling
+//   3090       (+1400ms) boot classes are removed, so the normal interactive state and the
+//              scroll-driven dissolve take over with no filter, mask or shadow left behind
 const BOOT_KEY = 'scrimmy_assembled';
 const BOOT_COL_STEP = 32;
 const BOOT_IGNITE_MS = 160;
@@ -186,8 +184,8 @@ const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 // The moment the last column has settled and the lock pause is over.
 const BOOT_REVEAL_MS = (TITLE_COLS - 1) * BOOT_COL_STEP + BOOT_IGNITE_MS + BOOT_LOCK_MS;
-const BOOT_STAMP_MS = 550;
-const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 850;
+const BOOT_STAMP_MS = 1000;
+const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 1400;
 // Keyframe offset for a point in the stamp-in, given in ms from its start.
 const stampAt = (ms) => `${((ms / BOOT_STAMP_MS) * 100).toFixed(2)}%`;
 
@@ -1101,13 +1099,7 @@ function Hero({ booting }) {
             <DigitalTitle booting={booting} />
           </h1>
 
-          <div ref={addText} className="relative will-change-[opacity,transform]">
-            {booting && (
-              <span
-                aria-hidden="true"
-                className="sp-boot-scan pointer-events-none absolute inset-x-0 z-20 h-[1px] bg-[#ffffff] shadow-[0_0_10px_#3b82f6]"
-              />
-            )}
+          <div ref={addText} className="will-change-[opacity,transform]">
             <ul
               className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-stamp' : ''}`}
               aria-label="Also known as">
@@ -1609,33 +1601,17 @@ const GLOBAL_CSS = `
       -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
       mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
     }
-    ${stampAt(180)} {
+    ${stampAt(350)} {
       opacity: 1; filter: brightness(1.4) contrast(1.2); -webkit-mask-image: none; mask-image: none;
-      text-shadow: -2px 0 #3b82f6, 2px 0 rgba(255, 255, 255, 0.8);
+      text-shadow: -2px 0 #3b82f6, 2px 0 #ffffff;
     }
-    ${stampAt(260)} { filter: brightness(1.2); }
-    ${stampAt(320)} {
-      opacity: 0.6; filter: grayscale(1) brightness(1); text-shadow: none;
-      -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
-      mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
-    }
-    ${stampAt(340)}, 100% {
-      opacity: 1; filter: none; -webkit-mask-image: none; mask-image: none;
-      text-shadow: 0 0 6px rgba(59, 130, 246, 0.35);
-    }
+    ${stampAt(600)}, 100% { opacity: 1; filter: none; text-shadow: none; -webkit-mask-image: none; mask-image: none; }
   }
   @keyframes sp-boot-rim {
     0% { box-shadow: none; }
-    ${stampAt(180)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), inset 0 0 8px rgba(59, 130, 246, 0.2); }
-    ${stampAt(320)} { box-shadow: none; }
-    ${stampAt(340)}, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
-  }
-  /* Cathode filament: a 1px line fired down through the lower block on the first strike. */
-  @keyframes sp-boot-scan {
-    0% { top: 0; opacity: 0; }
-    0.1% { top: 0; opacity: 1; }
-    99.9% { top: 100%; opacity: 1; }
-    100% { top: 100%; opacity: 0; }
+    ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), inset 0 0 8px rgba(59, 130, 246, 0.2); }
+    ${stampAt(600)} { box-shadow: none; }
+    ${stampAt(750)}, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
   }
   .sp-boot-stamp {
     pointer-events: none;
@@ -1646,7 +1622,6 @@ const GLOBAL_CSS = `
   .sp-boot-stamp :is(button, span).rounded-full {
     animation: sp-boot-rim ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
-  .sp-boot-scan { animation: sp-boot-scan 120ms linear ${BOOT_REVEAL_MS + 180}ms both; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
