@@ -8,14 +8,11 @@ import {
   ChevronDown,
   ChevronRight,
   Code2,
-  Landmark,
   Loader2,
   Mail,
   MapPin,
   Megaphone,
   Menu,
-  Mountain,
-  Pizza,
   Send,
   X,
 } from 'lucide-react';
@@ -61,7 +58,9 @@ const EXECUTION_MATRIX = [
 
 const ECOSYSTEMS = [
   {
-    icon: Pizza,
+    logo: '/pizzadao.png',
+    // Black-on-transparent mark: flatten to white so it reads on the dark badge.
+    logoClass: 'brightness-0 invert',
     org: 'PizzaDAO',
     role: 'Director of Operations',
     body: 'Started as a note-taker and climbed the ranks to lead operations for the largest global pizza party in existence. Spearheaded multi-timezone logistics, international communications, and cross-border marketing to coordinate simultaneous celebrations across 400+ cities and 100+ countries—onboarding the world by decentralizing joy.',
@@ -72,7 +71,7 @@ const ECOSYSTEMS = [
     ],
   },
   {
-    icon: Mountain,
+    logo: '/team1.png',
     org: 'Avax Team1 USA',
     role: 'Collaborator',
     body: 'Active collaborator pushing the Avalanche ecosystem forward. Fresh to the team, yet already architecting and executing high-impact, scaled cross-community partnerships that expand builder mindshare and drive strategic value across Avax Team1.',
@@ -83,7 +82,7 @@ const ECOSYSTEMS = [
     ],
   },
   {
-    icon: Landmark,
+    logo: '/standwithcrypto.png',
     org: 'Stand With Crypto',
     role: 'Iowa Chapter President',
     body: 'Grassroots community mobilization across Iowa, voter education, and advocacy for clearer digital asset policy.',
@@ -935,6 +934,26 @@ function About() {
 /*  Ecosystems                                                         */
 /* ------------------------------------------------------------------ */
 
+// Hairline brackets on each corner of an ecosystem card.
+const CORNERS = [
+  'left-0 top-0 border-l border-t',
+  'right-0 top-0 border-r border-t',
+  'bottom-0 left-0 border-b border-l',
+  'bottom-0 right-0 border-b border-r',
+];
+
+function ActiveTag() {
+  return (
+    <span className="inline-flex items-center gap-1.5 border border-zinc-800 bg-black px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-blue-300">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-500" />
+      </span>
+      Active
+    </span>
+  );
+}
+
 function Ecosystems() {
   return (
     <section id="ecosystems" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
@@ -946,34 +965,54 @@ function Ecosystems() {
           sub="Real roles in real communities: producing global events, supporting builders, and organizing for clear crypto policy."
         />
         <div className="grid gap-4 lg:grid-cols-3">
-          {ECOSYSTEMS.map((e, i) => {
-            const Icon = e.icon;
-            return (
-              <Reveal key={e.org} delay={i * 100} className="h-full">
-                <Card className="flex h-full flex-col p-7 transition-colors duration-200 hover:border-blue-500/30 sm:p-8">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-blue-600/10 text-blue-400">
-                      <Icon className="h-5 w-5" />
+          {ECOSYSTEMS.map((e, i) => (
+            <Reveal key={e.org} delay={i * 100} className="h-full">
+              <article className="group relative flex h-full flex-col border border-zinc-800 bg-[#05070d] p-7 transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] sm:p-8">
+                {CORNERS.map((c) => (
+                  <span
+                    key={c}
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute h-3 w-3 border-zinc-600 transition-colors duration-300 group-hover:border-blue-400 ${c}`}
+                  />
+                ))}
+
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/80 p-2">
+                    <img
+                      src={e.logo}
+                      alt={`${e.org} logo`}
+                      width={32}
+                      height={32}
+                      loading="lazy"
+                      decoding="async"
+                      className={`h-full w-full object-contain ${e.logoClass ?? ''}`}
+                    />
+                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      // Node_{String(i + 1).padStart(2, '0')}
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-blue-500/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-blue-300">
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Active
-                    </span>
+                    <ActiveTag />
                   </div>
-                  <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{e.org}</h3>
-                  <Mono className="mt-2 text-blue-400">{e.role}</Mono>
-                  <p className="mt-4 flex-1 text-[15px] leading-relaxed text-slate-400">{e.body}</p>
-                  <ul className="mt-6 space-y-2 border-t border-white/5 pt-6">
-                    {e.points.map((p) => (
-                      <li key={p} className="flex items-center gap-2.5 text-sm text-slate-300">
-                        <Check className="h-4 w-4 shrink-0 text-blue-500" />
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              </Reveal>
-            );
-          })}
+                </div>
+
+                <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{e.org}</h3>
+                <p className="mt-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue-400">{e.role}</p>
+                <p className="mt-4 flex-1 text-[15px] leading-relaxed text-slate-400">{e.body}</p>
+
+                <ul className="mt-6 space-y-2.5 border-t border-zinc-800 pt-6">
+                  {e.points.map((p) => (
+                    <li key={p} className="flex gap-2.5 text-sm text-slate-300">
+                      <span aria-hidden="true" className="font-mono text-blue-500">
+                        →
+                      </span>
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
