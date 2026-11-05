@@ -424,16 +424,11 @@ function Mono({ children, className = '' }) {
   return <span className={`font-mono text-xs uppercase tracking-[0.18em] ${className}`}>{children}</span>;
 }
 
-function SectionHeader({ index, eyebrow, title, sub }) {
+function SectionHeader({ title, sub }) {
   return (
-    <Reveal className="mb-14 grid gap-4 border-t border-white/10 pt-6 lg:grid-cols-[0.32fr_1fr] lg:gap-6">
-      <Mono className="text-blue-400 lg:pt-3">
-        {index} // {eyebrow}
-      </Mono>
-      <div>
-        <h2 className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">{title}</h2>
-        {sub && <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">{sub}</p>}
-      </div>
+    <Reveal className="mb-14 border-t border-white/10 pt-10">
+      <h2 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">{title}</h2>
+      {sub && <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">{sub}</p>}
     </Reveal>
   );
 }
@@ -924,8 +919,7 @@ function About() {
           </Reveal>
 
           <Reveal delay={100}>
-            <Mono className="text-blue-400">01 // About</Mono>
-            <h2 className="mt-4 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
+            <h2 className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Builder. Operator. Organizer.
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-slate-400">
@@ -972,8 +966,6 @@ function Ecosystems() {
     <section id="ecosystems" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          index="02"
-          eyebrow="Ecosystems"
           title="Where I build and organize."
           sub="Real roles in real communities: producing global events, supporting builders, and organizing for clear crypto policy."
         />
@@ -1034,8 +1026,6 @@ function Services() {
     <section id="services" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          index="03"
-          eyebrow="Services"
           title="What I Actually Do."
           sub="I coordinate complex global events, audit and automate messy operations, and write production-grade web software. No agency middlemen."
         />
@@ -1145,8 +1135,6 @@ function Contact() {
     <section id="contact" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          index="04"
-          eyebrow="Contact"
           title="Let's build something."
           sub="One form, no surveys. Tell me what you need and I will reply within 1 business day."
         />
