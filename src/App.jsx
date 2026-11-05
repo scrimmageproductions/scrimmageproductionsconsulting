@@ -457,19 +457,69 @@ function BlueprintRule() {
   );
 }
 
-function SectionHeader({ title, sub, blueprint = false, cursor = false, telemetry }) {
+// Scroll-linked typing window, as fractions of the viewport height measured at the heading's top edge:
+// typing starts when the heading is 15% of the way up the screen and finishes at 45%.
+const TYPE_START = 0.15;
+const TYPE_END = 0.45;
+
+// Types the heading out as it scrolls into view. Until it finishes, scrolling back up un-types it;
+// once complete it locks, so it never flickers while being read.
+function TypedText({ text }) {
+  const ref = useRef(null);
+  const [chars, setChars] = useState(() => (prefersReducedMotion() ? text.length : 0));
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return undefined;
+    let raf = 0;
+    let done = false;
+    const update = () => {
+      raf = 0;
+      const el = ref.current;
+      if (!el || done) return;
+      const vh = window.innerHeight;
+      const progress = (vh * (1 - TYPE_START) - el.getBoundingClientRect().top) / (vh * (TYPE_END - TYPE_START));
+      const next = Math.round(Math.min(Math.max(progress, 0), 1) * text.length);
+      setChars(next);
+      if (next >= text.length) {
+        done = true;
+        window.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', onScroll);
+      }
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [text]);
+
+  return (
+    <>
+      {/* Screen readers get the whole sentence once; the animated copy is hidden from them. */}
+      <span className="sr-only">{text}</span>
+      <span ref={ref} aria-hidden="true">
+        {text.slice(0, chars)}
+        <span className="ml-1 inline-block h-[0.85em] w-2.5 animate-pulse bg-blue-500 align-baseline shadow-[0_0_10px_rgba(59,130,246,0.8)] motion-reduce:animate-none" />
+        {/* The untyped rest is laid out but invisible, so the heading never changes height while typing. */}
+        <span className="invisible">{text.slice(chars)}</span>
+      </span>
+    </>
+  );
+}
+
+function SectionHeader({ title, sub, blueprint = false, typewriter = false, telemetry }) {
   return (
     <Reveal className={`mb-14 ${blueprint ? '' : 'border-t border-white/10 pt-10'}`}>
       {blueprint && <BlueprintRule />}
       <h2
         className={`max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl ${blueprint ? 'pt-9' : ''}`}>
-        {title}
-        {cursor && (
-          <span
-            aria-hidden="true"
-            className="ml-1 inline-block h-7 w-2.5 animate-pulse bg-blue-500 align-middle motion-reduce:animate-none"
-          />
-        )}
+        {typewriter ? <TypedText text={title} /> : title}
       </h2>
       {sub && <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">{sub}</p>}
       {telemetry && <p className="mt-4 font-mono text-[11px] tracking-wide text-zinc-500">{telemetry}</p>}
@@ -1020,7 +1070,7 @@ function Ecosystems() {
       <div className="mx-auto max-w-6xl">
         <SectionHeader
           blueprint
-          cursor
+          typewriter
           title="Where I build and organize."
           sub="Real roles in real communities: producing global events, supporting builders, and organizing for clear crypto policy."
           telemetry={`[SYS_ENV: PRODUCTION] // DEPLOYED_NODES: ${String(ECOSYSTEMS.length).padStart(2, '0')} // ACTIVE_STATE: RUNNING`}
