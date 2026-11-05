@@ -164,7 +164,7 @@ const TITLE = 'SCRIMMY';
 //                             brightness 1.6 / contrast 1.4 for 40ms then 1.4 / 1.25, and a sync jitter of
 //                             +3px (30ms) then -2px (40ms); text gets a white static core and blue halo, the
 //                             hero grid flashes blue for 60ms, a 2px blue interlace covers the hero, two
-//                             raster tears cut across it (+6px through the middle of SCRIMMY, then -4px
+//                             raster tears cut across it (+14px through the middle of SCRIMMY, then -10px
 //                             through the buttons, 35ms each), and SCRIMMY blooms blue, easing back by +450ms
 //                +420-470ms   sync recoil: 40% dot-matrix, no shadow
 //                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
@@ -1181,7 +1181,9 @@ function Hero({ booting }) {
               sideways, so a strip of the hero appears torn out of sync. */}
           {booting && (
             <div ref={tearRef} aria-hidden="true" inert className="sp-boot-tear pointer-events-none absolute inset-0 bg-black">
-              <HeroStage booting={booting} />
+              <div className="sp-boot-tear-fx">
+                <HeroStage booting={booting} />
+              </div>
             </div>
           )}
         </div>
@@ -1190,7 +1192,7 @@ function Hero({ booting }) {
         {booting && (
           <div
             aria-hidden="true"
-            className="sp-boot-interlace pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(59,130,246,0.15)_0px,rgba(59,130,246,0.15)_1px,transparent_1px,transparent_2px)]"
+            className="sp-boot-interlace pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(59,130,246,0.35)_0px,rgba(59,130,246,0.35)_1px,transparent_1px,transparent_2px)] mix-blend-screen"
           />
         )}
 
@@ -1706,13 +1708,13 @@ const GLOBAL_CSS = `
   /* The hero grid lines flash electric blue for 60ms on strike 1; hidden outside the animation. */
   @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
   .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 60ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* Strike 1 raster tears, 35ms each with hard cuts: a 24px band through SCRIMMY jumps +6px, then a
-     16px band through the buttons jumps -4px (positions measured by Hero; 40% / 72% otherwise). The ::after marks the band
+  /* Strike 1 raster tears, 35ms each with hard cuts: a 24px band through SCRIMMY jumps +14px, then a
+     16px band through the buttons jumps -10px (positions measured by Hero; 40% / 72% otherwise). The ::after marks the band
      with a cyan top edge and a white bottom edge. Hidden outside its 70ms. */
   @keyframes sp-boot-tear {
-    0% { opacity: 1; clip-path: inset(var(--sp-tear-1) 0 calc(100% - var(--sp-tear-1) - 24px) 0); transform: translateX(6px); }
+    0% { opacity: 1; clip-path: inset(var(--sp-tear-1) 0 calc(100% - var(--sp-tear-1) - 24px) 0); transform: translateX(14px); }
     50%, 100% {
-      opacity: 1; clip-path: inset(var(--sp-tear-2) 0 calc(100% - var(--sp-tear-2) - 16px) 0); transform: translateX(-4px);
+      opacity: 1; clip-path: inset(var(--sp-tear-2) 0 calc(100% - var(--sp-tear-2) - 16px) 0); transform: translateX(-10px);
     }
   }
   @keyframes sp-boot-tear-edge {
@@ -1720,6 +1722,8 @@ const GLOBAL_CSS = `
     50%, 100% { top: var(--sp-tear-2); height: 16px; }
   }
   .sp-boot-tear { --sp-tear-1: 40%; --sp-tear-2: 72%; opacity: 0; animation: sp-boot-tear 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  /* Overdrive on the torn copy's content (not its black backing, whose shadow would be clipped away). */
+  .sp-boot-tear-fx { filter: brightness(1.75) contrast(1.4) drop-shadow(-3px 0 6px #00f0ff); }
   .sp-boot-tear::after {
     content: '';
     position: absolute;
