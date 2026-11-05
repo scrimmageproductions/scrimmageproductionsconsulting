@@ -144,6 +144,18 @@ const CELL = 10;
 const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 
+// Hero scroll timeline, as a share of the pinned hero's scroll distance (0-1):
+//   0 → TEXT_FADE_END    eyebrow, pills, intro and buttons fade out (capped at 180px of scroll)
+//   BLOCK_START → ~0.84  SCRIMMY blocks detach and drop
+//   STAGE_FADE_*         whatever is left fades out, then the hero stops taking clicks
+// The About section slides up over the hero during the final stretch, so there is no empty screen.
+const TEXT_FADE_PX = 180;
+const TEXT_FADE_END = 0.18;
+const BLOCK_START = 0.2;
+const BLOCK_SPREAD = 0.35;
+const STAGE_FADE_START = 0.62;
+const STAGE_FADE_END = 0.86;
+
 // Each lit block gets a fixed start point (--t) and drop distance (--d), so the title
 // detaches unevenly: pixels let go at different moments and slide down at different rates.
 const TITLE_BLOCKS = TITLE.split('').flatMap((ch, li) =>
@@ -156,7 +168,7 @@ const TITLE_BLOCKS = TITLE.split('').flatMap((ch, li) =>
         x: col * CELL,
         y: y * CELL,
         on: on === '1',
-        t: (0.02 + (seed / 17) * 0.55).toFixed(3),
+        t: (BLOCK_START + (seed / 17) * BLOCK_SPREAD).toFixed(3),
         d: 40 + ((col * 11 + y * 3) % 9) * 14,
       };
     }),
@@ -579,11 +591,20 @@ function NavBar({ active }) {
 function Hero() {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
+  const textRefs = useRef([]);
   const cueRef = useRef(null);
+  const addText = (el) => {
+    if (el && !textRefs.current.includes(el)) textRefs.current.push(el);
+  };
 
   useEffect(() => {
     if (prefersReducedMotion()) return undefined;
     let raf = 0;
+    // Hidden elements also leave the tab order, so keyboard users never land on an invisible button.
+    const setGone = (el, gone) => {
+      el.style.pointerEvents = gone ? 'none' : '';
+      el.style.visibility = gone ? 'hidden' : '';
+    };
     const update = () => {
       raf = 0;
       const section = sectionRef.current;
@@ -591,16 +612,28 @@ function Hero() {
       if (!section || !stage) return;
       // 0 at the top of the page, 1 once the pinned hero has been scrolled past.
       const travel = Math.max(section.offsetHeight - window.innerHeight, 1);
-      const p = Math.min(Math.max(-section.getBoundingClientRect().top / travel, 0), 1);
-      // One CSS variable drives every block; no React re-renders while scrolling.
+      const scrolled = Math.max(-section.getBoundingClientRect().top, 0);
+      const p = Math.min(scrolled / travel, 1);
+
+      // Text: fades and drifts down over the first 180px (sooner on short screens), well before blocks drop.
+      const textFade = Math.min(scrolled / Math.min(TEXT_FADE_PX, travel * TEXT_FADE_END), 1);
+      textRefs.current.forEach((el) => {
+        el.style.opacity = String(1 - textFade);
+        el.style.transform = `translate3d(0, ${(textFade * 24).toFixed(1)}px, 0)`;
+        setGone(el, textFade >= 1);
+      });
+
+      // Title: one CSS variable drives every block; no React re-renders while scrolling.
+      const stageFade = Math.min(Math.max((p - STAGE_FADE_START) / (STAGE_FADE_END - STAGE_FADE_START), 0), 1);
       stage.style.setProperty('--p', p.toFixed(4));
       stage.style.transform = `translate3d(0, ${(p * 14).toFixed(2)}vh, 0) scale(${(1 + p * 0.06).toFixed(4)})`;
-      stage.style.opacity = String(1 - Math.max(0, (p - 0.6) / 0.4));
-      stage.style.pointerEvents = p >= 0.98 ? 'none' : '';
-      // The scroll hint has done its job as soon as scrolling starts.
+      stage.style.opacity = String(1 - stageFade);
+      setGone(stage, stageFade >= 1);
+
+      // The scroll hint fades with the text.
       if (cueRef.current) {
-        cueRef.current.style.opacity = String(Math.max(0, 1 - p * 6));
-        cueRef.current.style.visibility = p > 0.17 ? 'hidden' : '';
+        cueRef.current.style.opacity = String(1 - textFade);
+        setGone(cueRef.current, textFade >= 1);
       }
     };
     const onScroll = () => {
@@ -617,7 +650,7 @@ function Hero() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative h-[170svh]" aria-label="Introduction">
+    <section ref={sectionRef} className="relative h-[180svh]" aria-label="Introduction">
       <div className="sticky top-0 flex h-[100svh] items-center overflow-hidden px-4 sm:px-6 lg:px-8">
         {/* Faint blue grid behind the title */}
         <div
@@ -625,7 +658,7 @@ function Hero() {
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
         />
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
-          <p className="flex items-center gap-2.5">
+          <p ref={addText} className="flex items-center gap-2.5 will-change-[opacity,transform]">
             <span className="relative flex h-2 w-2">
               <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -637,35 +670,37 @@ function Hero() {
             <DigitalTitle />
           </h1>
 
-          <ul className="mt-8 flex flex-wrap gap-2" aria-label="Also known as">
-            {ALIASES.map((a) => (
-              <li key={a}>
-                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
-                  <span className="mr-2 text-blue-500">aka</span>
-                  {a}
+          <div ref={addText} className="will-change-[opacity,transform]">
+            <ul className="mt-8 flex flex-wrap gap-2" aria-label="Also known as">
+              {ALIASES.map((a) => (
+                <li key={a}>
+                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
+                    <span className="mr-2 text-blue-500">aka</span>
+                    {a}
+                  </span>
+                </li>
+              ))}
+              <li>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
+                  <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                  {HOME_BASE}
                 </span>
               </li>
-            ))}
-            <li>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
-                <MapPin className="h-3.5 w-3.5 text-blue-500" />
-                {HOME_BASE}
-              </span>
-            </li>
-          </ul>
+            </ul>
 
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl">
-            Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
-            marketing and operations, and ship high-velocity websites.
-          </p>
+            <p className="mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl">
+              Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
+              marketing and operations, and ship high-velocity websites.
+            </p>
 
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
-              Work With Me <ArrowRight className="h-4 w-4" />
-            </PrimaryButton>
-            <SecondaryButton onClick={() => scrollToId('ecosystems')} className="px-6 py-3">
-              See My Ecosystems
-            </SecondaryButton>
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
+                Work With Me <ArrowRight className="h-4 w-4" />
+              </PrimaryButton>
+              <SecondaryButton onClick={() => scrollToId('ecosystems')} className="px-6 py-3">
+                See My Ecosystems
+              </SecondaryButton>
+            </div>
           </div>
         </div>
 
@@ -688,7 +723,9 @@ function Hero() {
 
 function About() {
   return (
-    <section id="about" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+    <section id="about" className="relative z-10 -mt-[50svh] scroll-mt-20 bg-black px-4 py-20 sm:px-6 sm:py-28 lg:px-8 [@media(max-height:500px)]:pt-6">
+      {/* Soft top edge so the section rises over the dissolving hero instead of cutting across it */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-32 h-32 bg-gradient-to-b from-transparent to-black" />
       <div className="mx-auto max-w-6xl border-t border-white/10 pt-6">
         <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
           <Reveal className="mx-auto w-full max-w-md lg:max-w-none">
