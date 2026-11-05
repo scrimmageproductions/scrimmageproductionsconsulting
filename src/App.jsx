@@ -159,14 +159,17 @@ const TITLE = 'SCRIMMY';
 //              (faint cell → #3b82f6 flash → white over 160ms), from S's first column to Y's last
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
-//                +0-350ms     coordinate hold: 30% opacity through a dot-matrix mask, greyscale, high contrast
-//                +350-600ms   voltage strike: chromatic text split, blue box glow on bordered parts and
-//                             brightness 1.4 / contrast 1.2 across nav and hero together
-//                +600-750ms   recoil: split, overdrive and dot-matrix dropped
-//                +750-1000ms  tight electric-blue rim glow on badges and buttons
+//                +0-350ms     coordinate hold: 30% opacity under a dot-matrix grid, greyscale, high contrast
+//                +350-420ms   strike 1: 3px chromatic split, brightness 1.4 / contrast 1.25, 16px blue glow on
+//                             the pills, -1.2deg skew; SCRIMMY blooms blue and eases back by +450ms
+//                +420-470ms   sync recoil: 40% dot-matrix, no shadow
+//                +470-560ms   strike 2 / lock: 1px split, no skew, blue rim outline, dense dot-matrix
+//                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
+//                             overdrive ease out
+//                +750-1000ms  tight 8px rim glow on the badges and primary buttons
 //                +1000ms      hard cut to normal styling
 //   3090       (+1400ms) boot classes are removed, so the normal interactive state and the
-//              scroll-driven dissolve take over with no filter, mask or shadow left behind
+//              scroll-driven dissolve take over with no filter, overlay or shadow left behind
 const BOOT_KEY = 'scrimmy_assembled';
 const BOOT_COL_STEP = 32;
 const BOOT_IGNITE_MS = 160;
@@ -1095,7 +1098,7 @@ function Hero({ booting }) {
             <Mono className="text-blue-400">SYSTEM_ONLINE // {SITE_DOMAIN}</Mono>
           </p>
 
-          <h1 className="mt-8">
+          <h1 className={`mt-8 ${booting ? 'sp-boot-title' : ''}`}>
             <DigitalTitle booting={booting} />
           </h1>
 
@@ -1594,33 +1597,83 @@ const GLOBAL_CSS = `
      backwards keeps the element hidden while it waits; pointer-events comes from the class, so nothing
      is left once the boot classes are removed. Text shadows inherit down to the copy; the box glow
      (sp-boot-rim) runs on the bordered pill shapes inside: badges, buttons and the status dot. */
+  /* The dot-matrix is a black overlay (::after) punched with a 3px grid of holes of radius --sp-dot,
+     reaching 16px above and below each element so glows get the texture instead of being clipped.
+     Registering --sp-dot lets the holes swell until they overlap (past ~2.12px nothing is left) and the
+     grid burns away; browsers without @property simply cut from grid to clear. */
+  @property --sp-dot { syntax: '<length>'; inherits: false; initial-value: 3px; }
   @keyframes sp-boot-stamp {
     0% { opacity: 0; }
-    0.1% {
-      opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none;
-      -webkit-mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); -webkit-mask-size: 3px 3px;
-      mask-image: radial-gradient(circle, #000 1.1px, transparent 1.4px); mask-size: 3px 3px;
-    }
+    0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
     ${stampAt(350)} {
-      opacity: 1; filter: brightness(1.4) contrast(1.2); -webkit-mask-image: none; mask-image: none;
-      text-shadow: -2px 0 #3b82f6, 2px 0 #ffffff;
+      opacity: 1; filter: brightness(1.4) contrast(1.25); transform: skewX(-1.2deg);
+      text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff;
     }
-    ${stampAt(600)}, 100% { opacity: 1; filter: none; text-shadow: none; -webkit-mask-image: none; mask-image: none; }
+    ${stampAt(420)} { opacity: 0.4; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
+    ${stampAt(470)}, ${stampAt(560)} {
+      opacity: 1; filter: brightness(1.15) contrast(1.1); transform: none;
+      text-shadow: -1px 0 #3b82f6, 1px 0 #ffffff;
+    }
+    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(750)}, 100% {
+      opacity: 1; filter: brightness(1) contrast(1); transform: none;
+      text-shadow: 0 0 #3b82f6, 0 0 #ffffff;
+    }
   }
+  @keyframes sp-boot-grid {
+    0% { opacity: 0; }
+    0.1% { opacity: 1; --sp-dot: 1.1px; }
+    ${stampAt(350)} { opacity: 0; }
+    ${stampAt(420)} { opacity: 1; --sp-dot: 1.1px; }
+    ${stampAt(470)}, ${stampAt(560)} { opacity: 1; --sp-dot: 1.3px; }
+    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(750)}, 100% { opacity: 1; --sp-dot: 2.4px; }
+  }
+  /* Rim on the pill shapes. sp-boot-rim keeps the 8px settle glow (badges, primary buttons, status dot);
+     sp-boot-rim-strike drops it after the strike, for the secondary button. */
   @keyframes sp-boot-rim {
     0% { box-shadow: none; }
-    ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), inset 0 0 8px rgba(59, 130, 246, 0.2); }
-    ${stampAt(600)} { box-shadow: none; }
-    ${stampAt(750)}, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
+    ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.2); }
+    ${stampAt(420)} { box-shadow: none; }
+    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6, 0 0 8px rgba(59, 130, 246, 0.3); }
+    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 0 8px rgba(59, 130, 246, 0.3); }
   }
+  @keyframes sp-boot-rim-strike {
+    0% { box-shadow: none; }
+    ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.2); }
+    ${stampAt(420)} { box-shadow: none; }
+    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6; }
+    ${stampAt(560)} { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  }
+  /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
+  @keyframes sp-boot-title {
+    from { filter: brightness(1.3) drop-shadow(0 0 12px #3b82f6); }
+    to { filter: brightness(1) drop-shadow(0 0 0 rgba(59, 130, 246, 0)); }
+  }
+  .sp-boot-title { animation: sp-boot-title 100ms ease-out ${BOOT_REVEAL_MS + 350}ms; }
   .sp-boot-stamp {
     pointer-events: none;
     animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
+  }
+  .sp-boot-stamp:not(.sticky, .absolute) { position: relative; }
+  .sp-boot-stamp::after {
+    content: '';
+    position: absolute;
+    inset: -16px 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, transparent var(--sp-dot), #000 calc(var(--sp-dot) + 0.3px));
+    background-size: 3px 3px;
+    animation: sp-boot-grid ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
   /* Buttons reset text-shadow in the browser's default styles, so pull the strike's split through. */
   .sp-boot-stamp button { text-shadow: inherit; }
   .sp-boot-stamp :is(button, span).rounded-full {
     animation: sp-boot-rim ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
+  }
+  .sp-boot-stamp button.rounded-full:not(.bg-blue-600) {
+    animation-name: sp-boot-rim-strike;
   }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
