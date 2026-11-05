@@ -94,23 +94,23 @@ const SERVICES = [
   {
     n: '01',
     icon: CalendarRange,
-    title: 'Event Planning & Global Production',
-    body: 'High-stakes run-of-shows, multi-city logistics, venue and vendor deals, and crypto-native ticketing.',
-    tags: ['Run-of-show', 'Multi-city', 'Venues & vendors', 'Ticketing'],
+    title: 'Event Production & Logistics',
+    body: 'Full-scale live and decentralized event management. I coordinate multi-city runs-of-show, secure local venue and vendor contracts, direct sponsor activations, and handle crypto-native ticketing across time zones.',
+    tags: ['RUN-OF-SHOW', '400+ CITIES', 'SPONSORS', 'VENDORS'],
   },
   {
     n: '02',
     icon: Megaphone,
-    title: 'Marketing & Business Consulting',
-    body: 'Operations and campaign metrics, grassroots community building, tech audits, and pipeline automation.',
-    tags: ['Ops metrics', 'Campaigns', 'Community', 'Tech audits', 'Automation'],
+    title: 'Operations & Marketing Consulting',
+    body: "Fixing what's broken in your business. I audit internal toolchains, clear operational bottlenecks, structure ecosystem partnerships, and wire up automated lead-routing pipelines so work stops slipping through the cracks.",
+    tags: ['WORKFLOW AUDITS', 'PARTNERSHIPS', 'LEAD ROUTING', 'PIPELINES'],
   },
   {
     n: '03',
     icon: Code2,
-    title: 'High-Velocity Website Development',
-    body: 'Custom Vite + React 19 builds, SEO tuning, contact forms, and lead capture. Sub-second performance.',
-    tags: ['Vite', 'React 19', 'SEO', 'Lead capture'],
+    title: 'Custom Web Development',
+    body: 'Hand-crafted React and Vite applications deployed on Vercel. Fast, responsive, clean code built for conversion—zero bloated Wix templates, broken plugins, or fragile drag-and-drop page builders.',
+    tags: ['REACT 19', 'VITE', 'TAILWIND', 'VERCEL'],
   },
 ];
 
@@ -1030,8 +1030,8 @@ function Services() {
         <SectionHeader
           index="03"
           eyebrow="Services"
-          title="Three disciplines. One operator."
-          sub="Run the room, sharpen the business, and ship the website. You work directly with me."
+          title="What I Actually Do."
+          sub="I coordinate complex global events, audit and automate messy operations, and write production-grade web software. No agency middlemen."
         />
         <div className="grid gap-4 lg:grid-cols-3">
           {SERVICES.map((s, i) => {
