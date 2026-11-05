@@ -163,9 +163,10 @@ const TITLE = 'SCRIMMY';
 //                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, an arc surge of
 //                             brightness 1.6 / contrast 1.4 for 40ms then 1.4 / 1.25, and a sync jitter of
 //                             +3px (30ms) then -2px (40ms); text gets a white static core and blue halo, the
-//                             hero grid flashes blue for 60ms, a 2px blue interlace covers the hero, two
-//                             raster tears cut across it (+14px through the middle of SCRIMMY, then -10px
-//                             through the buttons, 35ms each), and SCRIMMY blooms blue, easing back by +450ms
+//                             hero grid flashes blue for 60ms, the viewport inverts to white for 25ms, a
+//                             buzzing 2px blue interlace covers the hero, three raster tears cut across it
+//                             (SCRIMMY +24px, intro -18px, buttons +16px; 25/20/25ms), and SCRIMMY blooms
+//                             blue, easing back by +450ms
 //                +420-470ms   sync recoil: 40% dot-matrix, no shadow
 //                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
 //                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
@@ -1141,8 +1142,8 @@ function Hero({ booting }) {
     };
   }, []);
 
-  // Aim the two raster tears at the real layout: band 1 through the middle of SCRIMMY, band 2 through
-  // the middle of the buttons. Without this the CSS falls back to fixed 40% / 72% bands.
+  // Aim the three raster tears at the real layout: through the middle of SCRIMMY, the intro's first line
+  // and the middle of the buttons. Without this the CSS falls back to fixed 40% / 58% / 72% bands.
   useLayoutEffect(() => {
     const tear = tearRef.current;
     const stage = stageRef.current;
@@ -1154,8 +1155,14 @@ function Hero({ booting }) {
     };
     const title = stage.querySelector('h1');
     const cta = stage.querySelector('button');
-    if (title) tear.style.setProperty('--sp-tear-1', `${Math.round(mid(title) - 12)}px`);
-    if (cta) tear.style.setProperty('--sp-tear-2', `${Math.round(mid(cta) - 8)}px`);
+    // Band B sits on the intro's first line: the mt-8 gap above it is wider than the band, so it can't
+    // take in the badges as well.
+    const intro = stage.querySelector('h1 ~ div > p');
+    const line = intro ? parseFloat(getComputedStyle(intro).lineHeight) || 28 : 28;
+    if (title) tear.style.setProperty('--sp-tear-1', `${Math.round(mid(title) - 18)}px`);
+    if (intro)
+      tear.style.setProperty('--sp-tear-2', `${Math.round(intro.getBoundingClientRect().top - top + line / 2 - 14)}px`);
+    if (cta) tear.style.setProperty('--sp-tear-3', `${Math.round(mid(cta) - 10)}px`);
   }, [booting]);
 
   return (
@@ -1192,7 +1199,7 @@ function Hero({ booting }) {
         {booting && (
           <div
             aria-hidden="true"
-            className="sp-boot-interlace pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(59,130,246,0.35)_0px,rgba(59,130,246,0.35)_1px,transparent_1px,transparent_2px)] mix-blend-screen"
+            className="sp-boot-interlace pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(59,130,246,0.55)_0px,rgba(59,130,246,0.55)_1px,transparent_1px,transparent_2px)] mix-blend-screen"
           />
         )}
 
@@ -1708,22 +1715,36 @@ const GLOBAL_CSS = `
   /* The hero grid lines flash electric blue for 60ms on strike 1; hidden outside the animation. */
   @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
   .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 60ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* Strike 1 raster tears, 35ms each with hard cuts: a 24px band through SCRIMMY jumps +14px, then a
-     16px band through the buttons jumps -10px (positions measured by Hero; 40% / 72% otherwise). The ::after marks the band
-     with a cyan top edge and a white bottom edge. Hidden outside its 70ms. */
+  /* Strike 1 fracture, three hard-cut bursts over 70ms on a black-backed copy of the stage (positions
+     measured by Hero):
+       A  0-25ms   36px band through SCRIMMY, +24px, cyan/magenta 6px split
+       B  25-45ms  28px band through the intro's first line, -18px, brightness 2.2 / contrast 1.6
+       C  45-70ms  20px band through the buttons, +16px, 12px cyan glow
+     The ::after marks each band with a cyan top edge and a white bottom edge. Hidden outside its 70ms. */
   @keyframes sp-boot-tear {
-    0% { opacity: 1; clip-path: inset(var(--sp-tear-1) 0 calc(100% - var(--sp-tear-1) - 24px) 0); transform: translateX(14px); }
-    50%, 100% {
-      opacity: 1; clip-path: inset(var(--sp-tear-2) 0 calc(100% - var(--sp-tear-2) - 16px) 0); transform: translateX(-10px);
-    }
+    0% { opacity: 1; clip-path: inset(var(--sp-tear-1) 0 calc(100% - var(--sp-tear-1) - 36px) 0); transform: translateX(24px); }
+    35.71% { opacity: 1; clip-path: inset(var(--sp-tear-2) 0 calc(100% - var(--sp-tear-2) - 28px) 0); transform: translateX(-18px); }
+    64.29%, 100% { opacity: 1; clip-path: inset(var(--sp-tear-3) 0 calc(100% - var(--sp-tear-3) - 20px) 0); transform: translateX(16px); }
   }
   @keyframes sp-boot-tear-edge {
-    0% { top: var(--sp-tear-1); height: 24px; }
-    50%, 100% { top: var(--sp-tear-2); height: 16px; }
+    0% { top: var(--sp-tear-1); height: 36px; }
+    35.71% { top: var(--sp-tear-2); height: 28px; }
+    64.29%, 100% { top: var(--sp-tear-3); height: 20px; }
   }
-  .sp-boot-tear { --sp-tear-1: 40%; --sp-tear-2: 72%; opacity: 0; animation: sp-boot-tear 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* Overdrive on the torn copy's content (not its black backing, whose shadow would be clipped away). */
-  .sp-boot-tear-fx { filter: brightness(1.75) contrast(1.4) drop-shadow(-3px 0 6px #00f0ff); }
+  @keyframes sp-boot-tear-fx {
+    0% { filter: brightness(1.75) contrast(1.4) drop-shadow(-3px 0 6px #00f0ff); text-shadow: -6px 0 #00f0ff, 6px 0 #ff0055; }
+    35.71% { filter: brightness(2.2) contrast(1.6); text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff; }
+    64.29%, 100% { filter: drop-shadow(0 0 12px #00f0ff); text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff; }
+  }
+  .sp-boot-tear {
+    --sp-tear-1: 40%; --sp-tear-2: 58%; --sp-tear-3: 72%;
+    opacity: 0;
+    animation: sp-boot-tear 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
+  }
+  /* Effects go on the copy's content, not its black backing (whose glow would be clipped away). The copy's
+     own stamp text-shadow is overridden so each burst's split shows. */
+  .sp-boot-tear-fx { animation: sp-boot-tear-fx 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  .sp-boot-tear-fx :is(.sp-boot-stamp, button) { text-shadow: inherit !important; }
   .sp-boot-tear::after {
     content: '';
     position: absolute;
@@ -1734,8 +1755,23 @@ const GLOBAL_CSS = `
     border-bottom: 1px solid #ffffff;
     animation: sp-boot-tear-edge 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
   }
-  @keyframes sp-boot-flash { from, to { opacity: 1; } }
-  .sp-boot-interlace { opacity: 0; animation: sp-boot-flash 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  /* Interlace: 0.55 blue in screen blend, buzzing 1px up and down every ~15ms. */
+  @keyframes sp-boot-interlace {
+    0% { opacity: 1; transform: translateY(1px); }
+    21.4% { opacity: 1; transform: none; }
+    42.9% { opacity: 1; transform: translateY(1px); }
+    64.3% { opacity: 1; transform: none; }
+    85.7%, 100% { opacity: 1; transform: translateY(1px); }
+  }
+  .sp-boot-interlace { opacity: 0; animation: sp-boot-interlace 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  /* Photonic arc: the whole viewport inverts to white for 25ms as the first tear hits. */
+  @keyframes sp-boot-arc { from, to { opacity: 1; } }
+  .sp-boot-arc {
+    opacity: 0;
+    -webkit-backdrop-filter: invert(1) hue-rotate(180deg) brightness(1.5);
+    backdrop-filter: invert(1) hue-rotate(180deg) brightness(1.5);
+    animation: sp-boot-arc 25ms step-end ${BOOT_REVEAL_MS + 350}ms;
+  }
   /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
   @keyframes sp-boot-title {
     from { filter: brightness(1.3) drop-shadow(0 0 12px #3b82f6); }
@@ -1813,6 +1849,7 @@ export default function App() {
     <div className="relative min-h-screen bg-black font-sans text-slate-400 antialiased selection:bg-blue-600/40 selection:text-white">
       <style>{GLOBAL_CSS}</style>
       <NavBar active={active} booting={booting} />
+      {booting && <div aria-hidden="true" className="sp-boot-arc pointer-events-none fixed inset-0 z-[60]" />}
       <main>
         <Hero booting={booting} />
         <About />
