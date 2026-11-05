@@ -3,15 +3,12 @@ import {
   AlertCircle,
   ArrowRight,
   ArrowUpRight,
-  CalendarRange,
   Check,
   ChevronDown,
   ChevronRight,
-  Code2,
   Loader2,
   Mail,
   MapPin,
-  Megaphone,
   Menu,
   Send,
   X,
@@ -93,21 +90,21 @@ const ECOSYSTEMS = [
 const SERVICES = [
   {
     n: '01',
-    icon: CalendarRange,
+    tag: 'PROD',
     title: 'Event Production & Logistics',
     body: 'Full-scale live and decentralized event management. I coordinate multi-city runs-of-show, secure local venue and vendor contracts, direct sponsor activations, and handle crypto-native ticketing across time zones.',
     tags: ['RUN-OF-SHOW', '400+ CITIES', 'SPONSORS', 'VENDORS'],
   },
   {
     n: '02',
-    icon: Megaphone,
+    tag: 'ADVISORY',
     title: 'Operations & Marketing Consulting',
     body: "Fixing what's broken in your business. I audit internal toolchains, clear operational bottlenecks, structure ecosystem partnerships, and wire up automated lead-routing pipelines so work stops slipping through the cracks.",
     tags: ['WORKFLOW AUDITS', 'PARTNERSHIPS', 'LEAD ROUTING', 'PIPELINES'],
   },
   {
     n: '03',
-    icon: Code2,
+    tag: 'DEV',
     title: 'Custom Web Development',
     body: 'Hand-crafted React and Vite applications deployed on Vercel. Fast, responsive, clean code built for conversion—zero bloated Wix templates, broken plugins, or fragile drag-and-drop page builders.',
     tags: ['REACT 19', 'VITE', 'TAILWIND', 'VERCEL'],
@@ -449,9 +446,33 @@ function Card({ className = '', children, ...rest }) {
   );
 }
 
+// Shared card shell for Ecosystems and Services: square hairline border, corner brackets,
+// and a blue border with a faint glow on hover.
+const CORNERS = [
+  'left-0 top-0 border-l border-t',
+  'right-0 top-0 border-r border-t',
+  'bottom-0 left-0 border-b border-l',
+  'bottom-0 right-0 border-b border-r',
+];
+
+function FrameCard({ children }) {
+  return (
+    <article className="group relative flex h-full flex-col border border-zinc-800 bg-[#09090b] p-7 transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] sm:p-8">
+      {CORNERS.map((c) => (
+        <span
+          key={c}
+          aria-hidden="true"
+          className={`pointer-events-none absolute h-3 w-3 border-zinc-600 transition-colors duration-300 group-hover:border-blue-400 ${c}`}
+        />
+      ))}
+      {children}
+    </article>
+  );
+}
+
 function Chip({ children }) {
   return (
-    <span className="rounded-md border border-blue-500/20 bg-blue-500/5 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-blue-300">
+    <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-[11px] text-zinc-400">
       {children}
     </span>
   );
@@ -934,14 +955,6 @@ function About() {
 /*  Ecosystems                                                         */
 /* ------------------------------------------------------------------ */
 
-// Hairline brackets on each corner of an ecosystem card.
-const CORNERS = [
-  'left-0 top-0 border-l border-t',
-  'right-0 top-0 border-r border-t',
-  'bottom-0 left-0 border-b border-l',
-  'bottom-0 right-0 border-b border-r',
-];
-
 function ActiveTag() {
   return (
     <span className="inline-flex items-center gap-1.5 border border-zinc-800 bg-black px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-blue-300">
@@ -967,14 +980,7 @@ function Ecosystems() {
         <div className="grid gap-4 lg:grid-cols-3">
           {ECOSYSTEMS.map((e, i) => (
             <Reveal key={e.org} delay={i * 100} className="h-full">
-              <article className="group relative flex h-full flex-col border border-zinc-800 bg-[#05070d] p-7 transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] sm:p-8">
-                {CORNERS.map((c) => (
-                  <span
-                    key={c}
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute h-3 w-3 border-zinc-600 transition-colors duration-300 group-hover:border-blue-400 ${c}`}
-                  />
-                ))}
+              <FrameCard>
 
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/80 p-2">
@@ -1010,7 +1016,7 @@ function Ecosystems() {
                     </li>
                   ))}
                 </ul>
-              </article>
+              </FrameCard>
             </Reveal>
           ))}
         </div>
@@ -1034,26 +1040,25 @@ function Services() {
           sub="I coordinate complex global events, audit and automate messy operations, and write production-grade web software. No agency middlemen."
         />
         <div className="grid gap-4 lg:grid-cols-3">
-          {SERVICES.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <Reveal key={s.n} delay={i * 100} className="h-full">
-                <Card className="flex h-full flex-col p-7 transition-colors duration-200 hover:border-blue-500/30 sm:p-8">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-4xl font-bold tracking-tight text-blue-500">{s.n}</span>
-                    <Icon className="h-5 w-5 text-slate-500" />
-                  </div>
-                  <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">{s.title}</h3>
-                  <p className="mt-4 flex-1 text-[15px] leading-relaxed text-slate-400">{s.body}</p>
-                  <div className="mt-8 flex flex-wrap gap-1.5">
-                    {s.tags.map((t) => (
-                      <Chip key={t}>{t}</Chip>
-                    ))}
-                  </div>
-                </Card>
-              </Reveal>
-            );
-          })}
+          {SERVICES.map((s, i) => (
+            <Reveal key={s.n} delay={i * 100} className="h-full">
+              <FrameCard>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs font-medium tracking-wider text-blue-400">
+                    [ {s.n} // {s.tag} ]
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">// SVC_{s.n}</span>
+                </div>
+                <h3 className="mt-6 text-xl font-bold text-white">{s.title}</h3>
+                <p className="mb-6 mt-3 text-sm leading-relaxed text-zinc-400">{s.body}</p>
+                <div className="mt-auto flex flex-wrap gap-1.5 border-t border-zinc-800/60 pt-6">
+                  {s.tags.map((t) => (
+                    <Chip key={t}>{t}</Chip>
+                  ))}
+                </div>
+              </FrameCard>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
