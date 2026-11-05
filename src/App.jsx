@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowRight,
@@ -163,8 +163,9 @@ const TITLE = 'SCRIMMY';
 //                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, an arc surge of
 //                             brightness 1.6 / contrast 1.4 for 40ms then 1.4 / 1.25, and a sync jitter of
 //                             +3px (30ms) then -2px (40ms); text gets a white static core and blue halo, the
-//                             hero grid flashes blue for 60ms over blue-and-white static grain (70ms, to the
-//                             recoil), and SCRIMMY blooms blue, easing back by +450ms
+//                             hero grid flashes blue for 60ms, a 2px blue interlace covers the hero, two
+//                             raster tears cut across it (+6px through the middle of SCRIMMY, then -4px
+//                             through the buttons, 35ms each), and SCRIMMY blooms blue, easing back by +450ms
 //                +420-470ms   sync recoil: 40% dot-matrix, no shadow
 //                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
 //                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
@@ -1016,12 +1017,72 @@ function drawGlobe(canvas, p) {
 /*  Hero: digital title that drops apart downward on scroll            */
 /* ------------------------------------------------------------------ */
 
+// The hero copy and title. Rendered once for real and, during the boot, once more as the raster-tear copy
+// (no refs, aria-hidden and inert), so the tear shows exactly what is on screen.
+function HeroStage({ booting, addText }) {
+  return (
+    <>
+      <p
+        ref={addText}
+        className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-stamp' : ''}`}>
+        <span className="relative flex h-2 w-2">
+          <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+        </span>
+        <Mono className="text-blue-400">SYSTEM_ONLINE // {SITE_DOMAIN}</Mono>
+      </p>
+
+      <h1 className={`mt-8 ${booting ? 'sp-boot-title' : ''}`}>
+        <DigitalTitle booting={booting} />
+      </h1>
+
+      <div ref={addText} className="will-change-[opacity,transform]">
+        <ul
+          className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-stamp' : ''}`}
+          aria-label="Also known as">
+          {ALIASES.map((a) => (
+            <li key={a}>
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
+                <span className="mr-2 text-blue-500">aka</span>
+                {a}
+              </span>
+            </li>
+          ))}
+          <li>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
+              <MapPin className="h-3.5 w-3.5 text-blue-500" />
+              {HOME_BASE}
+            </span>
+          </li>
+        </ul>
+
+        <p
+          className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-stamp' : ''}`}>
+          Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
+          marketing and operations, and ship high-velocity websites.
+        </p>
+
+        <div
+          className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-stamp' : ''}`}>
+          <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
+            Work With Me <ArrowRight className="h-4 w-4" />
+          </PrimaryButton>
+          <SecondaryButton onClick={() => scrollToId('ecosystems')} className="px-6 py-3">
+            See My Ecosystems
+          </SecondaryButton>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function Hero({ booting }) {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
   const textRefs = useRef([]);
   const cueRef = useRef(null);
   const globeRef = useRef(null);
+  const tearRef = useRef(null);
   const addText = (el) => {
     if (el && !textRefs.current.includes(el)) textRefs.current.push(el);
   };
@@ -1080,6 +1141,23 @@ function Hero({ booting }) {
     };
   }, []);
 
+  // Aim the two raster tears at the real layout: band 1 through the middle of SCRIMMY, band 2 through
+  // the middle of the buttons. Without this the CSS falls back to fixed 40% / 72% bands.
+  useLayoutEffect(() => {
+    const tear = tearRef.current;
+    const stage = stageRef.current;
+    if (!booting || !tear || !stage) return;
+    const top = stage.getBoundingClientRect().top;
+    const mid = (el) => {
+      const b = el.getBoundingClientRect();
+      return b.top - top + b.height / 2;
+    };
+    const title = stage.querySelector('h1');
+    const cta = stage.querySelector('button');
+    if (title) tear.style.setProperty('--sp-tear-1', `${Math.round(mid(title) - 12)}px`);
+    if (cta) tear.style.setProperty('--sp-tear-2', `${Math.round(mid(cta) - 8)}px`);
+  }, [booting]);
+
   return (
     <section ref={sectionRef} className="relative h-[180svh]" aria-label="Introduction">
       <div className="sticky top-0 flex h-[100svh] items-center overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -1095,67 +1173,26 @@ function Hero({ booting }) {
             className="sp-boot-gridpulse pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.25)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
           />
         )}
-        {/* Blue-and-white static grain under that flash, until the recoil */}
-        {booting && (
-          <div
-            aria-hidden="true"
-            className="sp-boot-static pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
-          />
-        )}
         {/* Dot globe, drawn behind the title as it dissolves */}
         <canvas ref={globeRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
         <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
-          <p
-            ref={addText}
-            className={`flex items-center gap-2.5 will-change-[opacity,transform] ${booting ? 'sp-boot-stamp' : ''}`}>
-            <span className="relative flex h-2 w-2">
-              <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-            </span>
-            <Mono className="text-blue-400">SYSTEM_ONLINE // {SITE_DOMAIN}</Mono>
-          </p>
-
-          <h1 className={`mt-8 ${booting ? 'sp-boot-title' : ''}`}>
-            <DigitalTitle booting={booting} />
-          </h1>
-
-          <div ref={addText} className="will-change-[opacity,transform]">
-            <ul
-              className={`mt-8 flex flex-wrap gap-2 ${booting ? 'sp-boot-stamp' : ''}`}
-              aria-label="Also known as">
-              {ALIASES.map((a) => (
-                <li key={a}>
-                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
-                    <span className="mr-2 text-blue-500">aka</span>
-                    {a}
-                  </span>
-                </li>
-              ))}
-              <li>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
-                  <MapPin className="h-3.5 w-3.5 text-blue-500" />
-                  {HOME_BASE}
-                </span>
-              </li>
-            </ul>
-
-            <p
-              className={`mt-8 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl ${booting ? 'sp-boot-stamp' : ''}`}>
-              Builder, operator and community organizer across Web3 and tech. I produce global events, consult on
-              marketing and operations, and ship high-velocity websites.
-            </p>
-
-            <div
-              className={`mt-10 flex flex-col gap-3 sm:flex-row ${booting ? 'sp-boot-stamp' : ''}`}>
-              <PrimaryButton onClick={() => scrollToId('contact')} className="px-6 py-3">
-                Work With Me <ArrowRight className="h-4 w-4" />
-              </PrimaryButton>
-              <SecondaryButton onClick={() => scrollToId('ecosystems')} className="px-6 py-3">
-                See My Ecosystems
-              </SecondaryButton>
+          <HeroStage booting={booting} addText={addText} />
+          {/* Raster tears: a black-backed copy of the stage, shown only through a thin band that jumps
+              sideways, so a strip of the hero appears torn out of sync. */}
+          {booting && (
+            <div ref={tearRef} aria-hidden="true" inert className="sp-boot-tear pointer-events-none absolute inset-0 bg-black">
+              <HeroStage booting={booting} />
             </div>
-          </div>
+          )}
         </div>
+
+        {/* 2px blue interlace over the whole hero for the first strike */}
+        {booting && (
+          <div
+            aria-hidden="true"
+            className="sp-boot-interlace pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(59,130,246,0.15)_0px,rgba(59,130,246,0.15)_1px,transparent_1px,transparent_2px)]"
+          />
+        )}
 
         <button
           ref={cueRef}
@@ -1669,20 +1706,32 @@ const GLOBAL_CSS = `
   /* The hero grid lines flash electric blue for 60ms on strike 1; hidden outside the animation. */
   @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
   .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 60ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* Phosphor static over the hero for strike 1 only (70ms, gone at the recoil): two layers of thresholded
-     SVG noise, sparse white and denser blue, jumping position every ~23ms so the grain crackles. */
-  @keyframes sp-boot-static {
-    0% { opacity: 0.5; background-position: 0 0, 0 0; }
-    33% { opacity: 0.5; background-position: 37px 11px, -19px 29px; }
-    66%, 100% { opacity: 0.5; background-position: -13px 41px, 23px -7px; }
+  /* Strike 1 raster tears, 35ms each with hard cuts: a 24px band through SCRIMMY jumps +6px, then a
+     16px band through the buttons jumps -4px (positions measured by Hero; 40% / 72% otherwise). The ::after marks the band
+     with a cyan top edge and a white bottom edge. Hidden outside its 70ms. */
+  @keyframes sp-boot-tear {
+    0% { opacity: 1; clip-path: inset(var(--sp-tear-1) 0 calc(100% - var(--sp-tear-1) - 24px) 0); transform: translateX(6px); }
+    50%, 100% {
+      opacity: 1; clip-path: inset(var(--sp-tear-2) 0 calc(100% - var(--sp-tear-2) - 16px) 0); transform: translateX(-4px);
+    }
   }
-  .sp-boot-static {
-    opacity: 0;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 15 -11.5'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E"),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23 0 0 0 0 0.51 0 0 0 0 0.96 0 0 0 13 -9'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)'/%3E%3C/svg%3E");
-    animation: sp-boot-static 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
+  @keyframes sp-boot-tear-edge {
+    0% { top: var(--sp-tear-1); height: 24px; }
+    50%, 100% { top: var(--sp-tear-2); height: 16px; }
   }
+  .sp-boot-tear { --sp-tear-1: 40%; --sp-tear-2: 72%; opacity: 0; animation: sp-boot-tear 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
+  .sp-boot-tear::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    box-sizing: border-box;
+    border-top: 1px solid #67e8f9;
+    border-bottom: 1px solid #ffffff;
+    animation: sp-boot-tear-edge 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
+  }
+  @keyframes sp-boot-flash { from, to { opacity: 1; } }
+  .sp-boot-interlace { opacity: 0; animation: sp-boot-flash 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
   /* SCRIMMY catches the same power strike: a blue bloom that eases off over 100ms. */
   @keyframes sp-boot-title {
     from { filter: brightness(1.3) drop-shadow(0 0 12px #3b82f6); }
