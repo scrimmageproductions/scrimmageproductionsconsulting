@@ -1105,7 +1105,7 @@ function Hero({ booting }) {
             {booting && (
               <span
                 aria-hidden="true"
-                className="sp-boot-scan pointer-events-none absolute inset-x-0 z-10 h-[1px] bg-white shadow-[0_0_12px_#3b82f6]"
+                className="sp-boot-scan pointer-events-none absolute inset-x-0 z-20 h-[1px] bg-[#ffffff] shadow-[0_0_10px_#3b82f6]"
               />
             )}
             <ul
@@ -1641,6 +1641,8 @@ const GLOBAL_CSS = `
     pointer-events: none;
     animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
+  /* Buttons reset text-shadow in the browser's default styles, so pull the strike's split through. */
+  .sp-boot-stamp button { text-shadow: inherit; }
   .sp-boot-stamp :is(button, span).rounded-full {
     animation: sp-boot-rim ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
