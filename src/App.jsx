@@ -750,9 +750,12 @@ function WorldMap() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden opacity-15 [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_80%)]">
-      <svg viewBox="0 30 1000 440" preserveAspectRatio="xMidYMid meet" className="h-auto w-[140%] max-w-none text-blue-500 lg:w-full">
-        <path d={WORLD_MAP_PATH} fill="none" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+      className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden opacity-40 [mask-image:radial-gradient(ellipse_at_center,black_65%,transparent_100%)]">
+      <svg
+        viewBox="0 30 1000 440"
+        preserveAspectRatio="xMidYMid meet"
+        className="h-auto w-[230%] max-w-none text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.35)] sm:w-[160%] lg:w-full">
+        <path d={WORLD_MAP_PATH} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
       </svg>
     </div>
   );
