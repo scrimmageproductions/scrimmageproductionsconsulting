@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowRight,
@@ -160,21 +160,18 @@ const TITLE = 'SCRIMMY';
 //   1440-1690  SCRIMMY rests alone, fully white
 //   1690       phosphor stamp-in: nav, status pill, aliases, intro and buttons all strike at once in place
 //                +0-350ms     coordinate hold: 30% opacity under a dot-matrix grid, greyscale, high contrast
-//                +350-420ms   strike 1: 3px chromatic split, 16px blue glow on the pills, a voltage spike of
-//                             brightness 2 / contrast 1.3 with a 16px cyan glow for 30ms (SCRIMMY too, which
-//                             then eases back by +450ms) then 1.4 / 1.25, and a sync jitter of +3px (30ms)
-//                             then -2px (40ms); text gets a white static core and blue halo, the hero grid
-//                             flashes cyan at 0.65 for 30ms, a buzzing 2px blue interlace covers the hero,
-//                             and three raster tears cut across it (SCRIMMY +24px, intro -18px, buttons
-//                             +16px; 25/20/25ms). The page background stays black throughout
-//                +420-470ms   sync recoil: 40% dot-matrix, no shadow
-//                +470-560ms   strike 2 / lock: 1px split, no jitter, blue rim outline, dense dot-matrix
-//                +560-750ms   phosphor dissipation: the dots swell until the grid burns away, split and
-//                             overdrive ease out
-//                +750-1000ms  tight 8px rim glow on the badges and primary buttons
-//                +1000ms      hard cut to normal styling
-//   3090       (+1400ms) boot classes are removed, so the normal interactive state and the
-//              scroll-driven dissolve take over with no filter, overlay or shadow left behind
+//                +350-525ms   buffer shred, six hard-cut frames (no easing):
+//                               350-375  anamorphic slit-scan: hero smeared to scaleX(5) scaleY(0.12), overdriven
+//                               375-405  macro shred: upper band -48px, blue blockout band +30px, lower band
+//                                        -18px, under a 2px interlace
+//                               405-430  ribbon shatter: five slices at +36 / -28 / +42 / -16 / +22px
+//                               430-460  interlace blanking: hero at 15% through 1px scanlines
+//                               460-490  micro-smear: scaleX(2.2) scaleY(0.6), blue glow, cyan/white split
+//                               490-525  coordinate lock: resting position, 12px blue rim glow on the pills
+//                +525-725ms   the rim glow eases out into normal styling
+//                The navbar takes the same flashes, blanking and split but no geometry.
+//   2440       (+750ms) boot classes and the shred copies are removed, so the normal interactive state and
+//              the scroll-driven dissolve take over with no filter, mask or shadow left behind
 const BOOT_KEY = 'scrimmy_assembled';
 const BOOT_COL_STEP = 32;
 const BOOT_IGNITE_MS = 160;
@@ -192,8 +189,8 @@ const GAP_COLS = 1;
 const TITLE_COLS = TITLE.length * (5 + GAP_COLS) - GAP_COLS;
 // The moment the last column has settled and the lock pause is over.
 const BOOT_REVEAL_MS = (TITLE_COLS - 1) * BOOT_COL_STEP + BOOT_IGNITE_MS + BOOT_LOCK_MS;
-const BOOT_STAMP_MS = 1000;
-const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 1400;
+const BOOT_STAMP_MS = 725;
+const BOOT_TOTAL_MS = BOOT_REVEAL_MS + 750;
 // Keyframe offset for a point in the stamp-in, given in ms from its start.
 const stampAt = (ms) => `${((ms / BOOT_STAMP_MS) * 100).toFixed(2)}%`;
 
@@ -1033,7 +1030,7 @@ function HeroStage({ booting, addText }) {
         <Mono className="text-blue-400">SYSTEM_ONLINE // {SITE_DOMAIN}</Mono>
       </p>
 
-      <h1 className={`mt-8 ${booting ? 'sp-boot-title' : ''}`}>
+      <h1 className="mt-8">
         <DigitalTitle booting={booting} />
       </h1>
 
@@ -1083,7 +1080,6 @@ function Hero({ booting }) {
   const textRefs = useRef([]);
   const cueRef = useRef(null);
   const globeRef = useRef(null);
-  const tearRef = useRef(null);
   const addText = (el) => {
     if (el && !textRefs.current.includes(el)) textRefs.current.push(el);
   };
@@ -1142,29 +1138,6 @@ function Hero({ booting }) {
     };
   }, []);
 
-  // Aim the three raster tears at the real layout: through the middle of SCRIMMY, the intro's first line
-  // and the middle of the buttons. Without this the CSS falls back to fixed 40% / 58% / 72% bands.
-  useLayoutEffect(() => {
-    const tear = tearRef.current;
-    const stage = stageRef.current;
-    if (!booting || !tear || !stage) return;
-    const top = stage.getBoundingClientRect().top;
-    const mid = (el) => {
-      const b = el.getBoundingClientRect();
-      return b.top - top + b.height / 2;
-    };
-    const title = stage.querySelector('h1');
-    const cta = stage.querySelector('button');
-    // Band B sits on the intro's first line: the mt-8 gap above it is wider than the band, so it can't
-    // take in the badges as well.
-    const intro = stage.querySelector('h1 ~ div > p');
-    const line = intro ? parseFloat(getComputedStyle(intro).lineHeight) || 28 : 28;
-    if (title) tear.style.setProperty('--sp-tear-1', `${Math.round(mid(title) - 18)}px`);
-    if (intro)
-      tear.style.setProperty('--sp-tear-2', `${Math.round(intro.getBoundingClientRect().top - top + line / 2 - 14)}px`);
-    if (cta) tear.style.setProperty('--sp-tear-3', `${Math.round(mid(cta) - 10)}px`);
-  }, [booting]);
-
   return (
     <section ref={sectionRef} className="relative h-[180svh]" aria-label="Introduction">
       <div className="sticky top-0 flex h-[100svh] items-center overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -1173,29 +1146,29 @@ function Hero({ booting }) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
         />
-        {/* Same grid in overdriven cyan at 0.65, flashed for 30ms by the first power strike */}
-        {booting && (
-          <div
-            aria-hidden="true"
-            className="sp-boot-gridpulse pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.65)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
-          />
-        )}
         {/* Dot globe, drawn behind the title as it dissolves */}
         <canvas ref={globeRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
-        <div ref={stageRef} className="relative mx-auto w-full max-w-6xl origin-top will-change-transform">
-          <HeroStage booting={booting} addText={addText} />
-          {/* Raster tears: a black-backed copy of the stage, shown only through a thin band that jumps
-              sideways, so a strip of the hero appears torn out of sync. */}
+        <div
+          ref={stageRef}
+          className={`relative mx-auto w-full max-w-6xl origin-top will-change-transform ${booting ? 'sp-shred-stage' : ''}`}>
+          <div className={booting ? 'sp-shred-orig' : undefined}>
+            <HeroStage booting={booting} addText={addText} />
+          </div>
+          {/* Buffer shred: five copies of the stage (no refs, hidden from assistive tech and not focusable),
+              each shown through its own band for frames 2 and 3, plus the blue blockout band. */}
           {booting && (
-            <div ref={tearRef} aria-hidden="true" inert className="sp-boot-tear pointer-events-none absolute inset-0 bg-black">
-              <div className="sp-boot-tear-fx">
-                <HeroStage booting={booting} />
-              </div>
-            </div>
+            <>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <div key={n} aria-hidden="true" inert className={`sp-shred-layer sp-shred-${n} pointer-events-none absolute inset-0`}>
+                  <HeroStage booting={booting} />
+                </div>
+              ))}
+              <div aria-hidden="true" className="sp-shred-block pointer-events-none absolute inset-0 bg-[#3b82f6]" />
+            </>
           )}
         </div>
 
-        {/* 2px blue interlace over the whole hero for the first strike */}
+        {/* 2px blue interlace over the whole hero for the macro-shred frame */}
         {booting && (
           <div
             aria-hidden="true"
@@ -1655,141 +1628,133 @@ const GLOBAL_CSS = `
     100% { fill: #ffffff; fill-opacity: 1; }
   }
   .sp-ignite { animation: sp-ignite ${BOOT_IGNITE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--ig) both; }
-  /* Phosphor stamp-in once SCRIMMY has locked. Every element runs the same keyframes, delayed to the
-     lock, and step-end holds each keyframe until the next, so every phase cuts over hard. Filling
-     backwards keeps the element hidden while it waits; pointer-events comes from the class, so nothing
-     is left once the boot classes are removed. Text shadows inherit down to the copy; the box glow
-     (sp-boot-rim) runs on the bordered pill shapes inside: badges, buttons and the status dot. */
-  /* The dot-matrix is a black overlay (::after) punched with a 3px grid of holes of radius --sp-dot,
-     reaching 16px above and below each element so glows get the texture instead of being clipped.
-     Registering --sp-dot lets the holes swell until they overlap (past ~2.12px nothing is left) and the
-     grid burns away; browsers without @property simply cut from grid to clear. */
-  @property --sp-dot { syntax: '<length>'; inherits: false; initial-value: 3px; }
+  /* Phosphor stamp-in once SCRIMMY has locked, then the buffer shred. Everything runs on the same clock
+     (delayed to the lock) with step-end, so each keyframe holds until the next: hard frame swaps.
+     Only the rim glow's final 200ms eases. Filling backwards keeps elements hidden while they wait;
+     pointer-events comes from the class, so nothing is left once the boot classes are removed.
+     The dot-matrix is a black overlay (::after) punched with a 3px grid of holes, reaching 16px above and
+     below each element so glows are textured rather than clipped. */
   @keyframes sp-boot-stamp {
     0% { opacity: 0; }
-    0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
-    ${stampAt(350)} {
-      opacity: 1; filter: brightness(2) contrast(1.3) drop-shadow(0 0 16px #00f0ff); transform: translateX(3px);
-      text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff, 0 0 8px rgba(59, 130, 246, 0.8);
-    }
-    ${stampAt(380)} { transform: translateX(-2px); }
-    ${stampAt(380)} { filter: brightness(1.4) contrast(1.25); }
-    ${stampAt(420)} { opacity: 0.4; filter: grayscale(1) contrast(2); text-shadow: none; transform: none; }
-    ${stampAt(470)}, ${stampAt(560)} {
-      opacity: 1; filter: brightness(1.15) contrast(1.1); transform: none;
-      text-shadow: -1px 0 #3b82f6, 1px 0 #ffffff;
-      animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-    ${stampAt(750)}, 100% {
-      opacity: 1; filter: brightness(1) contrast(1); transform: none;
-      text-shadow: 0 0 #3b82f6, 0 0 #ffffff;
-    }
+    0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; }
+    ${stampAt(350)} { opacity: 1; filter: none; text-shadow: none; }
+    ${stampAt(460)} { text-shadow: -3px 0 #00f0ff, 3px 0 #ffffff; }
+    ${stampAt(490)}, 100% { opacity: 1; filter: none; text-shadow: none; }
+  }
+  /* The navbar sits outside the hero, so it takes the shred's light, not its geometry. */
+  @keyframes sp-boot-stamp-nav {
+    0% { opacity: 0; }
+    0.1% { opacity: 0.3; filter: grayscale(1) contrast(2); text-shadow: none; }
+    ${stampAt(350)} { opacity: 0.95; filter: brightness(2.8) contrast(2); text-shadow: none; }
+    ${stampAt(375)} { opacity: 1; filter: none; }
+    ${stampAt(430)} { opacity: 0.15; }
+    ${stampAt(460)} { opacity: 1; filter: brightness(1.8); text-shadow: -3px 0 #00f0ff, 3px 0 #ffffff; }
+    ${stampAt(490)}, 100% { opacity: 1; filter: none; text-shadow: none; }
   }
   @keyframes sp-boot-grid {
     0% { opacity: 0; }
-    0.1% { opacity: 1; --sp-dot: 1.1px; }
-    ${stampAt(350)} { opacity: 0; }
-    ${stampAt(420)} { opacity: 1; --sp-dot: 1.1px; }
-    ${stampAt(470)}, ${stampAt(560)} { opacity: 1; --sp-dot: 1.3px; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-    ${stampAt(750)}, 100% { opacity: 1; --sp-dot: 2.4px; }
+    0.1% { opacity: 1; }
+    ${stampAt(350)}, 100% { opacity: 0; }
   }
-  /* Rim on the pill shapes. sp-boot-rim keeps the 8px settle glow (badges, primary buttons, status dot);
-     sp-boot-rim-strike drops it after the strike, for the secondary button. */
+  /* Frame 6 rim on the pill shapes (badges, buttons, status dot), easing out over the last 200ms. */
   @keyframes sp-boot-rim {
     0% { box-shadow: none; }
-    ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.2); }
-    ${stampAt(420)} { box-shadow: none; }
-    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6, 0 0 8px rgba(59, 130, 246, 0.3); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-    ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 0 8px rgba(59, 130, 246, 0.3); }
+    ${stampAt(490)}, ${stampAt(525)} { box-shadow: 0 0 12px rgba(59, 130, 246, 0.7); animation-timing-function: ease-out; }
+    100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
   }
-  @keyframes sp-boot-rim-strike {
-    0% { box-shadow: none; }
-    ${stampAt(350)} { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.2); }
-    ${stampAt(420)} { box-shadow: none; }
-    ${stampAt(470)}, ${stampAt(560)} { box-shadow: 0 0 0 1px #3b82f6; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-    ${stampAt(750)}, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-  }
-  /* The hero grid lines flash overdriven cyan for 30ms on strike 1; hidden outside the animation. */
-  @keyframes sp-boot-gridpulse { from, to { opacity: 1; } }
-  .sp-boot-gridpulse { opacity: 0; animation: sp-boot-gridpulse 30ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* Strike 1 fracture, three hard-cut bursts over 70ms on a black-backed copy of the stage (positions
-     measured by Hero):
-       A  0-25ms   36px band through SCRIMMY, +24px, cyan/magenta 6px split
-       B  25-45ms  28px band through the intro's first line, -18px, brightness 2.2 / contrast 1.6
-       C  45-70ms  20px band through the buttons, +16px, 12px cyan glow
-     The ::after marks each band with a cyan top edge and a white bottom edge. Hidden outside its 70ms. */
-  @keyframes sp-boot-tear {
-    0% { opacity: 1; clip-path: inset(var(--sp-tear-1) 0 calc(100% - var(--sp-tear-1) - 36px) 0); transform: translateX(24px); }
-    35.71% { opacity: 1; clip-path: inset(var(--sp-tear-2) 0 calc(100% - var(--sp-tear-2) - 28px) 0); transform: translateX(-18px); }
-    64.29%, 100% { opacity: 1; clip-path: inset(var(--sp-tear-3) 0 calc(100% - var(--sp-tear-3) - 20px) 0); transform: translateX(16px); }
-  }
-  @keyframes sp-boot-tear-edge {
-    0% { top: var(--sp-tear-1); height: 36px; }
-    35.71% { top: var(--sp-tear-2); height: 28px; }
-    64.29%, 100% { top: var(--sp-tear-3); height: 20px; }
-  }
-  @keyframes sp-boot-tear-fx {
-    0% { filter: brightness(1.75) contrast(1.4) drop-shadow(-3px 0 6px #00f0ff); text-shadow: -6px 0 #00f0ff, 6px 0 #ff0055; }
-    35.71% { filter: brightness(2.2) contrast(1.6); text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff; }
-    64.29%, 100% { filter: drop-shadow(0 0 12px #00f0ff); text-shadow: -3px 0 #3b82f6, 3px 0 #ffffff, 0 0 2px #ffffff; }
-  }
-  .sp-boot-tear {
-    --sp-tear-1: 40%; --sp-tear-2: 58%; --sp-tear-3: 72%;
-    opacity: 0;
-    animation: sp-boot-tear 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
-  }
-  /* Effects go on the copy's content, not its black backing (whose glow would be clipped away). The copy's
-     own stamp text-shadow is overridden so each burst's split shows. */
-  .sp-boot-tear-fx { animation: sp-boot-tear-fx 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  .sp-boot-tear-fx :is(.sp-boot-stamp, button) { text-shadow: inherit !important; }
-  .sp-boot-tear::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    box-sizing: border-box;
-    border-top: 1px solid #67e8f9;
-    border-bottom: 1px solid #ffffff;
-    animation: sp-boot-tear-edge 70ms step-end ${BOOT_REVEAL_MS + 350}ms;
-  }
-  /* Interlace: 0.55 blue in screen blend, buzzing 1px up and down every ~15ms. */
-  @keyframes sp-boot-interlace {
-    0% { opacity: 1; transform: translateY(1px); }
-    21.4% { opacity: 1; transform: none; }
-    42.9% { opacity: 1; transform: translateY(1px); }
-    64.3% { opacity: 1; transform: none; }
-    85.7%, 100% { opacity: 1; transform: translateY(1px); }
-  }
-  .sp-boot-interlace { opacity: 0; animation: sp-boot-interlace 70ms step-end ${BOOT_REVEAL_MS + 350}ms; }
-  /* SCRIMMY catches the same power strike: a 30ms cyan core bloom, then eases off by +450ms. */
-  @keyframes sp-boot-title {
-    0% { filter: brightness(2) contrast(1.3) drop-shadow(0 0 16px #00f0ff); }
-    30% { filter: brightness(2) contrast(1.3) drop-shadow(0 0 16px #00f0ff); animation-timing-function: ease-out; }
-    100% { filter: brightness(1) contrast(1) drop-shadow(0 0 0 rgba(0, 240, 255, 0)); }
-  }
-  .sp-boot-title { animation: sp-boot-title 100ms step-end ${BOOT_REVEAL_MS + 350}ms; }
   .sp-boot-stamp {
     pointer-events: none;
     animation: sp-boot-stamp ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
+  header.sp-boot-stamp { animation-name: sp-boot-stamp-nav; }
   .sp-boot-stamp:not(.sticky, .absolute) { position: relative; }
   .sp-boot-stamp::after {
     content: '';
     position: absolute;
     inset: -16px 0;
     pointer-events: none;
-    background-image: radial-gradient(circle, transparent var(--sp-dot), #000 calc(var(--sp-dot) + 0.3px));
+    opacity: 0;
+    background-image: radial-gradient(circle, transparent 1.1px, #000 1.4px);
     background-size: 3px 3px;
     animation: sp-boot-grid ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
-  /* Buttons reset text-shadow in the browser's default styles, so pull the strike's split through. */
+  /* Buttons reset text-shadow in the browser's default styles, so pull the split through. */
   .sp-boot-stamp button { text-shadow: inherit; }
   .sp-boot-stamp :is(button, span).rounded-full {
     animation: sp-boot-rim ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms backwards;
   }
-  .sp-boot-stamp button.rounded-full:not(.bg-blue-600) {
-    animation-name: sp-boot-rim-strike;
+
+  /* Buffer shred, hero geometry. Frames 1 and 5 smear the whole stage about its centre. */
+  @keyframes sp-shred-stage {
+    0% { transform: none; filter: none; opacity: 1; }
+    ${stampAt(350)} {
+      transform: scaleX(5) scaleY(0.12); transform-origin: 50% 50%; opacity: 0.95;
+      filter: brightness(2.8) contrast(2) drop-shadow(0 0 24px #00f0ff);
+    }
+    ${stampAt(375)} { transform: none; filter: none; opacity: 1; }
+    ${stampAt(460)} {
+      transform: scaleX(2.2) scaleY(0.6); transform-origin: 50% 50%;
+      filter: brightness(1.8) drop-shadow(0 0 14px #3b82f6);
+    }
+    ${stampAt(490)}, 100% { transform: none; filter: none; opacity: 1; }
   }
+  .sp-shred-stage { animation: sp-shred-stage ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms; }
+  /* The real stage hides while the copies shred it (frames 2-3), then blanks to 15% through 1px
+     scanlines (frame 4). */
+  @keyframes sp-shred-orig {
+    0% { opacity: 1; -webkit-mask-image: none; mask-image: none; }
+    ${stampAt(375)} { opacity: 0; }
+    ${stampAt(430)} {
+      opacity: 0.15;
+      -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 1px, transparent 1px 2px);
+      mask-image: repeating-linear-gradient(0deg, #000 0 1px, transparent 1px 2px);
+    }
+    ${stampAt(460)}, 100% { opacity: 1; -webkit-mask-image: none; mask-image: none; }
+  }
+  .sp-shred-orig { animation: sp-shred-orig ${BOOT_STAMP_MS}ms step-end ${BOOT_REVEAL_MS}ms; }
+  /* Copies: 55ms from +375ms. 0-54.55% is frame 2 (3-tier split), 54.55-100% frame 3 (five ribbons).
+     Their own stamp text-shadow is overridden so each slice's split shows. */
+  .sp-shred-layer { opacity: 0; animation: 55ms step-end ${BOOT_REVEAL_MS + 375}ms; }
+  .sp-shred-layer :is(.sp-boot-stamp, button) { text-shadow: inherit !important; }
+  .sp-shred-1 { animation-name: sp-shred-1; }
+  .sp-shred-2 { animation-name: sp-shred-2; }
+  .sp-shred-3 { animation-name: sp-shred-3; }
+  .sp-shred-4 { animation-name: sp-shred-4; }
+  .sp-shred-5 { animation-name: sp-shred-5; }
+  @keyframes sp-shred-1 {
+    0% { opacity: 1; clip-path: inset(0 0 65% 0); transform: translateX(-48px); }
+    54.55%, 100% { opacity: 1; clip-path: inset(0 0 82% 0); transform: translateX(36px); }
+  }
+  @keyframes sp-shred-2 {
+    0% { opacity: 1; clip-path: inset(55% 0 0 0); transform: translateX(-18px); filter: none; }
+    54.55%, 100% { opacity: 1; clip-path: inset(18% 0 64% 0); transform: translateX(-28px); filter: invert(0.25) brightness(1.8); }
+  }
+  @keyframes sp-shred-3 {
+    0% { opacity: 0; }
+    54.55%, 100% {
+      opacity: 1; clip-path: inset(36% 0 42% 0); transform: translateX(42px);
+      text-shadow: -6px 0 #00f0ff, 6px 0 #ffffff;
+    }
+  }
+  @keyframes sp-shred-4 {
+    0% { opacity: 0; }
+    54.55%, 100% { opacity: 1; clip-path: inset(58% 0 22% 0); transform: translateX(-16px); }
+  }
+  @keyframes sp-shred-5 {
+    0% { opacity: 0; }
+    54.55%, 100% { opacity: 1; clip-path: inset(78% 0 0 0); transform: translateX(22px); }
+  }
+  /* Frame 2's electric-blue blockout across the middle band, pushed +30px. */
+  @keyframes sp-shred-block { from, to { opacity: 0.8; } }
+  .sp-shred-block {
+    opacity: 0;
+    clip-path: inset(35% 0 45% 0);
+    transform: translateX(30px);
+    animation: sp-shred-block 30ms step-end ${BOOT_REVEAL_MS + 375}ms;
+  }
+  /* Frame 2's 2px interlace over the hero. */
+  @keyframes sp-boot-flash { from, to { opacity: 1; } }
+  .sp-boot-interlace { opacity: 0; animation: sp-boot-flash 30ms step-end ${BOOT_REVEAL_MS + 375}ms; }
   /* Skeleton bones: a dark-blue band with a faint electric-blue core slides across every 2s. */
   @keyframes sp-bone { from { background-position: -100% 0; } to { background-position: 200% 0; } }
   .sp-bone {
