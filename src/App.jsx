@@ -18,10 +18,9 @@ import {
 
 const SITE_DOMAIN = 'scrimmy.xyz';
 const CONTACT_EMAIL = 'scrimmageproductions@gmail.com';
-const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
-// Web3Forms routes submissions to the inbox that owns the access key (scrimmageproductions@gmail.com).
-// This key is public by design: it can only send to that inbox.
-const WEB3FORMS_ACCESS_KEY = '50f8f02c-b73b-48fc-b143-c16c183fb208';
+// The Contact form posts here: a Vercel serverless function (api/send.js) that sends through Resend.
+// The Resend key stays in Vercel's environment variables; nothing secret ships to the browser.
+const CONTACT_ENDPOINT = '/api/send';
 
 const NAV_LINKS = [
   { id: 'about', label: 'About' },
@@ -118,18 +117,14 @@ const scrollToId = (id) => {
 
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 
-const buildMailto = (subject, body) =>
-  `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-async function submitToWeb3Forms(payload) {
-  const res = await fetch(WEB3FORMS_ENDPOINT, {
+async function sendContact(payload) {
+  const res = await fetch(CONTACT_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ access_key: WEB3FORMS_ACCESS_KEY, ...payload }),
+    body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) throw new Error(data.message || 'Submission failed');
-  return data;
+  if (!res.ok || !data.success) throw new Error(data.error || 'Message failed to send');
 }
 
 const prefersReducedMotion = () =>
@@ -1364,18 +1359,16 @@ function Contact() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
-  const [serverError, setServerError] = useState('');
 
-  const set = (key, value) =>
+  const set = (key, value) => {
+    // Editing again clears the last success or failure notice.
+    if (status === 'success' || status === 'error') setStatus('idle');
     setForm((f) => {
       const next = { ...f, [key]: value };
       if (touched) setErrors(validate(next));
       return next;
     });
-
-  const mailSubject = `${SITE_DOMAIN}: Inquiry${form.name ? ` from ${form.name}` : ''}`;
-  const mailBody = `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`;
-  const mailto = buildMailto(mailSubject, mailBody);
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -1386,24 +1379,15 @@ function Contact() {
       document.getElementById(Object.keys(v)[0])?.focus();
       return;
     }
-    if (form.botcheck) return;
+    if (status === 'loading') return;
     setStatus('loading');
-    setServerError('');
     try {
-      await submitToWeb3Forms({
-        subject: mailSubject,
-        from_name: SITE_DOMAIN,
-        name: form.name,
-        email: form.email,
-        replyto: form.email,
-        message: form.message,
-      });
-      setStatus('success');
+      await sendContact({ name: form.name, email: form.email, message: form.message, botcheck: form.botcheck });
       setForm(EMPTY_FORM);
       setTouched(false);
-    } catch (err) {
-      // Keep the form filled so nothing is lost, and offer the same message by email.
-      setServerError(err.message || 'Something went wrong.');
+      setStatus('success');
+    } catch {
+      // Keep everything they typed, and point to the direct line.
       setStatus('error');
     }
   };
@@ -1430,99 +1414,93 @@ function Contact() {
         </Reveal>
 
         <Reveal delay={100} className="mt-12">
-          {status === 'success' ? (
-            <div className="border-y border-white/10 py-16 text-center" role="status">
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-blue-600">
-                <Check className="h-6 w-6 text-white" />
-              </span>
-              <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">Message delivered.</h3>
-              <p className="mt-3 text-slate-400">It is in my inbox. Expect a reply within 24 hours.</p>
-              <SecondaryButton onClick={() => setStatus('idle')} className="mt-8">
-                Send another message
-              </SecondaryButton>
-            </div>
-          ) : (
-            <form onSubmit={onSubmit} noValidate className="border-y border-white/10">
-              <input
-                type="checkbox"
-                name="botcheck"
-                checked={form.botcheck}
-                onChange={(e) => set('botcheck', e.target.checked)}
-                className="hidden"
-                tabIndex={-1}
-                autoComplete="off"
-              />
+          <form onSubmit={onSubmit} noValidate className="border-y border-white/10">
+            <input
+              type="checkbox"
+              name="botcheck"
+              checked={form.botcheck}
+              onChange={(e) => set('botcheck', e.target.checked)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+            />
 
-              <div className="grid divide-y divide-white/10 border-b border-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-                <LedgerField id="name" label="Your Name" error={errors.name}>
-                  <input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => set('name', e.target.value)}
-                    autoComplete="name"
-                    placeholder="Jordan Rivera"
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? 'name-err' : undefined}
-                    className={LEDGER_INPUT}
-                  />
-                </LedgerField>
-                <LedgerField id="email" label="Your Email" error={errors.email}>
-                  <input
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => set('email', e.target.value)}
-                    autoComplete="email"
-                    placeholder="jordan@company.com"
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? 'email-err' : undefined}
-                    className={LEDGER_INPUT}
-                  />
-                </LedgerField>
-              </div>
-
-              <LedgerField id="message" label="Message" error={errors.message} className="border-b border-white/10">
-                <textarea
-                  id="message"
-                  rows={4}
-                  value={form.message}
-                  onChange={(e) => set('message', e.target.value)}
-                  placeholder="What are you planning, building or fixing, and when do you need it?"
-                  aria-invalid={!!errors.message}
-                  aria-describedby={errors.message ? 'message-err' : undefined}
-                  className={`${LEDGER_INPUT} resize-y leading-relaxed`}
+            <div className="grid divide-y divide-white/10 border-b border-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <LedgerField id="name" label="Your Name" error={errors.name}>
+                <input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => set('name', e.target.value)}
+                  autoComplete="name"
+                  placeholder="Jordan Rivera"
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? 'name-err' : undefined}
+                  className={LEDGER_INPUT}
                 />
               </LedgerField>
+              <LedgerField id="email" label="Your Email" error={errors.email}>
+                <input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => set('email', e.target.value)}
+                  autoComplete="email"
+                  placeholder="jordan@company.com"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-err' : undefined}
+                  className={LEDGER_INPUT}
+                />
+              </LedgerField>
+            </div>
 
-              {status === 'error' && (
-                <div role="alert" className="border-b border-white/10 bg-blue-500/[0.06] px-4 py-5 text-sm text-slate-200 sm:px-6">
-                  <p className="flex items-start gap-2">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
-                    <span>{serverError} Your message was not sent, but you can send it by email instead.</span>
-                  </p>
-                  <a
-                    href={mailto}
-                    className={`mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:bg-slate-200 ${FOCUS}`}>
-                    <Mail className="h-4 w-4" /> Send via email
-                  </a>
-                </div>
-              )}
+            <LedgerField id="message" label="Message" error={errors.message} className="border-b border-white/10">
+              <textarea
+                id="message"
+                rows={4}
+                value={form.message}
+                onChange={(e) => set('message', e.target.value)}
+                placeholder="What are you planning, building or fixing, and when do you need it?"
+                aria-invalid={!!errors.message}
+                aria-describedby={errors.message ? 'message-err' : undefined}
+                className={`${LEDGER_INPUT} resize-y leading-relaxed`}
+              />
+            </LedgerField>
 
-              <div className="flex justify-end px-4 py-5 sm:px-6">
-                <PrimaryButton type="submit" disabled={status === 'loading'} className="w-full px-6 sm:w-auto">
-                  {status === 'loading' ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Sending...
-                    </>
-                  ) : (
-                    <>
-                      Send Message <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </PrimaryButton>
-              </div>
-            </form>
-          )}
+            <div className="flex flex-col-reverse gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p aria-live="polite" className="text-sm">
+                {status === 'success' && (
+                  <span className="inline-flex items-center gap-2 text-slate-300">
+                    <Check className="h-4 w-4 shrink-0 text-blue-400" /> Message dispatched successfully.
+                  </span>
+                )}
+                {status === 'error' && (
+                  <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-slate-400">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-blue-400" /> Dispatch failed. Direct line:
+                    <a
+                      href={`mailto:${CONTACT_EMAIL}`}
+                      className={`rounded font-medium text-blue-400 transition-colors duration-200 hover:text-blue-300 ${FOCUS}`}>
+                      {CONTACT_EMAIL}
+                    </a>
+                  </span>
+                )}
+              </p>
+              <PrimaryButton
+                type="submit"
+                disabled={status === 'loading'}
+                aria-busy={status === 'loading'}
+                className="w-full shrink-0 px-6 sm:w-auto">
+                {status === 'loading' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Transmitting...
+                  </>
+                ) : (
+                  <>
+                    Send Message <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </PrimaryButton>
+            </div>
+          </form>
         </Reveal>
       </div>
     </section>
