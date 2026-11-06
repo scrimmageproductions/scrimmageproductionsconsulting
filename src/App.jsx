@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowRight,
-  ArrowUpRight,
   Check,
   ChevronDown,
   ChevronRight,
@@ -10,7 +9,6 @@ import {
   Mail,
   MapPin,
   Menu,
-  Send,
   X,
 } from 'lucide-react';
 
@@ -108,7 +106,6 @@ const SERVICES = [
   },
 ];
 
-const SERVICE_OPTIONS = ['Event Planning', 'Marketing / Consulting', 'Website Development', 'General Inquiry'];
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -644,14 +641,6 @@ function SectionHeader({ title, sub, blueprint = false, typewriter = false }) {
   );
 }
 
-function Card({ className = '', children, ...rest }) {
-  return (
-    <div className={`rounded-2xl border border-white/5 bg-[#0a0f1d] ${className}`} {...rest}>
-      {children}
-    </div>
-  );
-}
-
 // Shared card shell for Ecosystems and Services: square hairline border, corner brackets,
 // and a blue border with a faint glow on hover.
 const CORNERS = [
@@ -741,7 +730,6 @@ function SecondaryButton({ children, className = '', ...rest }) {
   );
 }
 
-const INPUT_CLS = `w-full min-h-[44px] rounded-xl border border-white/10 bg-[#09090b] px-4 py-3 text-[15px] text-white placeholder:text-slate-500 outline-none transition duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40`;
 
 /* ------------------------------------------------------------------ */
 /*  Navigation                                                         */
@@ -1334,11 +1322,10 @@ function Services() {
 /*  Contact                                                            */
 /* ------------------------------------------------------------------ */
 
-const EMPTY_FORM = { service: '', name: '', email: '', message: '', botcheck: false };
+const EMPTY_FORM = { name: '', email: '', message: '', botcheck: false };
 
 function validate(f) {
   const e = {};
-  if (!f.service) e.service = 'Choose what you need help with.';
   if (f.name.trim().length < 2) e.name = 'Please enter your name.';
   if (!isEmail(f.email)) e.email = 'Please enter a valid email address.';
   if (f.message.trim().length < 10) e.message = 'Tell me a little about the project (10+ characters).';
@@ -1354,6 +1341,24 @@ function FieldError({ id, children }) {
   );
 }
 
+// One cell of the contact ledger: a label over a borderless field, marked by a blue edge on focus or error.
+function LedgerField({ id, label, error, className = '', children }) {
+  return (
+    <div
+      className={`relative px-4 py-5 transition-colors duration-200 focus-within:bg-white/[0.02] focus-within:shadow-[inset_2px_0_0_#3b82f6] sm:px-6 ${
+        error ? 'shadow-[inset_2px_0_0_#60a5fa]' : ''
+      } ${className}`}>
+      <label htmlFor={id} className="block font-mono text-xs uppercase tracking-wider text-slate-400">
+        {label}
+      </label>
+      {children}
+      <FieldError id={id}>{error}</FieldError>
+    </div>
+  );
+}
+
+const LEDGER_INPUT = 'mt-2 w-full bg-transparent text-base text-white placeholder:text-slate-600 outline-none';
+
 function Contact() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -1368,8 +1373,8 @@ function Contact() {
       return next;
     });
 
-  const mailSubject = `${SITE_DOMAIN}: ${form.service || 'Inquiry'}${form.name ? ` from ${form.name}` : ''}`;
-  const mailBody = `Name: ${form.name}\nEmail: ${form.email}\nService: ${form.service}\n\n${form.message}`;
+  const mailSubject = `${SITE_DOMAIN}: Inquiry${form.name ? ` from ${form.name}` : ''}`;
+  const mailBody = `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`;
   const mailto = buildMailto(mailSubject, mailBody);
 
   const onSubmit = async (e) => {
@@ -1391,7 +1396,6 @@ function Contact() {
         name: form.name,
         email: form.email,
         replyto: form.email,
-        service: form.service,
         message: form.message,
       });
       setStatus('success');
@@ -1404,174 +1408,123 @@ function Contact() {
     }
   };
 
-  const fieldCls = (k) => `${INPUT_CLS} ${errors[k] ? 'border-blue-400 ring-2 ring-blue-400/40' : ''}`;
-
   return (
     <section id="contact" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <SectionHeader
-          title="Let's build something."
-          sub="One form, no surveys. Tell me what you need and I will reply within 1 business day."
-        />
-        <div className="grid gap-10 lg:grid-cols-[0.32fr_1fr] lg:gap-6">
-          <Reveal>
-            <Mono className="text-slate-500">Direct line</Mono>
+        <Reveal className="border-t border-white/10 pt-10">
+          <h2 className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
+            Let&apos;s build something<span className="text-blue-500">.</span>
+          </h2>
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className={`mt-3 flex items-start gap-2 rounded-md text-[15px] font-semibold text-blue-400 transition-colors duration-200 hover:text-blue-300 ${FOCUS}`}>
-              <Mail className="mt-1 h-4 w-4 shrink-0" />
-              <span>
-                {CONTACT_EMAIL.split('@')[0]}@<wbr />
-                {CONTACT_EMAIL.split('@')[1]}
-              </span>
-              <ArrowUpRight className="mt-1 h-4 w-4 shrink-0" />
+              className={`inline-flex items-center gap-2 rounded font-medium text-blue-400 transition-colors duration-200 hover:text-blue-300 ${FOCUS}`}>
+              <Mail className="h-4 w-4 shrink-0" />
+              <span className="break-all">{CONTACT_EMAIL}</span>
             </a>
-            <p className="mt-6 flex items-center gap-2 text-sm text-slate-400">
+            <span className="hidden h-4 w-px bg-white/10 sm:block" aria-hidden="true" />
+            <span className="inline-flex items-center gap-2 text-slate-400">
               <MapPin className="h-4 w-4 shrink-0 text-blue-500" /> {HOME_BASE}
-            </p>
-          </Reveal>
+            </span>
+          </div>
+        </Reveal>
 
-          <Reveal delay={100}>
-            <Card className="p-6 sm:p-10">
-              {status === 'success' ? (
-                <div className="flex min-h-[380px] flex-col items-center justify-center text-center" role="status">
-                  <span className="grid h-14 w-14 place-items-center rounded-full bg-blue-600">
-                    <Check className="h-7 w-7 text-white" />
-                  </span>
-                  <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">Message delivered.</h3>
-                  <p className="mt-3 max-w-sm text-slate-400">It is in my inbox. Expect a reply within 1 business day.</p>
-                  <SecondaryButton onClick={() => setStatus('idle')} className="mt-8">
-                    Send another message
-                  </SecondaryButton>
-                </div>
-              ) : (
-                <form onSubmit={onSubmit} noValidate className="space-y-6">
+        <Reveal delay={100} className="mt-12">
+          {status === 'success' ? (
+            <div className="border-y border-white/10 py-16 text-center" role="status">
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-blue-600">
+                <Check className="h-6 w-6 text-white" />
+              </span>
+              <h3 className="mt-6 text-2xl font-bold tracking-tight text-white">Message delivered.</h3>
+              <p className="mt-3 text-slate-400">It is in my inbox. Expect a reply within 24 hours.</p>
+              <SecondaryButton onClick={() => setStatus('idle')} className="mt-8">
+                Send another message
+              </SecondaryButton>
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} noValidate className="border-y border-white/10">
+              <input
+                type="checkbox"
+                name="botcheck"
+                checked={form.botcheck}
+                onChange={(e) => set('botcheck', e.target.checked)}
+                className="hidden"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+
+              <div className="grid divide-y divide-white/10 border-b border-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                <LedgerField id="name" label="Your Name" error={errors.name}>
                   <input
-                    type="checkbox"
-                    name="botcheck"
-                    checked={form.botcheck}
-                    onChange={(e) => set('botcheck', e.target.checked)}
-                    className="hidden"
-                    tabIndex={-1}
-                    autoComplete="off"
+                    id="name"
+                    value={form.name}
+                    onChange={(e) => set('name', e.target.value)}
+                    autoComplete="name"
+                    placeholder="Jordan Rivera"
+                    aria-invalid={!!errors.name}
+                    aria-describedby={errors.name ? 'name-err' : undefined}
+                    className={LEDGER_INPUT}
                   />
+                </LedgerField>
+                <LedgerField id="email" label="Your Email" error={errors.email}>
+                  <input
+                    id="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => set('email', e.target.value)}
+                    autoComplete="email"
+                    placeholder="jordan@company.com"
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-err' : undefined}
+                    className={LEDGER_INPUT}
+                  />
+                </LedgerField>
+              </div>
 
-                  <fieldset
-                    id="service"
-                    tabIndex={-1}
-                    className="outline-none"
-                    aria-describedby={errors.service ? 'service-err' : undefined}>
-                    <legend className="mb-3 text-sm font-semibold text-white">What do you need?</legend>
-                    <div role="radiogroup" aria-label="Service" className="flex flex-wrap gap-2">
-                      {SERVICE_OPTIONS.map((o) => {
-                        const on = form.service === o;
-                        return (
-                          <button
-                            key={o}
-                            type="button"
-                            role="radio"
-                            aria-checked={on}
-                            onClick={() => set('service', o)}
-                            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition duration-200 active:scale-[0.98] ${FOCUS} ${
-                              on
-                                ? 'border-blue-500 bg-blue-600 text-white'
-                                : 'border-white/10 bg-transparent text-slate-300 hover:border-white/25 hover:text-white'
-                            }`}>
-                            {on && <Check className="h-4 w-4" />}
-                            {o}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <FieldError id="service">{errors.service}</FieldError>
-                  </fieldset>
+              <LedgerField id="message" label="Message" error={errors.message} className="border-b border-white/10">
+                <textarea
+                  id="message"
+                  rows={7}
+                  value={form.message}
+                  onChange={(e) => set('message', e.target.value)}
+                  placeholder="What are you planning, building or fixing, and when do you need it?"
+                  aria-invalid={!!errors.message}
+                  aria-describedby={errors.message ? 'message-err' : undefined}
+                  className={`${LEDGER_INPUT} resize-y leading-relaxed`}
+                />
+              </LedgerField>
 
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="name" className="mb-2 block text-sm font-semibold text-white">
-                        Your Name
-                      </label>
-                      <input
-                        id="name"
-                        value={form.name}
-                        onChange={(e) => set('name', e.target.value)}
-                        autoComplete="name"
-                        placeholder="Jordan Rivera"
-                        aria-invalid={!!errors.name}
-                        aria-describedby={errors.name ? 'name-err' : undefined}
-                        className={fieldCls('name')}
-                      />
-                      <FieldError id="name">{errors.name}</FieldError>
-                    </div>
-                    <div>
-                      <label htmlFor="email" className="mb-2 block text-sm font-semibold text-white">
-                        Email Address
-                      </label>
-                      <input
-                        id="email"
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => set('email', e.target.value)}
-                        autoComplete="email"
-                        placeholder="jordan@company.com"
-                        aria-invalid={!!errors.email}
-                        aria-describedby={errors.email ? 'email-err' : undefined}
-                        className={fieldCls('email')}
-                      />
-                      <FieldError id="email">{errors.email}</FieldError>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="message" className="mb-2 block text-sm font-semibold text-white">
-                      Project Scope / Message
-                    </label>
-                    <textarea
-                      id="message"
-                      rows={6}
-                      value={form.message}
-                      onChange={(e) => set('message', e.target.value)}
-                      placeholder="What are you planning, building or fixing, and when do you need it?"
-                      aria-invalid={!!errors.message}
-                      aria-describedby={errors.message ? 'message-err' : undefined}
-                      className={`${fieldCls('message')} resize-y`}
-                    />
-                    <FieldError id="message">{errors.message}</FieldError>
-                  </div>
-
-                  {status === 'error' && (
-                    <div role="alert" className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-slate-200">
-                      <p className="flex items-start gap-2">
-                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
-                        <span>{serverError} Your message was not sent, but you can send it by email instead.</span>
-                      </p>
-                      <a
-                        href={mailto}
-                        className={`mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:bg-slate-200 ${FOCUS}`}>
-                        <Mail className="h-4 w-4" /> Send via email
-                      </a>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-slate-500">I only use your details to reply.</p>
-                    <PrimaryButton type="submit" disabled={status === 'loading'} className="px-6">
-                      {status === 'loading' ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Sending...
-                        </>
-                      ) : (
-                        <>
-                          Send Message <Send className="h-4 w-4" />
-                        </>
-                      )}
-                    </PrimaryButton>
-                  </div>
-                </form>
+              {status === 'error' && (
+                <div role="alert" className="border-b border-white/10 bg-blue-500/[0.06] px-4 py-5 text-sm text-slate-200 sm:px-6">
+                  <p className="flex items-start gap-2">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
+                    <span>{serverError} Your message was not sent, but you can send it by email instead.</span>
+                  </p>
+                  <a
+                    href={mailto}
+                    className={`mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:bg-slate-200 ${FOCUS}`}>
+                    <Mail className="h-4 w-4" /> Send via email
+                  </a>
+                </div>
               )}
-            </Card>
-          </Reveal>
-        </div>
+
+              <div className="flex flex-col-reverse gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <p className="font-mono text-xs text-slate-500">Direct dispatch. Replies within 24 hours.</p>
+                <PrimaryButton type="submit" disabled={status === 'loading'} className="px-6">
+                  {status === 'loading' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Sending...
+                    </>
+                  ) : (
+                    <>
+                      Send Message <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </PrimaryButton>
+              </div>
+            </form>
+          )}
+        </Reveal>
       </div>
     </section>
   );
