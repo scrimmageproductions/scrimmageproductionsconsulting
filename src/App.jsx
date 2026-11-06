@@ -60,10 +60,10 @@ const ECOSYSTEMS = [
     logoClass: 'brightness-0 invert',
     org: 'PizzaDAO',
     role: 'Director of Operations',
-    body: 'Started as a note-taker and climbed the ranks to lead operations for the largest global pizza party in existence. Spearheaded multi-timezone logistics, international communications, and cross-border marketing to coordinate simultaneous celebrations across 400+ cities and 100+ countries—onboarding the world by decentralizing joy.',
+    body: 'Started as a note-taker and climbed the ranks to lead operations for the largest global pizza party in existence. Spearheaded multi-timezone logistics, international communications, and cross-border marketing to coordinate simultaneous celebrations across 400+ cities and 100+ countries, onboarding the world by decentralizing joy.',
     points: [
       '400+ cities & 100+ countries coordinated',
-      'Global run-of-show, comms & marketing lead',
+      'Assisted with global comms and marketing efforts',
       'International venue & indie pizzeria logistics',
     ],
   },
@@ -91,7 +91,7 @@ const SERVICES = [
   {
     n: '01',
     title: 'Event Production & Logistics',
-    body: 'Full-scale live and decentralized event management. I coordinate multi-city runs-of-show, secure local venue and vendor contracts, direct sponsor activations, and handle crypto-native ticketing across time zones.',
+    body: 'Full-scale live and decentralized event management. I coordinate multi-city runs-of-show, secure local venue and vendor contracts, direct sponsor activations, and assist with global onchain payment distribution across time zones.',
     tags: ['RUN-OF-SHOW', '400+ CITIES', 'SPONSORS', 'VENDORS'],
   },
   {
