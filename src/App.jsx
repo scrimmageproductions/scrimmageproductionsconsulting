@@ -1484,7 +1484,7 @@ function Contact() {
               <LedgerField id="message" label="Message" error={errors.message} className="border-b border-white/10">
                 <textarea
                   id="message"
-                  rows={7}
+                  rows={4}
                   value={form.message}
                   onChange={(e) => set('message', e.target.value)}
                   placeholder="What are you planning, building or fixing, and when do you need it?"
@@ -1508,9 +1508,8 @@ function Contact() {
                 </div>
               )}
 
-              <div className="flex flex-col-reverse gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <p className="font-mono text-xs text-slate-500">Direct dispatch. Replies within 24 hours.</p>
-                <PrimaryButton type="submit" disabled={status === 'loading'} className="px-6">
+              <div className="flex justify-end px-4 py-5 sm:px-6">
+                <PrimaryButton type="submit" disabled={status === 'loading'} className="w-full px-6 sm:w-auto">
                   {status === 'loading' ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" /> Sending...
