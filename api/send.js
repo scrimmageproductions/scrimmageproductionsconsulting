@@ -4,9 +4,9 @@ import { Resend } from 'resend';
 // RESEND_API_KEY lives only in the Vercel project's environment variables; it never reaches the browser.
 
 const TO = ['scrimmageproductions@gmail.com'];
-// onboarding@resend.dev works without DNS setup. Once scrimmy.xyz is verified in Resend, set
-// CONTACT_FROM (e.g. "Contact Form <contact@scrimmy.xyz>") in Vercel to send from the domain instead.
-const FROM = process.env.CONTACT_FROM || 'Contact Form <onboarding@resend.dev>';
+// Sent from the verified scrimmy.xyz domain. (Resend's onboarding@resend.dev sandbox sender only
+// delivers to the Resend account owner, so it is not used.)
+const FROM = 'Scrimmy Contact <contact@scrimmy.xyz>';
 
 const LIMITS = { name: 200, email: 320, message: 5000 };
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
@@ -51,13 +51,12 @@ export default async function handler(req, res) {
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: TO,
-      replyTo: email,
+      replyTo: email, // the SDK sends this to Resend as reply_to
       subject: `New Dispatch from ${name} // scrimmy.xyz`,
       text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
     });
     if (error) {
-      // Pass Resend's own error through (e.g. a 403 when onboarding@resend.dev sends to an address other
-      // than the Resend account owner's, or an unverified CONTACT_FROM domain) so it shows in DevTools.
+      // Pass Resend's own error through (e.g. a 403 if scrimmy.xyz is not verified) so it shows in DevTools.
       console.error('Resend API Error:', error);
       return res.status(error.statusCode || 400).json({
         error: error.message || String(error),
