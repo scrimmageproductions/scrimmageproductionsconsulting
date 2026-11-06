@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       body = null;
     }
   }
-  if (!body || typeof body !== 'object') return res.status(400).json({ error: 'Message failed to send' });
+  if (!body || typeof body !== 'object') return res.status(400).json({ error: 'Request body must be JSON' });
 
   // Honeypot: real visitors never fill this hidden field. Pretend it worked so bots move on.
   if (body.botcheck) return res.status(200).json({ success: true });
@@ -35,26 +35,20 @@ export default async function handler(req, res) {
   const email = clean(body.email);
   const message = clean(body.message);
 
-  if (
-    !name ||
-    !email ||
-    !message ||
-    !isEmail(email) ||
-    name.length > LIMITS.name ||
-    email.length > LIMITS.email ||
-    message.length > LIMITS.message
-  ) {
-    return res.status(400).json({ error: 'Message failed to send' });
+  if (!name || !email || !message) return res.status(400).json({ error: 'Name, email and message are all required' });
+  if (!isEmail(email)) return res.status(400).json({ error: 'Email address is not valid' });
+  if (name.length > LIMITS.name || email.length > LIMITS.email || message.length > LIMITS.message) {
+    return res.status(400).json({ error: 'A field is too long' });
   }
 
   if (!process.env.RESEND_API_KEY) {
-    console.error('RESEND_API_KEY is not set');
-    return res.status(500).json({ error: 'Message failed to send' });
+    console.error('RESEND_API_KEY is missing from environment');
+    return res.status(500).json({ error: 'RESEND_API_KEY is missing from environment' });
   }
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM,
       to: TO,
       replyTo: email,
@@ -62,12 +56,20 @@ export default async function handler(req, res) {
       text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
     });
     if (error) {
-      console.error('Resend error', error);
-      return res.status(500).json({ error: 'Message failed to send' });
+      // Pass Resend's own error through (e.g. a 403 when onboarding@resend.dev sends to an address other
+      // than the Resend account owner's, or an unverified CONTACT_FROM domain) so it shows in DevTools.
+      console.error('Resend API Error:', error);
+      return res.status(error.statusCode || 400).json({
+        error: error.message || String(error),
+        name: error.name,
+        statusCode: error.statusCode,
+        from: FROM,
+        to: TO,
+      });
     }
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, id: data?.id });
   } catch (err) {
-    console.error('Send failed', err);
-    return res.status(500).json({ error: 'Message failed to send' });
+    console.error('Send failed:', err);
+    return res.status(500).json({ error: err?.message || 'Unexpected error while sending' });
   }
 }

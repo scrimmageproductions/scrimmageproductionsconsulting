@@ -123,8 +123,12 @@ async function sendContact(payload) {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) throw new Error(data.error || 'Message failed to send');
+  const data = await res.json().catch(() => ({ error: `Non-JSON response (HTTP ${res.status})` }));
+  if (!res.ok || !data.success) {
+    const err = new Error(data.error || 'Message failed to send');
+    err.data = { status: res.status, ...data };
+    throw err;
+  }
 }
 
 const prefersReducedMotion = () =>
@@ -1386,8 +1390,9 @@ function Contact() {
       setForm(EMPTY_FORM);
       setTouched(false);
       setStatus('success');
-    } catch {
-      // Keep everything they typed, and point to the direct line.
+    } catch (err) {
+      // Keep everything they typed, and point to the direct line. The backend's exact reason goes to the console.
+      console.error('Submission failed:', err.data || err);
       setStatus('error');
     }
   };
