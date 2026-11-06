@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowRight,
+  ArrowUpRight,
   Check,
   ChevronDown,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
 
 const SITE_DOMAIN = 'scrimmy.xyz';
 const CONTACT_EMAIL = 'scrimmageproductions@gmail.com';
+const CALENDLY_URL = 'https://calendly.com/youngscrimmage';
 // The Contact form posts here: a Vercel serverless function (api/send.js) that sends through Resend.
 // The Resend key stays in Vercel's environment variables; nothing secret ships to the browser.
 const CONTACT_ENDPOINT = '/api/send';
@@ -1415,6 +1417,15 @@ function Contact() {
             <span className="inline-flex items-center gap-2 text-slate-400">
               <MapPin className="h-4 w-4 shrink-0 text-blue-500" /> {HOME_BASE}
             </span>
+            <span className="hidden h-4 w-px bg-white/10 sm:block" aria-hidden="true" />
+            <a
+              href={CALENDLY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-1 rounded font-mono text-sm text-neutral-400 transition-colors duration-150 hover:text-[#3b82f6] ${FOCUS}`}>
+              Schedule Call <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="sr-only">(opens Calendly in a new tab)</span>
+            </a>
           </div>
         </Reveal>
 
