@@ -69,8 +69,8 @@ const ECOSYSTEMS = [
   {
     logo: '/team1.png',
     org: 'Avax Team1 USA',
-    role: 'Collaborator',
-    body: 'Active collaborator pushing the Avalanche ecosystem forward. Fresh to the team, yet already architecting and executing high-impact, scaled cross-community partnerships that expand builder mindshare and drive strategic value across Avax Team1.',
+    role: 'Member',
+    body: 'Team1 USA member pushing the Avalanche ecosystem forward. Recently promoted from collaborator and already architecting and executing high-impact, scaled cross-community partnerships that expand builder mindshare and drive strategic value across Avax Team1.',
     points: [
       'High-impact ecosystem collaborations',
       'Avalanche community & network expansion',
