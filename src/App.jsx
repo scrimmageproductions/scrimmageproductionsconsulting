@@ -2568,11 +2568,19 @@ function InfoTip({ id, term, text, cta, onContact }) {
     const wrap = wrapRef.current;
     const tip = tipRef.current;
     if (!wrap || !tip) return;
+    // Width comes from CSS (w-72 / sm:w-80, capped at the viewport minus 2rem); only the offset is set here,
+    // starting at the (i) and shifted left as needed to keep a 16px gap from either screen edge.
     const r = wrap.getBoundingClientRect();
-    const width = Math.min(288, window.innerWidth - 32);
-    tip.style.width = `${width}px`;
+    const width = tip.offsetWidth;
     const left = Math.min(Math.max(r.left, 16), window.innerWidth - 16 - width);
     tip.style.left = `${left - r.left}px`;
+    // Open above the (i) when there is no room below but there is above (clear of the 56px header).
+    const h = tip.offsetHeight + 8;
+    const above = r.bottom + h > window.innerHeight - 16 && r.top - h > 72;
+    tip.style.top = above ? 'auto' : '';
+    tip.style.bottom = above ? '100%' : '';
+    tip.style.marginTop = above ? '0' : '';
+    tip.style.marginBottom = above ? '0.5rem' : '';
   };
 
   useEffect(() => {
@@ -2617,9 +2625,10 @@ function InfoTip({ id, term, text, cta, onContact }) {
         ref={tipRef}
         id={id}
         role="tooltip"
-        className={`absolute top-full z-40 mt-2 block w-72 border border-zinc-800 bg-black/95 p-4 text-left text-[13px] font-normal leading-relaxed text-slate-300 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-md transition-opacity duration-200 ${shown}`}>
+        // whitespace-normal overrides the nowrap wrapper that keeps the (i) next to its phrase.
+        className={`absolute left-0 top-full z-50 mt-2 block w-72 max-w-[calc(100vw-2rem)] whitespace-normal break-words border border-zinc-800 bg-[#0a0a0a] p-4 text-left text-[13px] font-normal leading-relaxed text-slate-300 no-underline shadow-2xl shadow-black transition-opacity duration-200 sm:w-80 ${shown}`}>
         <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-blue-400">When you need this</span>
-        <span className="mt-1.5 block">{text}</span>
+        <span className="mt-1.5 block whitespace-normal break-words text-left">{text}</span>
         {cta && (
           <a
             href="/#contact"
@@ -2862,7 +2871,13 @@ function FaqPage({ onContact, onHome }) {
               </h2>
               <div className="space-y-3">
                 {FAQS.filter((f) => f.cat === g.id).map((f, i) => (
-                  <Reveal key={f.id} delay={Math.min(i, 4) * 100}>
+                  // Each Reveal is its own stacking context (transform), so the item with an active (i) popup is
+                  // raised above the questions after it: hover beats a tapped popup beats keyboard focus elsewhere, all
+                  // below the sticky filter bar (z-20).
+                  <Reveal
+                    key={f.id}
+                    delay={Math.min(i, 4) * 100}
+                    className="relative focus-within:z-10 has-[button[aria-describedby][aria-expanded=true]]:z-[11] hover:z-[12]">
                     <FaqItem f={f} open={open.has(f.id)} onToggle={() => toggle(f.id)} onContact={onContact} />
                   </Reveal>
                 ))}
