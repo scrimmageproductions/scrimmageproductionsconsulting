@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Info,
   Loader2,
   Mail,
   MapPin,
@@ -18,7 +19,17 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { FAQ_CATEGORIES, FAQ_DESCRIPTION, FAQ_FACTS, FAQ_PATH, FAQ_TITLE, FAQS, SERVICE_AREA, faqJsonLd } from './faqData.js';
+import {
+  FAQ_CATEGORIES,
+  FAQ_DESCRIPTION,
+  FAQ_FACTS,
+  FAQ_PATH,
+  FAQ_TIPS,
+  FAQ_TITLE,
+  FAQS,
+  SERVICE_AREA,
+  faqJsonLd,
+} from './faqData.js';
 
 /* ------------------------------------------------------------------ */
 /*  Configuration                                                      */
@@ -1735,10 +1746,14 @@ const MONO_MAX_LOOSE = 0.22; // at most this share of pixels is ever peeled off
 const MONO_PEEL = 1.7; // peel chance per second at the very trailing edge
 const MONO_REPEL_R = 110; // px
 const MONO_REPEL = 1400; // px/s^2 at the pointer
+const MONO_DISSOLVE_PX = 450; // scroll distance over which the slab fully dissolves
 
 // Pixels peel off the trailing edge (the side turning away), drift out as dust, and spring back once the
 // rotation brings their home spot round to the leading edge. The pointer repels nearby pixels and tilts the
-// slab. Draws one static frame under reduced motion; pauses while off screen.
+// slab. Scrolling dissolves the whole slab: past the point where the canvas sits mid-screen (the page top on
+// desktop), every pixel breaks away over the next 450px, scattering outward and upward with growing speed
+// until all are faded out, and scrolling back reassembles it. Draws one static frame under reduced motion;
+// pauses while off screen.
 function PixelMonolith({ className = '' }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -1760,7 +1775,14 @@ function PixelMonolith({ className = '' }) {
       mode: reduced ? 0 : 2, // 0 attached, 1 drifting dust, 2 returning
       t: 0,
       life: 1,
+      // Scroll dissolve: when this pixel lets go (0-0.6 of the dissolve), its scatter angle, reach and lift.
+      brk: Math.random() * 0.6,
+      ang: Math.random() * Math.PI * 2,
+      reach: 0.6 + Math.random() * 0.9,
+      rise: 40 + Math.random() * 90,
     }));
+    let dissolve = 0; // eased toward dissolveTarget each frame
+    let dissolveTarget = 0;
     let loose = reduced ? 0 : n;
     let w = 0;
     let h = 0;
@@ -1795,6 +1817,9 @@ function PixelMonolith({ className = '' }) {
       const oy0 = h / 2 + (reduced ? 0 : Math.sin(time * 0.8) * 4);
       const sizeK = Math.max(0.8, Math.min(S / 150, 1.5));
       const R2 = MONO_REPEL_R * MONO_REPEL_R;
+      dissolve += (dissolveTarget - dissolve) * Math.min(1, dt * 6);
+      if (Math.abs(dissolveTarget - dissolve) < 0.0005) dissolve = dissolveTarget;
+      const spread = Math.min(w, h) * 0.45;
 
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = 'lighter';
@@ -1813,7 +1838,7 @@ function PixelMonolith({ className = '' }) {
           if (p.mode === 0) {
             // Front points travel right as it spins, so the right edge is the one turning away.
             const edge = Math.min(Math.max((x1 / 0.9 - 0.25) / 0.6, 0), 1) * (z1 < 0.15 ? 1 : 0.3);
-            if (edge > 0 && loose < n * MONO_MAX_LOOSE && Math.random() < edge * MONO_PEEL * dt) {
+            if (edge > 0 && dissolve < 0.05 && loose < n * MONO_MAX_LOOSE && Math.random() < edge * MONO_PEEL * dt) {
               const dx = hx - ox0;
               const dy = hy - oy0;
               const len = Math.hypot(dx, dy) || 1;
@@ -1885,9 +1910,30 @@ function PixelMonolith({ className = '' }) {
           a = Math.min(1, 0.15 + p.t / 0.7) * (0.3 + depth * 0.7);
           col = p.t < 0.5 ? '#3b82f6' : z2 > 0.02 ? '#e2e8f0' : '#2563eb';
         }
+        // Scroll dissolve: a pure function of the eased progress, so scrolling back reassembles exactly.
+        // Each pixel lets go at its own point, then accelerates outward (k squared) and drifts up as it fades.
+        let dx = 0;
+        let dy = 0;
+        if (dissolve > 0.001) {
+          const k = Math.min(Math.max((dissolve - p.brk) / 0.4, 0), 1);
+          if (k > 0) {
+            const rx0 = hx - ox0;
+            const ry0 = hy - oy0;
+            const len = Math.hypot(rx0, ry0) || 1;
+            const ux = (rx0 / len) * 0.6 + Math.cos(p.ang) * 0.4;
+            const uy = (ry0 / len) * 0.6 + Math.sin(p.ang) * 0.4;
+            const e = k * k * spread * p.reach;
+            dx = ux * e + Math.sin(time * 1.3 + p.ang * 5) * k * 6;
+            dy = uy * e - k * p.rise + Math.cos(time * 1.1 + p.ang * 3) * k * 6;
+            a *= (1 - k) ** 1.3;
+            s *= 1 - k * 0.4;
+            if (k > 0.15) col = '#3b82f6';
+          }
+        }
+        if (a < 0.01) continue;
         ctx.globalAlpha = a;
         ctx.fillStyle = col;
-        ctx.fillRect(hx + p.ox - s / 2, hy + p.oy - s / 2, s, s);
+        ctx.fillRect(hx + p.ox + dx - s / 2, hy + p.oy + dy - s / 2, s, s);
       }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
@@ -1923,6 +1969,21 @@ function PixelMonolith({ className = '' }) {
     });
     io.observe(canvas);
 
+    // Scroll progress for the dissolve. It starts once the canvas centre is just past mid-screen (scrollY 0
+    // on desktop, where the canvas sits beside the headline; later on phones, where it sits below it) and
+    // completes within 450px, and always before the canvas has scrolled under the 56px header.
+    const onScroll = () => {
+      const r = canvas.getBoundingClientRect();
+      const absTop = r.top + window.scrollY;
+      const begin = Math.max(0, absTop + r.height / 2 - window.innerHeight * 0.55);
+      const end = Math.max(begin + 150, Math.min(begin + MONO_DISSOLVE_PX, absTop + r.height - 56));
+      dissolveTarget = Math.min(Math.max((window.scrollY - begin) / (end - begin), 0), 1);
+    };
+    onScroll();
+    dissolve = dissolveTarget; // a reload mid-page starts dissolved, not mid-animation
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
     // Pointer anywhere near the canvas (its box plus 80px) steers the tilt and repels pixels.
     const onMove = (e) => {
       const r = canvas.getBoundingClientRect();
@@ -1954,6 +2015,8 @@ function PixelMonolith({ className = '' }) {
       cancelAnimationFrame(raf);
       io.disconnect();
       ro.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerdown', onMove);
       document.removeEventListener('pointerleave', onLeave);
@@ -2340,7 +2403,7 @@ function WebServicesPage({ onContact, onHome }) {
               Bespoke Websites. Built From Scratch<span className="text-blue-500">.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl">
-              High-speed, custom-engineered websites tailored to your business—zero bloated templates, slow page
+              High-speed, custom-engineered websites tailored to your business. Zero bloated templates, slow page
               builders, or recurring platform drag.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -2465,7 +2528,7 @@ function WebServicesPage({ onContact, onHome }) {
                 Custom-Scoped Pricing. Reach Out for a Quote<span className="text-blue-500">.</span>
               </h2>
               <p className="relative mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">
-                Every site is scoped around your exact pages, features, and goals—no bloated agency retainers. Contact{' '}
+                Every site is scoped around your exact pages, features, and goals, with no bloated agency retainers. Contact{' '}
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
                   className={`rounded text-blue-400 transition-colors duration-150 hover:text-blue-300 ${FOCUS}`}>
@@ -2493,7 +2556,133 @@ function WebServicesPage({ onContact, onHome }) {
 
 const faqNumber = (f) => String(FAQS.indexOf(f) + 1).padStart(2, '0');
 
-function FaqItem({ f, open, onToggle }) {
+// Inline (i) trigger after a key phrase in an FAQ answer. The scenario is always rendered (crawlers index
+// it); only CSS opacity hides it. It shows on hover, on keyboard focus, or on tap (toggled state, closed by
+// tapping elsewhere or Escape). On show it is nudged sideways to stay inside the viewport.
+function InfoTip({ id, term, text, cta, onContact }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const tipRef = useRef(null);
+
+  const place = () => {
+    const wrap = wrapRef.current;
+    const tip = tipRef.current;
+    if (!wrap || !tip) return;
+    const r = wrap.getBoundingClientRect();
+    const width = Math.min(288, window.innerWidth - 32);
+    tip.style.width = `${width}px`;
+    const left = Math.min(Math.max(r.left, 16), window.innerWidth - 16 - width);
+    tip.style.left = `${left - r.left}px`;
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (!wrapRef.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const shown = open
+    ? 'pointer-events-auto opacity-100'
+    : 'pointer-events-none opacity-0 group-hover/tip:pointer-events-auto group-hover/tip:opacity-100 group-focus-within/tip:pointer-events-auto group-focus-within/tip:opacity-100';
+
+  return (
+    <span ref={wrapRef} className="group/tip relative inline-block align-[-3px]" onPointerEnter={place} onFocus={place}>
+      <button
+        type="button"
+        aria-label={`When you need ${term}`}
+        aria-describedby={id}
+        aria-expanded={open}
+        onClick={() => {
+          place();
+          setOpen((o) => !o);
+        }}
+        className={`ml-1 grid h-5 w-5 place-items-center rounded-full text-slate-500 transition-colors duration-150 hover:text-blue-400 ${
+          open ? 'text-blue-400' : ''
+        } ${FOCUS}`}>
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      {/* Hover bridge: a hit area between the icon and the popup so it stays open while the mouse crosses. */}
+      <span aria-hidden="true" className="absolute left-0 top-full h-2 w-8" />
+      <span
+        ref={tipRef}
+        id={id}
+        role="tooltip"
+        className={`absolute top-full z-40 mt-2 block w-72 border border-zinc-800 bg-black/95 p-4 text-left text-[13px] font-normal leading-relaxed text-slate-300 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-md transition-opacity duration-200 ${shown}`}>
+        <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-blue-400">When you need this</span>
+        <span className="mt-1.5 block">{text}</span>
+        {cta && (
+          <a
+            href="/#contact"
+            onClick={(e) => {
+              e.preventDefault();
+              setOpen(false);
+              onContact();
+            }}
+            className={`mt-3 inline-flex items-center gap-1 rounded font-mono text-[11px] uppercase tracking-wider text-blue-400 transition-colors duration-150 hover:text-blue-300 ${FOCUS}`}>
+            See how we handle this <ArrowRight className="h-3 w-3" />
+          </a>
+        )}
+      </span>
+    </span>
+  );
+}
+
+// Splits answer text at each tip's phrase, underlining the phrase and placing its (i) trigger after it.
+// `used` makes sure each tip appears once per answer, at its first occurrence.
+function withTips(text, tips, used, faqId, onContact) {
+  const hits = tips
+    .map((t, i) => ({ t, i, at: used.has(i) ? -1 : text.indexOf(t.term) }))
+    .filter((h) => h.at >= 0)
+    .sort((a, b) => a.at - b.at);
+  if (!hits.length) return text;
+  const out = [];
+  let pos = 0;
+  hits.forEach(({ t, i, at }) => {
+    if (at < pos) return;
+    used.add(i);
+    out.push(text.slice(pos, at));
+    // The phrase's last word and the (i) never wrap apart.
+    const cut = t.term.lastIndexOf(' ') + 1;
+    const underline = 'text-slate-200 underline decoration-blue-500/50 decoration-dotted underline-offset-4';
+    out.push(
+      <span key={i}>
+        {cut > 0 && <span className={underline}>{t.term.slice(0, cut)}</span>}
+        <span className="whitespace-nowrap">
+          <span className={underline}>{t.term.slice(cut)}</span>
+          <InfoTip id={`${faqId}-tip-${i}`} term={t.term} text={t.text} cta={t.cta} onContact={onContact} />
+        </span>
+      </span>,
+    );
+    pos = at + t.term.length;
+  });
+  out.push(text.slice(pos));
+  return out;
+}
+
+function FaqItem({ f, open, onToggle, onContact }) {
+  // The answer clips while it expands or collapses, then unclips once open so (i) popups can overflow it.
+  const [unclipped, setUnclipped] = useState(open);
+  useEffect(() => {
+    if (!open) {
+      setUnclipped(false);
+      return undefined;
+    }
+    const t = setTimeout(() => setUnclipped(true), 320);
+    return () => clearTimeout(t);
+  }, [open]);
+  const tips = FAQ_TIPS[f.id] ?? [];
+  const used = new Set();
+
   return (
     <article
       id={f.id}
@@ -2531,16 +2720,16 @@ function FaqItem({ f, open, onToggle }) {
         className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
           open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
         }`}>
-        <div className="overflow-hidden">
+        <div className={unclipped ? 'overflow-visible' : 'overflow-hidden'}>
           <div className="border-t border-zinc-800/70 px-5 pb-6 pt-5 sm:px-7 sm:pl-[6.25rem]">
-            <p className="text-[15px] leading-relaxed text-slate-300">{f.summary}</p>
+            <p className="text-[15px] leading-relaxed text-slate-300">{withTips(f.summary, tips, used, f.id, onContact)}</p>
             <ul className="mt-4 space-y-2.5">
               {f.points.map((p) => (
                 <li key={p} className="flex gap-2.5 text-sm leading-relaxed text-slate-400">
                   <span aria-hidden="true" className="font-mono text-blue-500">
                     →
                   </span>
-                  {p}
+                  <span>{withTips(p, tips, used, f.id, onContact)}</span>
                 </li>
               ))}
             </ul>
@@ -2645,7 +2834,7 @@ function FaqPage({ onContact, onHome }) {
         </div>
       </section>
 
-      <section className="px-4 pb-20 sm:px-6 sm:pb-28 lg:px-8" aria-label="Frequently asked questions">
+      <section className="overflow-x-clip px-4 pb-20 sm:px-6 sm:pb-28 lg:px-8" aria-label="Frequently asked questions">
         <div className="mx-auto max-w-6xl">
           <div role="group" aria-label="Filter questions by topic" className="sticky top-14 z-20 -mx-4 flex gap-1.5 overflow-x-auto border-b border-zinc-900 bg-black/90 px-4 py-3 backdrop-blur sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {FAQ_CATEGORIES.map((c) => (
@@ -2674,7 +2863,7 @@ function FaqPage({ onContact, onHome }) {
               <div className="space-y-3">
                 {FAQS.filter((f) => f.cat === g.id).map((f, i) => (
                   <Reveal key={f.id} delay={Math.min(i, 4) * 100}>
-                    <FaqItem f={f} open={open.has(f.id)} onToggle={() => toggle(f.id)} />
+                    <FaqItem f={f} open={open.has(f.id)} onToggle={() => toggle(f.id)} onContact={onContact} />
                   </Reveal>
                 ))}
               </div>

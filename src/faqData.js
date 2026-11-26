@@ -332,7 +332,9 @@ ${FAQS.filter((f) => f.cat === c.id)
   .map(
     (f) => `<article id="${f.id}"><h3 style="color:#fff">${esc(f.q)}</h3><p>${esc(f.summary)}</p><ul>${f.points
       .map((p) => `<li>${esc(p)}</li>`)
-      .join('')}</ul></article>`,
+      .join('')}</ul>${(FAQ_TIPS[f.id] ?? [])
+      .map((t) => `<p><strong>When you need ${esc(t.term)}:</strong> ${esc(t.text)}</p>`)
+      .join('')}</article>`,
   )
   .join('\n')}
 </section>`,
@@ -341,3 +343,96 @@ ${FAQS.filter((f) => f.cat === c.id)
 <p>Contact: <a style="color:#60a5fa" href="mailto:${FAQ_EMAIL}">${FAQ_EMAIL}</a> · <a style="color:#60a5fa" href="/#contact">Contact form</a></p>
 </main>`;
 }
+
+// "When do I need this?" scenarios behind the (i) triggers on the FAQ page. Each `term` must appear
+// verbatim in that question's summary or points; the trigger sits right after it. The text is always in
+// the DOM (and in the prerendered HTML), so crawlers index every scenario. `cta` adds a contact link.
+export const FAQ_TIPS = {
+  'who-builds-custom-websites-quad-cities': [
+    {
+      term: 'hand-codes custom websites',
+      text: 'When your local service business runs on word-of-mouth but keeps losing bids because competitors look more established online, or when people in Davenport or Moline search for what you do and find a rival first.',
+      cta: true,
+    },
+  ],
+  'custom-website-vs-wix-squarespace-wordpress': [
+    {
+      term: 'page builder you rent every month',
+      text: 'When you pay Wix or Squarespace every month, still fight the template to make it look right, and the site crawls on a phone.',
+      cta: true,
+    },
+  ],
+  'quad-cities-businesses-worked-with': [
+    {
+      term: 'direct customer quote and lead capture',
+      text: 'When customers have to call during business hours to ask for a price, and the after-hours visitors who would have filled out a form go to a competitor instead.',
+      cta: true,
+    },
+  ],
+  'website-redesign-wix-squarespace-wordpress': [
+    {
+      term: 'sluggish Wix, Squarespace or WordPress templates',
+      text: 'When your site was set up years ago, nobody remembers the login, plugins keep breaking, and you hesitate to send customers to it.',
+      cta: true,
+    },
+  ],
+  'landing-pages-lead-capture': [
+    {
+      term: 'lead funnels',
+      text: 'When you run ads, mailers or a seasonal promotion and send people to a busy homepage where they get lost, instead of one page with one clear next step.',
+      cta: true,
+    },
+  ],
+  'mobile-friendly-fast-websites': [
+    {
+      term: 'mobile-first',
+      text: 'When most customers find you on a phone from a parking lot or job site, and your current site makes them pinch, zoom and give up.',
+    },
+  ],
+  'automate-small-business-email-lead-intake': [
+    {
+      term: 'internal toolchains',
+      text: 'When your team juggles email, spreadsheets, a calendar and a handful of apps, and the same customer details get typed in three or four times.',
+    },
+    {
+      term: 'lead-routing pipelines',
+      text: "When you're losing quotes because website form submissions sit in a spam folder or a personal inbox for two days before anyone replies.",
+      cta: true,
+    },
+  ],
+  'operations-workflow-audit': [
+    {
+      term: 'operational bottlenecks',
+      text: "When jobs stall because one person has to approve everything, or work waits on information that only lives in someone's head.",
+      cta: true,
+    },
+  ],
+  'marketing-partnership-consulting': [
+    {
+      term: 'ecosystem partnerships',
+      text: 'When you want to team up with another business, sponsor or community, but nobody has defined who does what, who pays for what, or how results get tracked.',
+      cta: true,
+    },
+  ],
+  'event-production-experience': [
+    {
+      term: 'runs-of-show',
+      text: 'When you are hosting an event with vendors, speakers and volunteers, and need a minute-by-minute plan so nothing depends on someone remembering.',
+      cta: true,
+    },
+  ],
+  'where-based-areas-served': [
+    {
+      term: 'based in the Quad Cities',
+      text: 'When you would rather work with someone based here who knows the Quad Cities market than hand your project to an out-of-state agency.',
+      cta: true,
+    },
+  ],
+  'custom-website-workflow-audit-cost': [
+    {
+      term: 'custom-scoped',
+      text: 'When agency quotes come back as monthly retainers for things you do not need, and you want a fair price for the pages and features you will actually use.',
+      cta: true,
+    },
+  ],
+};
