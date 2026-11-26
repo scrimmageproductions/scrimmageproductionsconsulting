@@ -18,7 +18,7 @@ import {
 /* ------------------------------------------------------------------ */
 
 const SITE_DOMAIN = 'scrimmy.xyz';
-const CONTACT_EMAIL = 'scrimmageproductions@gmail.com';
+const CONTACT_EMAIL = 'hello@scrimmy.xyz';
 const CALENDLY_URL = 'https://calendly.com/youngscrimmage';
 // The Contact form posts here: a Vercel serverless function (api/send.js) that sends through Resend.
 // The Resend key stays in Vercel's environment variables; nothing secret ships to the browser.
