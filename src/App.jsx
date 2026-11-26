@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle,
@@ -622,11 +622,14 @@ function PixelPortrait() {
 /* ------------------------------------------------------------------ */
 
 const REVEAL_OBSERVER_OPTIONS = { threshold: 0.15, rootMargin: '0px 0px -40px 0px' };
+// `fast` reveals (Website Services page): fire as soon as the top edge is in view, with a short 12px glide,
+// so scrolling never shows empty space waiting for content.
+const REVEAL_FAST_OPTIONS = { threshold: 0.02, rootMargin: '0px 0px -20px 0px' };
 
 const revealStartsVisible = () =>
   typeof window === 'undefined' || !('IntersectionObserver' in window) || prefersReducedMotion();
 
-function Reveal({ as: Element = 'div', delay = 0, className = '', style, children, ...rest }) {
+function Reveal({ as: Element = 'div', delay = 0, fast = false, className = '', style, children, ...rest }) {
   const ref = useRef(null);
   const [instant] = useState(revealStartsVisible);
   const [shown, setShown] = useState(instant);
@@ -641,14 +644,16 @@ function Reveal({ as: Element = 'div', delay = 0, className = '', style, childre
         setShown(true);
         io.disconnect();
       }
-    }, REVEAL_OBSERVER_OPTIONS);
+    }, fast ? REVEAL_FAST_OPTIONS : REVEAL_OBSERVER_OPTIONS);
     io.observe(el);
     return () => io.disconnect();
-  }, [shown]);
+  }, [shown, fast]);
 
   const motion = instant
     ? 'opacity-100 translate-y-0'
-    : `transition-all duration-700 ease-out ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`;
+    : fast
+      ? `transition-[opacity,transform] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`
+      : `transition-all duration-700 ease-out ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`;
 
   return (
     <Element
@@ -759,9 +764,9 @@ function TypedText({ text }) {
   );
 }
 
-function SectionHeader({ title, sub, blueprint = false, typewriter = false }) {
+function SectionHeader({ title, sub, blueprint = false, typewriter = false, fast = false }) {
   return (
-    <Reveal className={`mb-14 ${blueprint ? '' : 'border-t border-white/10 pt-10'}`}>
+    <Reveal fast={fast} className={`mb-14 ${blueprint ? '' : 'border-t border-white/10 pt-10'}`}>
       {blueprint && <BlueprintRule />}
       <h2
         className={`max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl ${blueprint ? 'pt-9' : ''}`}>
@@ -1756,7 +1761,7 @@ const MONO_DISSOLVE_PX = 450; // scroll distance over which the slab fully disso
 // desktop), every pixel breaks away over the next 450px, scattering outward and upward with growing speed
 // until all are faded out, and scrolling back reassembles it. Draws one static frame under reduced motion;
 // pauses while off screen.
-function PixelMonolith({ className = '' }) {
+function PixelMonolith({ className = '', handoffId }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -1972,13 +1977,17 @@ function PixelMonolith({ className = '' }) {
     io.observe(canvas);
 
     // Scroll progress for the dissolve. It starts once the canvas centre is just past mid-screen (scrollY 0
-    // on desktop, where the canvas sits beside the headline; later on phones, where it sits below it) and
-    // completes within 450px, and always before the canvas has scrolled under the 56px header.
+    // on desktop, where the canvas sits beside the headline; later on phones, where it sits below it). It
+    // completes exactly as the next section's heading (handoffId) reaches the lower third of the viewport, so
+    // the last dust clears as that heading arrives; without one, within 450px.
     const onScroll = () => {
+      const vh = window.innerHeight;
       const r = canvas.getBoundingClientRect();
       const absTop = r.top + window.scrollY;
-      const begin = Math.max(0, absTop + r.height / 2 - window.innerHeight * 0.55);
-      const end = Math.max(begin + 150, Math.min(begin + MONO_DISSOLVE_PX, absTop + r.height - 56));
+      const begin = Math.max(0, absTop + r.height / 2 - vh * 0.55);
+      const handoff = handoffId && document.getElementById(handoffId);
+      const handoffAt = handoff ? handoff.getBoundingClientRect().top + window.scrollY - (vh * 2) / 3 : begin + MONO_DISSOLVE_PX;
+      const end = Math.max(begin + 150, handoffAt);
       dissolveTarget = Math.min(Math.max((window.scrollY - begin) / (end - begin), 0), 1);
     };
     onScroll();
@@ -2024,7 +2033,7 @@ function PixelMonolith({ className = '' }) {
       document.removeEventListener('pointerleave', onLeave);
       window.removeEventListener('blur', onLeave);
     };
-  }, []);
+  }, [handoffId]);
 
   return (
     <div ref={wrapRef} className={`relative ${className}`}>
@@ -2097,7 +2106,7 @@ function SpotlightCard({ children }) {
 // Screenshot frame with corner brackets and a mono title bar. Every slide's image is stacked in the same
 // box and cross-faded, so switching sections never changes the frame's size. The image area is a button
 // that opens the lightbox.
-function ShotFrame({ slides, index, device, label, onExpand, focus = true, className = '', areaClassName = '' }) {
+function ShotFrame({ slides, index, device, label, onExpand, className = '', areaClassName = '' }) {
   const current = slides[index];
   return (
     <figure
@@ -2116,11 +2125,7 @@ function ShotFrame({ slides, index, device, label, onExpand, focus = true, class
         onClick={onExpand}
         aria-label={`Expand ${device} screenshot: ${current.label}`}
         className={`group/shot relative block w-full cursor-zoom-in overflow-hidden bg-black ${FOCUS} ${areaClassName}`}>
-        {/* Entrance focus: dark, soft and slightly small until revealed, then sharp over 650ms. */}
-        <span
-          className={`absolute inset-0 block transition-[opacity,transform,filter] duration-[650ms] ease-out motion-reduce:transform-none motion-reduce:duration-300 ${
-            focus ? 'scale-100 opacity-100 brightness-100' : 'scale-[0.99] opacity-0 brightness-75'
-          }`}>
+        <span className="absolute inset-0 block">
         {slides.map((s, i) => (
           <img
             key={s.key}
@@ -2240,10 +2245,12 @@ function Lightbox({ slides, index, device, onIndex, onClose }) {
 const SLIDE_MS = 3200;
 
 // Perkins proof of work: section tabs and arrows over a paired desktop + phone preview.
-// Entrance (once, when 20% is on screen): the frames glide up 16px and fade in over 500ms while a 1px
-// royal-blue scanline with a faint trailing wash sweeps the previews top to bottom in 650ms, and the
-// screenshots come from dark soft focus to sharp. The scanline's animation end finishes the entrance.
-// Reduced motion: a 300ms fade, no scanline or movement. Autoplay: once in, slides advance every
+// Entrance, scrubbed by scroll: as the showcase's top edge travels from the bottom of the viewport (100%) to
+// 45% of its height, its opacity (0.25 to 1), scale (0.97 to 1) and offset (20px to 0) follow the scroll
+// position frame by frame, and a 1px royal-blue scanline sweeps down the previews at the same progress,
+// leaving the screenshots unveiled above it. At 100% it locks (the listener is removed and the scanline fades),
+// so scrolling back up never re-hides it. Transform and opacity only. Reduced motion: shown as is.
+// Autoplay: once locked, slides advance every
 // 3.2s; the 2px bar on the active tab is the timer itself (its CSS animation ending advances the slide), so
 // pausing freezes bar and timer together. Hover or keyboard focus pauses; leaving resumes. Picking a tab,
 // an arrow or a swipe hands control to the visitor (resume with the play button). The lightbox pauses
@@ -2252,7 +2259,8 @@ function PerkinsShowcase() {
   const [index, setIndex] = useState(0);
   const [expanded, setExpanded] = useState(null); // null | 'desktop' | 'mobile'
   const [reduced] = useState(prefersReducedMotion);
-  const [phase, setPhase] = useState('idle'); // idle (hidden) | enter (scanline running) | done
+  const [locked, setLocked] = useState(reduced); // entrance finished (reduced motion: from the start)
+  const [scanGone, setScanGone] = useState(reduced);
   const [manual, setManual] = useState(false);
   const [hover, setHover] = useState(false);
   const [focusIn, setFocusIn] = useState(false);
@@ -2261,28 +2269,52 @@ function PerkinsShowcase() {
   const [cycle, setCycle] = useState(0);
   const [announce, setAnnounce] = useState('');
   const rootRef = useRef(null);
+  const stageRef = useRef(null);
+  const panelRef = useRef(null);
+  const sweepRef = useRef(null);
   const tabRefs = useRef([]);
   const touchX = useRef(null);
   const count = PERKINS_SLIDES.length;
 
-  // Entrance, once.
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el || !('IntersectionObserver' in window)) {
-      setPhase('done');
+  // Scroll-scrubbed entrance. Layout effect, so the first paint already shows the right progress. Styles are
+  // written straight to the DOM in a rAF-throttled handler: no React render per scroll frame.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const stage = stageRef.current;
+    if (!root || !stage) return undefined;
+    if (locked) {
+      stage.style.opacity = '';
+      stage.style.transform = '';
       return undefined;
     }
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        io.disconnect();
-        setPhase(reduced ? 'done' : 'enter');
-      },
-      { threshold: 0.2 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [reduced]);
+    let raf = 0;
+    let first = true;
+    const apply = () => {
+      raf = 0;
+      const vh = window.innerHeight;
+      const p = Math.min(Math.max((vh - root.getBoundingClientRect().top) / (vh * 0.55), 0), 1);
+      // Loaded already past the showcase: lock with no scanline at all (there is no fade to wait for).
+      if (first && p >= 1) setScanGone(true);
+      first = false;
+      stage.style.opacity = (0.25 + 0.75 * p).toFixed(3);
+      stage.style.transform = `translate3d(0, ${(20 * (1 - p)).toFixed(2)}px, 0) scale(${(0.97 + 0.03 * p).toFixed(4)})`;
+      if (sweepRef.current && panelRef.current) {
+        sweepRef.current.style.transform = `translate3d(0, ${(p * panelRef.current.offsetHeight).toFixed(1)}px, 0)`;
+      }
+      if (p >= 1) setLocked(true);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(apply);
+    };
+    apply();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [locked]);
 
   // Autoplay only runs while the showcase is on screen and the tab is visible.
   useEffect(() => {
@@ -2298,7 +2330,7 @@ function PerkinsShowcase() {
     };
   }, []);
 
-  const autoplay = phase === 'done' && !reduced && !manual;
+  const autoplay = locked && !reduced && !manual;
   const playing = autoplay && !hover && !focusIn && !expanded && inView && pageVisible;
 
   // Visitor-driven moves: take over from autoplay and announce the new section to screen readers.
@@ -2339,12 +2371,6 @@ function PerkinsShowcase() {
   };
 
   const slide = PERKINS_SLIDES[index];
-  const revealed = phase !== 'idle';
-  const entrance = reduced
-    ? `transition-opacity duration-300 ${revealed ? 'opacity-100' : 'opacity-0'}`
-    : `transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-        revealed ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-      }`;
 
   return (
     <div
@@ -2356,7 +2382,7 @@ function PerkinsShowcase() {
         if (!rootRef.current?.contains(e.relatedTarget)) setFocusIn(false);
       }}
       className="relative">
-      <div className={`relative ${entrance}`}>
+      <div ref={stageRef} className={`relative origin-top ${locked ? '' : 'will-change-[opacity,transform]'}`}>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div role="tablist" aria-label="Perkins Lawn & Snow site sections" className="flex flex-wrap gap-1.5" onKeyDown={onTabKey}>
             {PERKINS_SLIDES.map((s, i) => (
@@ -2410,6 +2436,7 @@ function PerkinsShowcase() {
         </div>
 
         <div
+          ref={panelRef}
           id="perkins-panel"
           role="tabpanel"
           aria-labelledby={`perkins-tab-${slide.key}`}
@@ -2422,7 +2449,6 @@ function PerkinsShowcase() {
             device="desktop"
             label="Desktop // 1440px"
             onExpand={() => setExpanded('desktop')}
-            focus={revealed}
             areaClassName="aspect-[1440/900]"
           />
           {/* On large screens the phone frame stretches to the desktop frame's height and crops from the top. */}
@@ -2432,17 +2458,22 @@ function PerkinsShowcase() {
             device="mobile"
             label="Mobile // 390px"
             onExpand={() => setExpanded('mobile')}
-            focus={revealed}
             className="mx-auto w-full max-w-xs lg:max-w-none"
             areaClassName="aspect-[390/844] lg:aspect-auto lg:flex-1"
           />
-          {/* Entrance scanline: 1px royal-blue line with a faint wash trailing above it, swept top to bottom. */}
-          {phase === 'enter' && (
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
-              <div
-                onAnimationEnd={() => setPhase('done')}
-                className="sp-scan absolute inset-x-0 h-px bg-[#2563eb] shadow-[0_0_10px_1px_rgba(37,99,235,0.8)]">
-                <div className="absolute inset-x-0 bottom-px h-24 bg-gradient-to-t from-blue-600/15 to-transparent" />
+          {/* Entrance scanline, moved by the scroll handler: a 1px royal-blue line with a faint wash trailing above
+              it and a dark veil below it, so the previews unveil as it passes. Fades out once locked. */}
+          {!scanGone && (
+            <div
+              aria-hidden="true"
+              onTransitionEnd={() => locked && setScanGone(true)}
+              className={`pointer-events-none absolute inset-0 z-20 overflow-hidden transition-opacity duration-300 ${
+                locked ? 'opacity-0' : 'opacity-100'
+              }`}>
+              <div ref={sweepRef} className="absolute inset-0 will-change-transform">
+                <div className="absolute inset-x-0 bottom-full h-24 bg-gradient-to-t from-blue-600/15 to-transparent" />
+                <div className="absolute inset-x-0 top-0 h-px bg-[#2563eb] shadow-[0_0_10px_1px_rgba(37,99,235,0.8)]" />
+                <div className="absolute inset-x-0 bottom-0 top-px bg-black/45" />
               </div>
             </div>
           )}
@@ -2522,7 +2553,7 @@ function WebServicesPage({ onContact, onHome }) {
           </a>
 
           <div className="mt-14 grid items-center gap-10 sm:mt-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-6">
-          <Reveal>
+          <Reveal fast fast>
             <p className="flex items-center gap-2.5">
               <span className="relative flex h-2 w-2">
                 <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
@@ -2548,8 +2579,8 @@ function WebServicesPage({ onContact, onHome }) {
               </a>
             </div>
           </Reveal>
-          <Reveal delay={100}>
-            <PixelMonolith className="mx-auto aspect-[5/4] w-full max-w-xl lg:aspect-square" />
+          <Reveal fast delay={100}>
+            <PixelMonolith handoffId="proof-of-work" className="mx-auto aspect-[5/4] w-full max-w-xl lg:aspect-square" />
           </Reveal>
           </div>
         </div>
@@ -2558,7 +2589,7 @@ function WebServicesPage({ onContact, onHome }) {
       {/* Featured proof of work */}
       <section className="px-4 py-20 sm:px-6 sm:py-28 lg:px-8" aria-labelledby="proof-of-work">
         <div className="mx-auto max-w-6xl">
-          <Reveal className="mb-14">
+          <Reveal fast className="mb-14">
             <BlueprintRule />
             <Mono className="mt-9 block text-blue-400">Featured Proof of Work</Mono>
             <h2 id="proof-of-work" className="mt-4 max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
@@ -2576,7 +2607,7 @@ function WebServicesPage({ onContact, onHome }) {
 
           <PerkinsShowcase />
 
-          <Reveal delay={100} className="mt-4">
+          <Reveal fast delay={100} className="mt-4">
             <FrameCard>
               <dl className="grid gap-8 md:grid-cols-[1fr_2fr_auto] md:items-start md:gap-10">
                 <div>
@@ -2618,12 +2649,13 @@ function WebServicesPage({ onContact, onHome }) {
       <section className="px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <SectionHeader
+            fast
             title="What We Build."
             sub="Hand-coded from the first line, scoped to what your business actually needs to win customers online."
           />
           <div className="grid gap-4 lg:grid-cols-3">
             {WEB_BUILDS.map((b, i) => (
-              <Reveal key={b.n} delay={i * 100} className="h-full">
+              <Reveal fast key={b.n} delay={i * 100} className="h-full">
                 <SpotlightCard>
                   <span className="font-mono text-xs text-blue-400">{b.n} //</span>
                   <h3 className="mt-4 text-xl font-bold text-white">{b.title}</h3>
@@ -2643,7 +2675,7 @@ function WebServicesPage({ onContact, onHome }) {
       {/* Pricing & contact callout */}
       <section className="px-4 pb-24 pt-4 sm:px-6 sm:pb-32 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <Reveal>
+          <Reveal fast fast>
             <div className="relative overflow-hidden border border-zinc-800 bg-[#0a0a0a] px-6 py-12 sm:px-12 sm:py-16">
               {CORNERS.map((c) => (
                 <span key={c} aria-hidden="true" className={`pointer-events-none absolute h-4 w-4 border-blue-500/70 ${c}`} />
@@ -3231,9 +3263,6 @@ const GLOBAL_CSS = `
   /* Showcase autoplay cadence bar (duration set inline). */
   @keyframes sp-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   .sp-progress { transform-origin: left; animation-name: sp-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
-  /* Showcase entrance scanline: top of the previews to the bottom in 650ms, gone as it reaches the edge. */
-  @keyframes sp-scan { 0% { top: 0%; opacity: 1; } 85% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-  .sp-scan { animation: sp-scan 650ms cubic-bezier(0.45, 0, 0.55, 1) forwards; }
   @keyframes sp-fade { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: none; } }
   .sp-fade { animation: sp-fade 250ms ease-out; }
   @media (prefers-reduced-motion: reduce) {
