@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   ArrowLeft,
@@ -6,11 +7,13 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Copy,
   Loader2,
   Mail,
   MapPin,
+  Maximize2,
   Menu,
   X,
 } from 'lucide-react';
@@ -130,6 +133,54 @@ const SERVICES = [
 
 const PERKINS_URL = 'https://perkinslawnandsnow.com';
 const PERKINS_TAGS = ['CUSTOM BUILD', 'MOBILE-FIRST', 'LEAD CAPTURE', 'LIVE SITE'];
+
+// Section captures of the live Perkins site: desktop at 1440x900 (saved 1.5x) and phone at 390x844 (2x).
+const perkinsShot = (key, desktopAlt, mobileAlt) => ({
+  desktop: { src: `/work/perkins-${key}-desktop.webp`, w: 2160, h: 1350, alt: `Perkins Lawn & Snow on desktop: ${desktopAlt}` },
+  mobile: { src: `/work/perkins-${key}-mobile.webp`, w: 780, h: 1688, alt: `Perkins Lawn & Snow on a phone: ${mobileAlt}` },
+});
+const PERKINS_SLIDES = [
+  {
+    key: 'hero',
+    n: '01',
+    label: 'Hero',
+    ...perkinsShot(
+      'hero',
+      'hero photo of the work truck and mower with the Perkins logo, tagline and Get in Touch button.',
+      'compact header, truck photo, and the Get in Touch call to action.',
+    ),
+  },
+  {
+    key: 'services',
+    n: '02',
+    label: 'Services',
+    ...perkinsShot(
+      'services',
+      'Services We Offer, with grounds and landscaping, snow and trucking, and property maintenance cards.',
+      'Services We Offer intro and the grounds and landscaping checklist.',
+    ),
+  },
+  {
+    key: 'about',
+    n: '03',
+    label: 'About & Fleet',
+    ...perkinsShot(
+      'about',
+      'Since 2001 family business story beside a photo of the branded Perkins truck door.',
+      'Since 2001 heading, family business intro and the branded truck photo.',
+    ),
+  },
+  {
+    key: 'quote',
+    n: '04',
+    label: 'Quote Form',
+    ...perkinsShot(
+      'quote',
+      'Get Your Free Quote form with name, email, phone, service and project detail fields.',
+      'Get Your Free Quote intro, address, phone and the commercial-only note above the form.',
+    ),
+  },
+];
 
 const WEB_BUILDS = [
   {
@@ -1607,8 +1658,11 @@ function Contact({ preset }) {
 /*  Website Services page                                              */
 /* ------------------------------------------------------------------ */
 
-// Screenshot in a hairline frame with corner brackets and a mono title bar.
-function ShotFrame({ src, alt, label, width, height, className = '', imgClassName = '', fill = false }) {
+// Screenshot frame with corner brackets and a mono title bar. Every slide's image is stacked in the same
+// box and cross-faded, so switching sections never changes the frame's size. The image area is a button
+// that opens the lightbox.
+function ShotFrame({ slides, index, device, label, onExpand, className = '', areaClassName = '' }) {
+  const current = slides[index];
   return (
     <figure
       className={`group relative flex flex-col border border-zinc-800 bg-[#09090b] transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] ${className}`}>
@@ -1621,18 +1675,223 @@ function ShotFrame({ src, alt, label, width, height, className = '', imgClassNam
         </span>
         <span className="truncate">{label}</span>
       </figcaption>
-      <div className={`relative overflow-hidden bg-black ${imgClassName}`}>
+      <button
+        type="button"
+        onClick={onExpand}
+        aria-label={`Expand ${device} screenshot: ${current.label}`}
+        className={`group/shot relative block w-full cursor-zoom-in overflow-hidden bg-black ${FOCUS} ${areaClassName}`}>
+        {slides.map((s, i) => (
+          <img
+            key={s.key}
+            src={s[device].src}
+            alt={i === index ? s[device].alt : ''}
+            aria-hidden={i === index ? undefined : true}
+            width={s[device].w}
+            height={s[device].h}
+            loading="lazy"
+            decoding="async"
+            className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-500 ease-out motion-reduce:transition-none ${
+              i === index ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ))}
+        <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 border border-zinc-700 bg-black/80 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-zinc-300 opacity-0 backdrop-blur transition-opacity duration-200 group-hover/shot:opacity-100 group-focus-visible/shot:opacity-100">
+          <Maximize2 className="h-3 w-3 text-blue-400" /> Expand
+        </span>
+      </button>
+    </figure>
+  );
+}
+
+// Small square arrow button used by the slider and the lightbox.
+function ArrowButton({ dir, onClick, label, className = '' }) {
+  const Icon = dir === 'prev' ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`grid h-11 w-11 place-items-center border border-zinc-800 bg-[#09090b] text-zinc-400 hover:border-blue-500/40 hover:text-white ${PRESS} ${className}`}>
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+}
+
+// Full-size screenshot viewer. Arrow keys step through sections, Escape closes, focus returns to the opener.
+function Lightbox({ slides, index, device, onIndex, onClose }) {
+  const closeRef = useRef(null);
+  const slide = slides[index];
+  const shot = slide[device];
+  const step = (d) => onIndex((index + d + slides.length) % slides.length);
+
+  useEffect(() => {
+    const opener = document.activeElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      opener?.focus?.({ preventScroll: true });
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowRight') onIndex((index + 1) % slides.length);
+      else if (e.key === 'ArrowLeft') onIndex((index - 1 + slides.length) % slides.length);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [index, slides.length, onIndex, onClose]);
+
+  // Portalled to <body>: the Reveal wrapper's transform would otherwise trap position:fixed.
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${slide.label} screenshot, ${device}`}
+      className="fixed inset-0 z-[80] flex flex-col bg-black/95 backdrop-blur-md">
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2 sm:px-6">
+        <Mono className="truncate text-[11px] text-zinc-400">
+          <span className="text-blue-400">Perkins</span> // {slide.n} · {slide.label} // {device}
+        </Mono>
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Close screenshot viewer"
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white ${PRESS}`}>
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      {/* Click the dark area around the image to close. */}
+      <div className="relative min-h-0 flex-1 overflow-auto p-4 sm:p-8" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <img
-          src={src}
-          alt={alt}
-          width={width}
-          height={height}
-          loading="lazy"
-          decoding="async"
-          className={`h-full w-full object-cover object-top ${fill ? 'lg:absolute lg:inset-0' : ''}`}
+          key={shot.src}
+          src={shot.src}
+          alt={shot.alt}
+          width={shot.w}
+          height={shot.h}
+          onClick={(e) => e.stopPropagation()}
+          className={`sp-fade mx-auto border border-zinc-800 object-contain ${
+            device === 'mobile' ? 'h-full w-auto max-w-full' : 'max-h-full w-auto max-w-full'
+          }`}
         />
       </div>
-    </figure>
+      <div className="flex items-center justify-center gap-3 border-t border-zinc-800 px-4 py-3">
+        <ArrowButton dir="prev" onClick={() => step(-1)} label="Previous section" />
+        <Mono className="min-w-[4.5rem] text-center text-[11px] text-zinc-400">
+          {slide.n} / {String(slides.length).padStart(2, '0')}
+        </Mono>
+        <ArrowButton dir="next" onClick={() => step(1)} label="Next section" />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// Perkins proof of work: section tabs and arrows over a paired desktop + phone preview.
+function PerkinsShowcase() {
+  const [index, setIndex] = useState(0);
+  const [expanded, setExpanded] = useState(null); // null | 'desktop' | 'mobile'
+  const tabRefs = useRef([]);
+  const touchX = useRef(null);
+  const count = PERKINS_SLIDES.length;
+  const go = (i) => setIndex((i + count) % count);
+
+  // Roving focus for the tab row: arrow keys, Home and End move between tabs.
+  const onTabKey = (e) => {
+    const map = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: count - 1 };
+    if (!(e.key in map)) return;
+    e.preventDefault();
+    const next = (map[e.key] + count) % count;
+    setIndex(next);
+    tabRefs.current[next]?.focus();
+  };
+
+  // Horizontal swipe on the preview switches sections on touch screens.
+  const onTouchStart = (e) => {
+    touchX.current = e.touches[0].clientX;
+  };
+  const onTouchEnd = (e) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) > 50) go(index + (dx < 0 ? 1 : -1));
+  };
+
+  const slide = PERKINS_SLIDES[index];
+
+  return (
+    <>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div role="tablist" aria-label="Perkins Lawn & Snow site sections" className="flex flex-wrap gap-1.5" onKeyDown={onTabKey}>
+          {PERKINS_SLIDES.map((s, i) => (
+            <button
+              key={s.key}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`perkins-tab-${s.key}`}
+              aria-selected={i === index}
+              aria-controls="perkins-panel"
+              tabIndex={i === index ? 0 : -1}
+              onClick={() => setIndex(i)}
+              className={`min-h-[36px] rounded-full border px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-200 ${FOCUS} ${
+                i === index
+                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-300'
+                  : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-white'
+              }`}>
+              {s.n} · {s.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <Mono className="mr-1 text-[11px] text-zinc-500" aria-hidden="true">
+            {slide.n} / {String(count).padStart(2, '0')}
+          </Mono>
+          <ArrowButton dir="prev" onClick={() => go(index - 1)} label="Previous section" />
+          <ArrowButton dir="next" onClick={() => go(index + 1)} label="Next section" />
+        </div>
+      </div>
+
+      <div
+        id="perkins-panel"
+        role="tabpanel"
+        aria-labelledby={`perkins-tab-${slide.key}`}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        className="grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
+        <ShotFrame
+          slides={PERKINS_SLIDES}
+          index={index}
+          device="desktop"
+          label="Desktop // 1440px"
+          onExpand={() => setExpanded('desktop')}
+          areaClassName="aspect-[1440/900]"
+        />
+        {/* On large screens the phone frame stretches to the desktop frame's height and crops from the top. */}
+        <ShotFrame
+          slides={PERKINS_SLIDES}
+          index={index}
+          device="mobile"
+          label="Mobile // 390px"
+          onExpand={() => setExpanded('mobile')}
+          className="mx-auto w-full max-w-xs lg:max-w-none"
+          areaClassName="aspect-[390/844] lg:aspect-auto lg:flex-1"
+        />
+      </div>
+      <p className="sr-only" aria-live="polite">
+        Showing {slide.label}, section {index + 1} of {count}
+      </p>
+
+      {expanded && (
+        <Lightbox slides={PERKINS_SLIDES} index={index} device={expanded} onIndex={go} onClose={() => setExpanded(null)} />
+      )}
+    </>
   );
 }
 
@@ -1745,31 +2004,9 @@ function WebServicesPage({ onContact, onHome }) {
             </a>
           </Reveal>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
-            <Reveal>
-              <ShotFrame
-                src="/work/perkins-desktop.webp"
-                alt="Perkins Lawn & Snow homepage on desktop: hero photo of the work truck and mower with the Perkins logo, tagline and Get in Touch button."
-                label="Desktop // 1440px"
-                width={1440}
-                height={900}
-                imgClassName="aspect-[1440/900]"
-              />
-            </Reveal>
-            <Reveal delay={100} className="mx-auto w-full max-w-xs lg:max-w-none">
-              {/* On desktop the phone shot fills the row height set by the desktop shot, cropped from the top. */}
-              <ShotFrame
-                src="/work/perkins-mobile.webp"
-                alt="Perkins Lawn & Snow homepage on a phone: compact header with Services and Contact, truck photo, and the quote call to action."
-                label="Mobile // 390px"
-                width={780}
-                height={1688}
-                className="h-full"
-                fill
-                imgClassName="aspect-[390/844] lg:aspect-auto lg:flex-1"
-              />
-            </Reveal>
-          </div>
+          <Reveal>
+            <PerkinsShowcase />
+          </Reveal>
 
           <Reveal delay={150} className="mt-4">
             <FrameCard>
@@ -2060,8 +2297,11 @@ const GLOBAL_CSS = `
     background-repeat: no-repeat;
     animation: sp-bone 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   }
+  @keyframes sp-fade { from { opacity: 0; } to { opacity: 1; } }
+  .sp-fade { animation: sp-fade 250ms ease-out; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
+    .sp-fade { animation: none; }
     .sp-ping, .sp-bob, .sp-breathe, .sp-bone { animation: none; }
     .sp-beam { animation: none; opacity: 0; }
   }
