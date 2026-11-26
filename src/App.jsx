@@ -15,8 +15,10 @@ import {
   MapPin,
   Maximize2,
   Menu,
+  Plus,
   X,
 } from 'lucide-react';
+import { FAQ_CATEGORIES, FAQ_DESCRIPTION, FAQ_FACTS, FAQ_PATH, FAQ_TITLE, FAQS, SERVICE_AREA, faqJsonLd } from './faqData.js';
 
 /* ------------------------------------------------------------------ */
 /*  Configuration                                                      */
@@ -36,19 +38,38 @@ const NAV_LINKS = [
   { id: 'contact', label: 'Contact' },
 ];
 
-// Routes: the one-page home and the dedicated Website Services page. Plain history-API routing, no router
-// dependency. vercel.json rewrites /website-services to index.html so deep links load the app.
+// Routes: the one-page home plus two standalone pages. Plain history-API routing, no router dependency.
+// vercel.json rewrites /website-services to index.html, and /faq to the prerendered faq/index.html.
 const WEB_SERVICES_PATH = '/website-services';
 const WEB_SERVICE_NAME = 'Custom Web & Creative Solutions';
-const routeFromPath = (path) => (path.replace(/\/+$/, '') === WEB_SERVICES_PATH ? 'web' : 'home');
+const PAGE_PATHS = { home: '/', web: WEB_SERVICES_PATH, faq: FAQ_PATH };
+const routeFromPath = (path) => {
+  const clean = path.replace(/\/+$/, '') || '/';
+  return Object.keys(PAGE_PATHS).find((r) => PAGE_PATHS[r] === clean) ?? 'home';
+};
 const initialRoute = () => (typeof window === 'undefined' ? 'home' : routeFromPath(window.location.pathname));
 
-// Hamburger menu: the home sections, with the Website Services page slotted in before Contact.
+const HOME_TITLE = 'SCRIMMY // Don Scrimmy John';
+const HOME_DESCRIPTION =
+  'Builder, operator and community organizer across Web3 and tech. Producing global events, consulting on operations, and shipping high-velocity web software.';
+const PAGE_META = {
+  home: { title: HOME_TITLE, description: HOME_DESCRIPTION },
+  web: {
+    title: `Website Services // ${SITE_DOMAIN}`,
+    description:
+      'Bespoke, hand-coded websites for Quad Cities businesses: custom business sites, landing pages and lead funnels, and redesigns of Wix, Squarespace or WordPress sites.',
+  },
+  faq: { title: FAQ_TITLE, description: FAQ_DESCRIPTION },
+};
+
+// Hamburger menu: the home sections, with the two standalone pages slotted in before Contact.
+// FAQ & Info lives only here; it is deliberately not linked from the top bar or the home page.
 const MENU_LINKS = [
   { id: 'about', label: 'About' },
   { id: 'ecosystems', label: 'Ecosystems' },
   { id: 'services', label: 'Services' },
   { id: 'web', label: 'Website Services', page: true },
+  { id: 'faq', label: 'FAQ & Info', page: true },
   { id: 'contact', label: 'Contact' },
 ];
 
@@ -836,9 +857,9 @@ function SecondaryButton({ children, className = '', ...rest }) {
 /*  Navigation                                                         */
 /* ------------------------------------------------------------------ */
 
-// `current` is the highlighted menu entry: the section in view on the home page, or 'web' on the Website
-// Services page. `onNavigate(id)` scrolls to a home section (switching pages first if needed) or opens the
-// Website Services page when id is 'web'.
+// `current` is the highlighted menu entry: the section in view on the home page, or the page id ('web',
+// 'faq') on a standalone page. `onNavigate(id)` scrolls to a home section (switching pages first if
+// needed) or opens the standalone page for a page id.
 function NavBar({ current, onNavigate, onHome, booting = false }) {
   const [open, setOpen] = useState(false);
   const firstLinkRef = useRef(null);
@@ -929,7 +950,7 @@ function NavBar({ current, onNavigate, onHome, booting = false }) {
                   <li key={l.id}>
                     <a
                       ref={i === 0 ? firstLinkRef : undefined}
-                      href={l.page ? WEB_SERVICES_PATH : `/#${l.id}`}
+                      href={l.page ? PAGE_PATHS[l.id] : `/#${l.id}`}
                       onClick={(e) => {
                         e.preventDefault();
                         go(l.id);
@@ -1655,6 +1676,356 @@ function Contact({ preset }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Pixel monolith (Website Services hero)                             */
+/* ------------------------------------------------------------------ */
+
+// A browser-window slab made of points: the box's 12 edges plus a wireframe page on its front face
+// (title bar, window dots, headline lines, button, image block and three cards). Units are model space.
+const MONOLITH_POINTS = (() => {
+  const W = 1.6;
+  const H = 1.0;
+  const D = 0.36;
+  const hw = W / 2;
+  const hh = H / 2;
+  const hd = D / 2;
+  const pts = [];
+  const seg = (a, b, step = 0.03) => {
+    const n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / step));
+    for (let i = 0; i <= n; i += 1) {
+      const t = i / n;
+      pts.push({ x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, z: a[2] + (b[2] - a[2]) * t });
+    }
+  };
+  const rect = (x0, y0, x1, y1, step) => {
+    seg([x0, y0, hd], [x1, y0, hd], step);
+    seg([x1, y0, hd], [x1, y1, hd], step);
+    seg([x1, y1, hd], [x0, y1, hd], step);
+    seg([x0, y1, hd], [x0, y0, hd], step);
+  };
+  // Box edges.
+  [-hh, hh].forEach((y) => [-hd, hd].forEach((z) => seg([-hw, y, z], [hw, y, z])));
+  [-hw, hw].forEach((x) => [-hd, hd].forEach((z) => seg([x, -hh, z], [x, hh, z])));
+  [-hw, hw].forEach((x) => [-hh, hh].forEach((y) => seg([x, y, -hd], [x, y, hd])));
+  // Front face: title bar, three window dots, then the page wireframe.
+  seg([-hw, hh - 0.13, hd], [hw, hh - 0.13, hd]);
+  [0, 1, 2].forEach((k) => {
+    for (let i = 0; i < 6; i += 1) {
+      const a = (i / 6) * Math.PI * 2;
+      pts.push({ x: -hw + 0.08 + k * 0.065 + Math.cos(a) * 0.017, y: hh - 0.065 + Math.sin(a) * 0.017, z: hd });
+    }
+  });
+  seg([-0.66, 0.25, hd], [-0.06, 0.25, hd], 0.035);
+  seg([-0.66, 0.18, hd], [-0.22, 0.18, hd], 0.035);
+  seg([-0.66, 0.11, hd], [-0.3, 0.11, hd], 0.04);
+  rect(-0.66, 0.02, -0.4, -0.06, 0.035);
+  rect(0.06, 0.27, 0.66, -0.07, 0.035);
+  seg([0.06, -0.07, hd], [0.66, 0.27, hd], 0.05);
+  [
+    [-0.66, -0.26],
+    [-0.2, 0.2],
+    [0.26, 0.66],
+  ].forEach(([x0, x1]) => rect(x0, -0.17, x1, -0.41, 0.04));
+  return pts;
+})();
+
+const MONO_CAM = 3.4; // perspective camera distance
+const MONO_SPIN = 0.42; // radians per second
+const MONO_TILT = -0.32; // resting tilt toward the viewer
+const MONO_MAX_LOOSE = 0.22; // at most this share of pixels is ever peeled off
+const MONO_PEEL = 1.7; // peel chance per second at the very trailing edge
+const MONO_REPEL_R = 110; // px
+const MONO_REPEL = 1400; // px/s^2 at the pointer
+
+// Pixels peel off the trailing edge (the side turning away), drift out as dust, and spring back once the
+// rotation brings their home spot round to the leading edge. The pointer repels nearby pixels and tilts the
+// slab. Draws one static frame under reduced motion; pauses while off screen.
+function PixelMonolith({ className = '' }) {
+  const wrapRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return undefined;
+    const ctx = canvas.getContext('2d');
+    const reduced = prefersReducedMotion();
+    const n = MONOLITH_POINTS.length;
+    // Start scattered so the slab assembles itself on first view.
+    const ps = MONOLITH_POINTS.map((p) => ({
+      ...p,
+      ox: reduced ? 0 : (Math.random() - 0.5) * 320,
+      oy: reduced ? 0 : (Math.random() - 0.5) * 320,
+      vx: 0,
+      vy: 0,
+      mode: reduced ? 0 : 2, // 0 attached, 1 drifting dust, 2 returning
+      t: 0,
+      life: 1,
+    }));
+    let loose = reduced ? 0 : n;
+    let w = 0;
+    let h = 0;
+    let time = 0;
+    let last = 0;
+    let raf = 0;
+    let visible = false;
+    const tilt = { x: 0, y: 0 };
+    const target = { x: 0, y: 0 };
+    const ptr = { x: 0, y: 0, active: false };
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const draw = (dt) => {
+      tilt.x += (target.x - tilt.x) * Math.min(1, dt * 3);
+      tilt.y += (target.y - tilt.y) * Math.min(1, dt * 3);
+      const ry = (reduced ? 0.6 : time * MONO_SPIN) + tilt.y;
+      const rx = MONO_TILT + tilt.x;
+      const cY = Math.cos(ry);
+      const sY = Math.sin(ry);
+      const cX = Math.cos(rx);
+      const sX = Math.sin(rx);
+      const S = Math.min(w, h * 1.45) * 0.42;
+      const ox0 = w / 2;
+      const oy0 = h / 2 + (reduced ? 0 : Math.sin(time * 0.8) * 4);
+      const sizeK = Math.max(0.8, Math.min(S / 150, 1.5));
+      const R2 = MONO_REPEL_R * MONO_REPEL_R;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < n; i += 1) {
+        const p = ps[i];
+        // Rotate about Y, then X, then project.
+        const x1 = p.x * cY + p.z * sY;
+        const z1 = -p.x * sY + p.z * cY;
+        const y2 = p.y * cX - z1 * sX;
+        const z2 = p.y * sX + z1 * cX;
+        const f = MONO_CAM / (MONO_CAM - z2);
+        const hx = ox0 + x1 * f * S;
+        const hy = oy0 - y2 * f * S;
+
+        if (!reduced) {
+          if (p.mode === 0) {
+            // Front points travel right as it spins, so the right edge is the one turning away.
+            const edge = Math.min(Math.max((x1 / 0.9 - 0.25) / 0.6, 0), 1) * (z1 < 0.15 ? 1 : 0.3);
+            if (edge > 0 && loose < n * MONO_MAX_LOOSE && Math.random() < edge * MONO_PEEL * dt) {
+              const dx = hx - ox0;
+              const dy = hy - oy0;
+              const len = Math.hypot(dx, dy) || 1;
+              const sp = 20 + Math.random() * 55;
+              p.mode = 1;
+              p.t = 0;
+              p.life = 1 + Math.random() * 1.4;
+              p.vx = (dx / len) * sp + 25 + (Math.random() - 0.5) * 30;
+              p.vy = (dy / len) * sp + (Math.random() - 0.5) * 30 - 8;
+              loose += 1;
+            }
+          } else if (p.mode === 1) {
+            p.t += dt;
+            // Reassemble once its home has come round to the leading (left) side.
+            if (p.t > p.life && x1 < -0.1) {
+              p.mode = 2;
+              p.t = 0;
+            }
+          } else {
+            p.t += dt;
+            if (p.t > 0.8 && Math.abs(p.ox) + Math.abs(p.oy) < 0.8) {
+              p.mode = 0;
+              p.ox = 0;
+              p.oy = 0;
+              loose -= 1;
+            }
+          }
+
+          if (ptr.active) {
+            const dx = hx + p.ox - ptr.x;
+            const dy = hy + p.oy - ptr.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < R2 && d2 > 0.01) {
+              const d = Math.sqrt(d2);
+              const push = (1 - d / MONO_REPEL_R) * MONO_REPEL * (p.mode === 0 ? 0.6 : 1);
+              p.vx += (dx / d) * push * dt;
+              p.vy += (dy / d) * push * dt;
+            }
+          }
+
+          if (p.mode === 1) {
+            const damp = Math.exp(-0.7 * dt);
+            p.vx *= damp;
+            p.vy = p.vy * damp - 4 * dt;
+          } else {
+            // Damped spring home: stiff when attached, softer while reassembling.
+            const k = p.mode === 0 ? 70 : 16;
+            const c = 2 * Math.sqrt(k) * 0.75;
+            p.vx += (-p.ox * k - p.vx * c) * dt;
+            p.vy += (-p.oy * k - p.vy * c) * dt;
+          }
+          p.ox += p.vx * dt;
+          p.oy += p.vy * dt;
+        }
+
+        const depth = Math.min(Math.max((z2 + 0.9) / 1.8, 0), 1);
+        let a;
+        let col;
+        let s = (1.2 + depth * 1.5) * sizeK;
+        if (p.mode === 0) {
+          a = 0.3 + depth * 0.7;
+          col = z2 > 0.02 ? '#e2e8f0' : '#2563eb';
+        } else if (p.mode === 1) {
+          const k = Math.min(p.t / p.life, 1);
+          a = 0.08 + (1 - k) * 0.75;
+          col = '#3b82f6';
+          s *= 1 - k * 0.45;
+        } else {
+          a = Math.min(1, 0.15 + p.t / 0.7) * (0.3 + depth * 0.7);
+          col = p.t < 0.5 ? '#3b82f6' : z2 > 0.02 ? '#e2e8f0' : '#2563eb';
+        }
+        ctx.globalAlpha = a;
+        ctx.fillStyle = col;
+        ctx.fillRect(hx + p.ox - s / 2, hy + p.oy - s / 2, s, s);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    };
+
+    const frame = (now) => {
+      raf = 0;
+      const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
+      last = now;
+      time += dt;
+      draw(dt);
+      if (visible) raf = requestAnimationFrame(frame);
+    };
+    const start = () => {
+      if (reduced || raf) return;
+      last = 0;
+      raf = requestAnimationFrame(frame);
+    };
+
+    resize();
+    draw(0);
+
+    const ro = new ResizeObserver(() => {
+      resize();
+      if (reduced || !visible) draw(0);
+    });
+    ro.observe(canvas);
+    if (reduced) return () => ro.disconnect();
+
+    const io = new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (visible) start();
+    });
+    io.observe(canvas);
+
+    // Pointer anywhere near the canvas (its box plus 80px) steers the tilt and repels pixels.
+    const onMove = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      const near = x > -80 && y > -80 && x < r.width + 80 && y < r.height + 80;
+      ptr.active = near;
+      ptr.x = x;
+      ptr.y = y;
+      if (near) {
+        target.y = Math.max(-1, Math.min(1, (x / r.width - 0.5) * 2)) * 0.45;
+        target.x = Math.max(-1, Math.min(1, (y / r.height - 0.5) * 2)) * 0.28;
+      } else {
+        target.x = 0;
+        target.y = 0;
+      }
+    };
+    const onLeave = () => {
+      ptr.active = false;
+      target.x = 0;
+      target.y = 0;
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerdown', onMove, { passive: true });
+    document.addEventListener('pointerleave', onLeave);
+    window.addEventListener('blur', onLeave);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      ro.disconnect();
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onMove);
+      document.removeEventListener('pointerleave', onLeave);
+      window.removeEventListener('blur', onLeave);
+    };
+  }, []);
+
+  return (
+    <div ref={wrapRef} className={`relative ${className}`}>
+      {/* Soft blue floor glow under the slab */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-[15%] bottom-[12%] h-1/3 rounded-full bg-blue-600/10 blur-3xl"
+      />
+      <canvas
+        ref={canvasRef}
+        role="img"
+        aria-label="Rotating wireframe browser window built from blue and white pixels that peel away and reassemble"
+        className="relative h-full w-full"
+      />
+      <Mono className="pointer-events-none absolute left-0 top-0 text-[10px] text-zinc-600">[ Live_Render ]</Mono>
+      <Mono className="pointer-events-none absolute bottom-0 right-0 text-[10px] text-zinc-600">
+        {MONOLITH_POINTS.length} PX // Hand-Coded
+      </Mono>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Spotlight card (What We Build)                                     */
+/* ------------------------------------------------------------------ */
+
+// Corner brackets that slide 2px outward on hover.
+const CORNERS_OUT = [
+  'left-0 top-0 border-l border-t group-hover:-translate-x-[2px] group-hover:-translate-y-[2px]',
+  'right-0 top-0 border-r border-t group-hover:translate-x-[2px] group-hover:-translate-y-[2px]',
+  'bottom-0 left-0 border-b border-l group-hover:-translate-x-[2px] group-hover:translate-y-[2px]',
+  'bottom-0 right-0 border-b border-r group-hover:translate-x-[2px] group-hover:translate-y-[2px]',
+];
+
+// FrameCard variant with expanding brackets, a royal-blue border and a radial glow that follows the cursor.
+function SpotlightCard({ children }) {
+  const ref = useRef(null);
+  const onMove = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    el.style.setProperty('--my', `${e.clientY - r.top}px`);
+  };
+  return (
+    <article
+      ref={ref}
+      onPointerMove={onMove}
+      className="group relative flex h-full flex-col border border-zinc-800 bg-[#0a0a0a] p-7 transition duration-300 hover:border-[#2563eb]/60 hover:shadow-[0_0_24px_rgba(37,99,235,0.12)] sm:p-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 [background:radial-gradient(280px_circle_at_var(--mx,50%)_var(--my,50%),rgba(37,99,235,0.14),transparent_70%)] group-hover:opacity-100"
+      />
+      {CORNERS_OUT.map((c) => (
+        <span
+          key={c}
+          aria-hidden="true"
+          className={`pointer-events-none absolute z-10 h-3 w-3 border-zinc-600 transition-[transform,border-color] duration-300 ease-out group-hover:border-blue-400 ${c}`}
+        />
+      ))}
+      <div className="relative flex h-full flex-col">{children}</div>
+    </article>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Website Services page                                              */
 /* ------------------------------------------------------------------ */
 
@@ -1690,8 +2061,8 @@ function ShotFrame({ slides, index, device, label, onExpand, className = '', are
             height={s[device].h}
             loading="lazy"
             decoding="async"
-            className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-500 ease-out motion-reduce:transition-none ${
-              i === index ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 h-full w-full origin-top object-cover object-top transition-[opacity,transform] duration-500 ease-out motion-reduce:transition-none ${
+              i === index ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
             }`}
           />
         ))}
@@ -1956,7 +2327,8 @@ function WebServicesPage({ onContact, onHome }) {
             <ArrowLeft className="h-3.5 w-3.5" /> {SITE_DOMAIN}
           </a>
 
-          <Reveal className="mt-14 sm:mt-20">
+          <div className="mt-14 grid items-center gap-10 sm:mt-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-6">
+          <Reveal>
             <p className="flex items-center gap-2.5">
               <span className="relative flex h-2 w-2">
                 <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
@@ -1964,7 +2336,7 @@ function WebServicesPage({ onContact, onHome }) {
               </span>
               <Mono className="text-blue-400">Custom Web &amp; Creative Solutions</Mono>
             </p>
-            <h1 id="web-hero" className="mt-6 max-w-4xl text-balance text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+            <h1 id="web-hero" className="mt-6 max-w-4xl text-balance text-5xl font-bold tracking-tight text-white sm:text-6xl">
               Bespoke Websites. Built From Scratch<span className="text-blue-500">.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl">
@@ -1982,6 +2354,10 @@ function WebServicesPage({ onContact, onHome }) {
               </a>
             </div>
           </Reveal>
+          <Reveal delay={100}>
+            <PixelMonolith className="mx-auto aspect-[5/4] w-full max-w-xl lg:aspect-square" />
+          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -2008,7 +2384,7 @@ function WebServicesPage({ onContact, onHome }) {
             <PerkinsShowcase />
           </Reveal>
 
-          <Reveal delay={150} className="mt-4">
+          <Reveal delay={100} className="mt-4">
             <FrameCard>
               <dl className="grid gap-8 md:grid-cols-[1fr_2fr_auto] md:items-start md:gap-10">
                 <div>
@@ -2056,7 +2432,7 @@ function WebServicesPage({ onContact, onHome }) {
           <div className="grid gap-4 lg:grid-cols-3">
             {WEB_BUILDS.map((b, i) => (
               <Reveal key={b.n} delay={i * 100} className="h-full">
-                <FrameCard>
+                <SpotlightCard>
                   <span className="font-mono text-xs text-blue-400">{b.n} //</span>
                   <h3 className="mt-4 text-xl font-bold text-white">{b.title}</h3>
                   <p className="mb-6 mt-3 text-sm leading-relaxed text-zinc-400">{b.body}</p>
@@ -2065,7 +2441,7 @@ function WebServicesPage({ onContact, onHome }) {
                       <Chip key={t}>{t}</Chip>
                     ))}
                   </div>
-                </FrameCard>
+                </SpotlightCard>
               </Reveal>
             ))}
           </div>
@@ -2096,6 +2472,228 @@ function WebServicesPage({ onContact, onHome }) {
                   {CONTACT_EMAIL}
                 </a>{' '}
                 for pricing or send your project details through the main contact form.
+              </p>
+              <div className="relative mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <PrimaryButton onClick={onContact} className="px-6 py-3">
+                  Go to Contact Form <ArrowRight className="h-4 w-4" />
+                </PrimaryButton>
+                <CopyEmail />
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FAQ & Local Knowledge Base page (hamburger menu only)              */
+/* ------------------------------------------------------------------ */
+
+const faqNumber = (f) => String(FAQS.indexOf(f) + 1).padStart(2, '0');
+
+function FaqItem({ f, open, onToggle }) {
+  return (
+    <article
+      id={f.id}
+      className={`group relative scroll-mt-36 border bg-[#0a0a0a] transition-colors duration-300 ${
+        open ? 'border-blue-500/40' : 'border-zinc-800 hover:border-zinc-700'
+      }`}>
+      <Brackets />
+      <h3>
+        <button
+          type="button"
+          id={`${f.id}-q`}
+          aria-expanded={open}
+          aria-controls={`${f.id}-a`}
+          onClick={onToggle}
+          className={`flex w-full items-start gap-4 px-5 py-5 text-left sm:gap-6 sm:px-7 sm:py-6 ${FOCUS}`}>
+          <span className={`mt-1.5 shrink-0 font-mono text-[11px] tracking-wider ${open ? 'text-blue-400' : 'text-zinc-500'}`}>
+            Q // {faqNumber(f)}
+          </span>
+          <span className="flex-1 text-base font-semibold leading-snug text-white sm:text-lg">{f.q}</span>
+          <span
+            aria-hidden="true"
+            className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center border transition duration-300 ${
+              open ? 'border-blue-500/50 text-blue-300' : 'border-zinc-800 text-zinc-500 group-hover:text-white'
+            }`}>
+            <Plus className={`h-4 w-4 transition-transform duration-300 ${open ? 'rotate-45' : ''}`} />
+          </span>
+        </button>
+      </h3>
+      {/* Answers stay in the DOM when collapsed (readable by crawlers); inert keeps them out of the tab order. */}
+      <div
+        id={`${f.id}-a`}
+        role="region"
+        aria-labelledby={`${f.id}-q`}
+        inert={!open}
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}>
+        <div className="overflow-hidden">
+          <div className="border-t border-zinc-800/70 px-5 pb-6 pt-5 sm:px-7 sm:pl-[6.25rem]">
+            <p className="text-[15px] leading-relaxed text-slate-300">{f.summary}</p>
+            <ul className="mt-4 space-y-2.5">
+              {f.points.map((p) => (
+                <li key={p} className="flex gap-2.5 text-sm leading-relaxed text-slate-400">
+                  <span aria-hidden="true" className="font-mono text-blue-500">
+                    →
+                  </span>
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FaqPage({ onContact, onHome }) {
+  const [cat, setCat] = useState('all');
+  const [open, setOpen] = useState(() => new Set([FAQS[0].id]));
+
+  // FAQPage + ProfessionalService JSON-LD. The prerendered /faq/index.html already carries the same
+  // block (same id) for crawlers; this keeps it present after in-app navigation, and removes it on leave.
+  useEffect(() => {
+    let el = document.getElementById('faq-jsonld');
+    if (!el) {
+      el = document.createElement('script');
+      el.type = 'application/ld+json';
+      el.id = 'faq-jsonld';
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify(faqJsonLd());
+    return () => el.remove();
+  }, []);
+
+  // Deep links: /faq#question-id opens that answer and scrolls to it.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id || !FAQS.some((f) => f.id === id)) return;
+    setOpen((s) => new Set(s).add(id));
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }));
+  }, []);
+
+  const toggle = (id) =>
+    setOpen((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const groups = FAQ_CATEGORIES.filter((c) => c.id !== 'all' && (cat === 'all' || c.id === cat));
+  const count = (id) => (id === 'all' ? FAQS.length : FAQS.filter((f) => f.cat === id).length);
+
+  return (
+    <>
+      <section className="relative overflow-hidden px-4 pb-14 pt-10 sm:px-6 sm:pt-14 lg:px-8" aria-labelledby="faq-title">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_30%_30%,black_15%,transparent_65%)]"
+        />
+        <div className="relative mx-auto max-w-6xl">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              onHome();
+            }}
+            className={`inline-flex items-center gap-1.5 rounded font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 transition-colors duration-150 hover:text-white ${FOCUS}`}>
+            <ArrowLeft className="h-3.5 w-3.5" /> {SITE_DOMAIN}
+          </a>
+          <Reveal className="mt-14 sm:mt-20">
+            <p className="flex items-center gap-2.5">
+              <span className="relative flex h-2 w-2">
+                <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+              </span>
+              <Mono className="text-blue-400">FAQ // Quad Cities Knowledge Base</Mono>
+            </p>
+            <h1 id="faq-title" className="mt-6 max-w-4xl text-balance text-5xl font-bold tracking-tight text-white sm:text-6xl">
+              Questions, answered<span className="text-blue-500">.</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400">
+              Straight answers about Scrimmy and Scrimmage Productions LLC: custom web design for Quad Cities businesses,
+              operations and lead-routing automation, event production, pricing and how to start.
+            </p>
+            <ul aria-label="Areas served" className="mt-8 flex flex-wrap gap-1.5">
+              {SERVICE_AREA.map((c) => (
+                <li key={c.name}>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-xs text-slate-300">
+                    <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                    {c.name}, {c.region === 'Iowa' ? 'IA' : 'IL'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+
+          <Reveal delay={100} className="mt-12">
+            <dl className="grid gap-px overflow-hidden border border-zinc-800 bg-zinc-800 sm:grid-cols-2 lg:grid-cols-5">
+              {FAQ_FACTS.map((f) => (
+                <div key={f.k} className="bg-[#0a0a0a] p-5">
+                  <dt className="font-mono text-[11px] uppercase tracking-wider text-blue-400">{f.k}</dt>
+                  <dd className="mt-2 text-sm leading-relaxed text-slate-300">{f.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="px-4 pb-20 sm:px-6 sm:pb-28 lg:px-8" aria-label="Frequently asked questions">
+        <div className="mx-auto max-w-6xl">
+          <div role="group" aria-label="Filter questions by topic" className="sticky top-14 z-20 -mx-4 flex gap-1.5 overflow-x-auto border-b border-zinc-900 bg-black/90 px-4 py-3 backdrop-blur sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+            {FAQ_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={cat === c.id}
+                onClick={() => setCat(c.id)}
+                className={`inline-flex min-h-[36px] shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-200 ${FOCUS} ${
+                  cat === c.id
+                    ? 'border-blue-500/50 bg-blue-500/10 text-blue-300'
+                    : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-white'
+                }`}>
+                {c.label}
+                <span className={cat === c.id ? 'text-blue-500' : 'text-zinc-700'}>{count(c.id)}</span>
+              </button>
+            ))}
+          </div>
+
+          {groups.map((g) => (
+            <div key={g.id} className="mt-12">
+              <h2 className="mb-5 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                <span className="text-blue-500">//</span> {g.label}
+                <span aria-hidden="true" className="h-px flex-1 bg-zinc-900" />
+              </h2>
+              <div className="space-y-3">
+                {FAQS.filter((f) => f.cat === g.id).map((f, i) => (
+                  <Reveal key={f.id} delay={Math.min(i, 4) * 100}>
+                    <FaqItem f={f} open={open.has(f.id)} onToggle={() => toggle(f.id)} />
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <Reveal className="mt-16">
+            <div className="relative overflow-hidden border border-zinc-800 bg-[#0a0a0a] px-6 py-12 sm:px-12 sm:py-14">
+              {CORNERS.map((c) => (
+                <span key={c} aria-hidden="true" className={`pointer-events-none absolute h-4 w-4 border-blue-500/70 ${c}`} />
+              ))}
+              <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
+              <Mono className="relative text-blue-400">Still have a question?</Mono>
+              <h2 className="relative mt-4 max-w-3xl text-balance text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                Ask it directly<span className="text-blue-500">.</span>
+              </h2>
+              <p className="relative mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">
+                Websites, workflow audits or event production: send the details and get a straight answer and a
+                custom-scoped quote.
               </p>
               <div className="relative mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <PrimaryButton onClick={onContact} className="px-6 py-3">
@@ -2297,7 +2895,7 @@ const GLOBAL_CSS = `
     background-repeat: no-repeat;
     animation: sp-bone 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   }
-  @keyframes sp-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sp-fade { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: none; } }
   .sp-fade { animation: sp-fade 250ms ease-out; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -2328,7 +2926,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, [booting]);
 
-  // Back/forward between the two pages.
+  // Back/forward between pages.
   useEffect(() => {
     const onPop = () => {
       setBooting(false);
@@ -2338,8 +2936,18 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Per-page title, description and canonical URL (the prerendered /faq ships these statically too).
   useEffect(() => {
-    document.title = route === 'web' ? `Website Services // ${SITE_DOMAIN}` : 'SCRIMMY // Don Scrimmy John';
+    const meta = PAGE_META[route];
+    document.title = meta.title;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', meta.description);
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `https://${SITE_DOMAIN}${PAGE_PATHS[route]}`;
   }, [route]);
 
   // Highlight the menu entry for the section in view (home page only).
@@ -2369,14 +2977,16 @@ export default function App() {
 
   const jumpTop = () => window.scrollTo({ top: 0, behavior: 'instant' });
 
-  const showWeb = () => {
-    if (route !== 'web') {
-      window.history.pushState(null, '', WEB_SERVICES_PATH);
+  // Open a standalone page ('web' or 'faq') at its top.
+  const showPage = (r) => {
+    if (route !== r) {
+      window.history.pushState(null, '', PAGE_PATHS[r]);
       setBooting(false);
-      setRoute('web');
+      setRoute(r);
     }
     jumpTop();
   };
+  const showWeb = () => showPage('web');
 
   const showSection = (id) => {
     if (route === 'home') {
@@ -2407,17 +3017,23 @@ export default function App() {
     showSection('contact');
   };
 
-  const onNavigate = (id) => (id === 'web' ? showWeb() : showSection(id));
+  const onNavigate = (id) => (id === 'web' || id === 'faq' ? showPage(id) : showSection(id));
 
   return (
     <div className="relative min-h-screen bg-black font-sans text-slate-400 antialiased selection:bg-blue-600/40 selection:text-white">
       <style>{GLOBAL_CSS}</style>
-      <NavBar current={route === 'web' ? 'web' : active} onNavigate={onNavigate} onHome={goHome} booting={booting} />
-      {route === 'web' ? (
+      <NavBar current={route === 'home' ? active : route} onNavigate={onNavigate} onHome={goHome} booting={booting} />
+      {route === 'web' && (
         <main>
           <WebServicesPage onContact={contactForWeb} onHome={goHome} />
         </main>
-      ) : (
+      )}
+      {route === 'faq' && (
+        <main>
+          <FaqPage onContact={() => showSection('contact')} onHome={goHome} />
+        </main>
+      )}
+      {route === 'home' && (
         <main>
           <Hero booting={booting} />
           <About />
