@@ -2122,6 +2122,7 @@ function ShotFrame({ slides, index, device, label, onExpand, className = '', are
             src={s[device].src}
             alt={i === index ? s[device].alt : ''}
             aria-hidden={i === index ? undefined : true}
+            data-active={i === index ? '' : undefined}
             width={s[device].w}
             height={s[device].h}
             loading="lazy"
@@ -2231,23 +2232,42 @@ function Lightbox({ slides, index, device, onIndex, onClose }) {
   );
 }
 
-// Pixel-rain entrance for the showcase frames. Measures every <figure> in `panelRef` and builds targets on
-// their borders, caption rules and a sparse interior grid; pixels fall from up to RAIN_ABOVE px above the
-// panel, accelerating like rain, and lock onto their targets with a white flash. The canvas extends above
-// the panel to give them room, never takes pointer events, and the parent unmounts it when done.
+// Pixel-rain entrance for the showcase frames, drawn on one canvas over the panel (extending RAIN_ABOVE px
+// above it so pixels have room to fall). While it runs, the real screenshots are hidden and the canvas
+// paints them instead:
+//   0 - ~0.6s   coarse 32px mosaic cells, coloured from the active screenshot (a quarter fall royal blue and
+//               take the image colour as they land), drop in and lock row by row from the top
+//   0.6 - 0.95s the image sharpens in steps: 16, 8, 4, 2px blocks, then a full-resolution draw
+// Meanwhile thin blue and ice-white pixels rain onto the frame borders and caption rules. The last frame
+// matches the <img> exactly, so when onDone fires the parent removes the canvas and shows the images with
+// no visible change. If the screenshots are not decoded within 500ms the mosaic is skipped.
 const RAIN_ABOVE = 260;
-const RAIN_FALL_S = 0.42;
-const RAIN_TOTAL_S = 0.9;
+const RAIN_TOTAL_S = 0.95;
+const RAIN_EDGE_FALL_S = 0.42;
+const MOSAIC_CELL = 32;
+const MOSAIC_FALL_S = 0.25;
+const MOSAIC_ROWS_S = 0.3; // time for the landing front to sweep from the top row to the bottom row
+const SHARPEN = [
+  [0.6, 16],
+  [0.67, 8],
+  [0.74, 4],
+  [0.81, 2],
+  [0.88, 1],
+];
 
-function PixelRain({ panelRef }) {
+function PixelRain({ panelRef, onDone }) {
   const canvasRef = useRef(null);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const panel = panelRef.current;
     if (!canvas || !panel) return undefined;
-    // Layout offsets, not client rects: the showcase is mid-way through its 0.98 -> 1 scale-in, and the
-    // pixels must land where the frames will be at full size.
+    let raf = 0;
+    let cancelled = false;
+
+    // Layout offsets (not client rects), so everything lines up with the frames' final positions.
     const w = panel.offsetWidth;
     const h = panel.offsetHeight + RAIN_ABOVE;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -2256,78 +2276,208 @@ function PixelRain({ panelRef }) {
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const pts = [];
-    const add = (x, y, size) => {
-      const ty = y + RAIN_ABOVE;
-      pts.push({
+    // Frame edges: thin pixels that rain onto every border and caption rule.
+    const edges = [];
+    const addEdge = (x, y, size) =>
+      edges.push({
         tx: x,
-        ty,
+        ty: y + RAIN_ABOVE,
         sx: x + (Math.random() - 0.5) * 8,
         sy: Math.random() * RAIN_ABOVE * 0.9 - 30,
-        // A slight left-to-right sweep plus scatter; every pixel lands by about 0.82s.
         delay: Math.random() * 0.32 + (x / w) * 0.08,
         size,
         col: Math.random() < 0.6 ? '#2563eb' : '#e2e8f0',
       });
-    };
+
+    // Screenshot areas: where each frame's active <img> sits, plus its object-cover/object-top crop.
+    const areas = [];
     panel.querySelectorAll('figure').forEach((fig) => {
-      const r = { width: fig.offsetWidth, height: fig.offsetHeight };
-      const x0 = fig.offsetLeft; // the panel is the figures' offsetParent (position: relative)
+      const x0 = fig.offsetLeft; // the panel is the figures' offsetParent
       const y0 = fig.offsetTop;
+      const fw = fig.offsetWidth;
+      const fh = fig.offsetHeight;
       const cap = fig.querySelector('figcaption')?.offsetHeight ?? 0;
-      for (let x = 0; x <= r.width; x += 6) {
-        add(x0 + x, y0, 2);
-        add(x0 + x, y0 + r.height, 2);
+      for (let x = 0; x <= fw; x += 6) {
+        addEdge(x0 + x, y0, 2);
+        addEdge(x0 + x, y0 + fh, 2);
       }
-      for (let y = 6; y < r.height; y += 6) {
-        add(x0, y0 + y, 2);
-        add(x0 + r.width, y0 + y, 2);
+      for (let y = 6; y < fh; y += 6) {
+        addEdge(x0, y0 + y, 2);
+        addEdge(x0 + fw, y0 + y, 2);
       }
-      for (let x = 8; x < r.width; x += 8) add(x0 + x, y0 + cap, 1.5);
-      for (let gy = cap + 40; gy < r.height - 10; gy += 44) {
-        for (let gx = 40; gx < r.width - 10; gx += 44) add(x0 + gx, y0 + gy, 1.5);
+      for (let x = 8; x < fw; x += 8) addEdge(x0 + x, y0 + cap, 1.5);
+
+      const btn = fig.querySelector('button'); // the image area; the figure is its offsetParent
+      const img = fig.querySelector('img[data-active]');
+      if (btn && img) {
+        areas.push({ x: x0 + btn.offsetLeft, y: y0 + btn.offsetTop + RAIN_ABOVE, w: btn.offsetWidth, h: btn.offsetHeight, img });
       }
     });
 
-    let raf = 0;
-    const t0 = performance.now();
+    let cells = [];
+    let mosaic = false;
+
+    const prepare = () => {
+      areas.forEach((a) => {
+        const { img } = a;
+        const nw = img.naturalWidth;
+        const nh = img.naturalHeight;
+        const scale = Math.max(a.w / nw, a.h / nh);
+        // Visible part of the source under object-cover, anchored top centre.
+        a.src = { x: (nw - a.w / scale) / 2, y: 0, w: a.w / scale, h: a.h / scale };
+        // Pre-render each block size once: the screenshot downsampled to one pixel per block.
+        a.levels = {};
+        [MOSAIC_CELL, ...SHARPEN.map(([, b]) => b).filter((b) => b > 1)].forEach((b) => {
+          const c = document.createElement('canvas');
+          c.width = Math.ceil(a.w / b);
+          c.height = Math.ceil(a.h / b);
+          const cx = c.getContext('2d', { willReadFrequently: b === MOSAIC_CELL });
+          cx.imageSmoothingEnabled = true;
+          cx.imageSmoothingQuality = 'high';
+          cx.drawImage(img, a.src.x, a.src.y, a.src.w, a.src.h, 0, 0, c.width, c.height);
+          a.levels[b] = c;
+        });
+        // One falling block per coarse cell, coloured from the 32px level.
+        const lv = a.levels[MOSAIC_CELL];
+        const data = lv.getContext('2d').getImageData(0, 0, lv.width, lv.height).data;
+        for (let r = 0; r < lv.height; r += 1) {
+          for (let c = 0; c < lv.width; c += 1) {
+            const k = (r * lv.width + c) * 4;
+            const tx = a.x + c * MOSAIC_CELL;
+            const ty = a.y + r * MOSAIC_CELL;
+            cells.push({
+              a,
+              tx,
+              ty,
+              cw: Math.min(MOSAIC_CELL, a.x + a.w - tx),
+              ch: Math.min(MOSAIC_CELL, a.y + a.h - ty),
+              sy: ty - 140 - Math.random() * 220,
+              delay: (r / lv.height) * MOSAIC_ROWS_S + Math.random() * 0.05,
+              col: `rgb(${data[k]},${data[k + 1]},${data[k + 2]})`,
+              blue: Math.random() < 0.25,
+            });
+          }
+        }
+      });
+      mosaic = true;
+    };
+
+    // Image level for time t: 0 = cell mosaic, otherwise the current sharpen block size.
+    const blockAt = (t) => {
+      let b = 0;
+      SHARPEN.forEach(([at, size]) => {
+        if (t >= at) b = size;
+      });
+      return b;
+    };
+
+    const drawArea = (a, b) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(a.x, a.y, a.w, a.h);
+      ctx.clip();
+      if (b === 1) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(a.img, a.src.x, a.src.y, a.src.w, a.src.h, a.x, a.y, a.w, a.h);
+      } else {
+        const lv = a.levels[b];
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(lv, a.x, a.y, lv.width * b, lv.height * b);
+      }
+      ctx.restore();
+    };
+
+    let t0 = 0;
     const frame = (now) => {
+      if (!t0) t0 = now;
       const t = (now - t0) / 1000;
       ctx.clearRect(0, 0, w, h);
-      for (let i = 0; i < pts.length; i += 1) {
-        const p = pts[i];
-        const k = (t - p.delay) / RAIN_FALL_S;
+
+      if (mosaic) {
+        const b = blockAt(t);
+        if (b) {
+          areas.forEach((a) => drawArea(a, b));
+        } else {
+          // Coarse mosaic: cells fall (accelerating) and lock top-down; blue ones take the image colour on landing.
+          for (let i = 0; i < cells.length; i += 1) {
+            const c = cells[i];
+            const k = (t - c.delay) / MOSAIC_FALL_S;
+            if (k <= 0) continue;
+            if (k < 1) {
+              const y = c.sy + (c.ty - c.sy) * k * k;
+              ctx.globalAlpha = 0.85;
+              ctx.fillStyle = c.blue ? '#2563eb' : c.col;
+              ctx.fillRect(c.tx + 4, y + 4, c.cw - 8, c.ch - 8);
+            } else {
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = c.col;
+              ctx.fillRect(c.tx, c.ty, c.cw, c.ch);
+            }
+          }
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      for (let i = 0; i < edges.length; i += 1) {
+        const p = edges[i];
+        const k = (t - p.delay) / RAIN_EDGE_FALL_S;
         if (k <= 0) continue;
+        ctx.fillStyle = p.col;
         if (k < 1) {
-          const e = k * k; // accelerate, like rain
+          const e = k * k;
           const x = p.sx + (p.tx - p.sx) * e;
           const y = p.sy + (p.ty - p.sy) * e;
           const trail = 6 + k * 18;
           ctx.globalAlpha = 0.18;
-          ctx.fillStyle = p.col;
           ctx.fillRect(x - p.size / 2, y - trail, p.size, trail);
           ctx.globalAlpha = 0.9;
           ctx.fillRect(x - p.size / 2, y - p.size / 2, p.size, p.size);
-        } else {
-          // Locked: a 120ms white flash, then its own colour.
-          const since = t - p.delay - RAIN_FALL_S;
+        } else if (t < RAIN_TOTAL_S - 0.08) {
+          // Locked edge pixels flash white, hold, then hand over to the real borders just before the end.
           ctx.globalAlpha = 1;
-          ctx.fillStyle = since < 0.12 ? '#ffffff' : p.col;
+          if (t - p.delay - RAIN_EDGE_FALL_S < 0.12) ctx.fillStyle = '#ffffff';
           ctx.fillRect(p.tx - p.size / 2, p.ty - p.size / 2, p.size, p.size);
         }
       }
       ctx.globalAlpha = 1;
-      if (t < RAIN_TOTAL_S + 0.3) raf = requestAnimationFrame(frame);
+
+      if (t >= RAIN_TOTAL_S) {
+        doneRef.current?.();
+        return;
+      }
+      raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+
+    // Wait (briefly) for the active screenshots to decode so the mosaic can sample them.
+    const ready = Promise.all(areas.map((a) => (a.img.complete && a.img.naturalWidth ? null : a.img.decode())));
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), 500));
+    Promise.race([ready, timeout])
+      .then(() => {
+        if (cancelled) return;
+        try {
+          prepare();
+        } catch {
+          mosaic = false;
+          cells = [];
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) raf = requestAnimationFrame(frame);
+      });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [panelRef]);
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="sp-rain pointer-events-none absolute inset-x-0 bottom-0 z-20 w-full"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 w-full"
       style={{ top: -RAIN_ABOVE, height: `calc(100% + ${RAIN_ABOVE}px)` }}
     />
   );
@@ -2336,8 +2486,8 @@ function PixelRain({ panelRef }) {
 const SLIDE_MS = 3200;
 
 // Perkins proof of work: section tabs and arrows over a paired desktop + phone preview.
-// Entrance: hidden until 20% of it is on screen, then pixel rain assembles the frames while the
-// showcase fades and sharpens in (reduced motion: a plain fade). Autoplay: once in, slides advance every
+// Entrance: hidden until 20% of it is on screen, then pixel rain assembles the frames and the screenshots
+// resolve from a coarse mosaic to full resolution (see PixelRain; reduced motion: a plain fade). Autoplay: once in, slides advance every
 // 3.2s; the 2px bar on the active tab is the timer itself (its CSS animation ending advances the slide), so
 // pausing freezes bar and timer together. Hover or keyboard focus pauses; leaving resumes. Picking a tab,
 // an arrow or a swipe hands control to the visitor (resume with the play button). The lightbox pauses
@@ -2379,9 +2529,10 @@ function PerkinsShowcase() {
     return () => io.disconnect();
   }, [reduced]);
 
+  // Safety net: if the rain never reports back (say the tab is hidden and frames stop), finish anyway.
   useEffect(() => {
     if (phase !== 'rain') return undefined;
-    const t = setTimeout(() => setPhase('done'), (RAIN_TOTAL_S + 0.35) * 1000);
+    const t = setTimeout(() => setPhase('done'), 4000);
     return () => clearTimeout(t);
   }, [phase]);
 
@@ -2440,10 +2591,9 @@ function PerkinsShowcase() {
   };
 
   const slide = PERKINS_SLIDES[index];
+  // No scale during the rain: the canvas mosaic is drawn at the frames' final positions and must line up.
   const shown =
-    phase === 'idle'
-      ? 'opacity-0 scale-[0.98]'
-      : `opacity-100 scale-100 ${phase === 'rain' ? 'duration-[450ms] delay-[350ms]' : 'duration-300'}`;
+    phase === 'idle' ? 'opacity-0' : `opacity-100 ${phase === 'rain' ? 'duration-[450ms] delay-[350ms]' : 'duration-300'}`;
 
   return (
     <div
@@ -2455,7 +2605,7 @@ function PerkinsShowcase() {
         if (!rootRef.current?.contains(e.relatedTarget)) setFocusIn(false);
       }}
       className="relative">
-      <div className={`relative origin-top transition-[opacity,transform] ease-out motion-reduce:transform-none ${shown}`}>
+      <div className={`relative transition-opacity ease-out ${shown}`}>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div role="tablist" aria-label="Perkins Lawn & Snow site sections" className="flex flex-wrap gap-1.5" onKeyDown={onTabKey}>
             {PERKINS_SLIDES.map((s, i) => (
@@ -2515,7 +2665,7 @@ function PerkinsShowcase() {
           aria-labelledby={`perkins-tab-${slide.key}`}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
-          className="relative grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
+          className={`relative grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)] ${phase === 'rain' ? '[&_img]:invisible' : ''}`}>
           <ShotFrame
             slides={PERKINS_SLIDES}
             index={index}
@@ -2540,7 +2690,7 @@ function PerkinsShowcase() {
       {/* Outside the fading wrapper, so the rain stays sharp while the frames come into focus beneath it. */}
       {phase === 'rain' && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ top: panelRef.current?.offsetTop ?? 0 }}>
-          <PixelRain panelRef={panelRef} />
+          <PixelRain panelRef={panelRef} onDone={() => setPhase('done')} />
         </div>
       )}
 
@@ -3326,8 +3476,6 @@ const GLOBAL_CSS = `
   /* Showcase autoplay cadence bar (duration set inline) and the rain overlay's exit fade. */
   @keyframes sp-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   .sp-progress { transform-origin: left; animation-name: sp-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
-  @keyframes sp-rain-out { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
-  .sp-rain { animation: sp-rain-out ${Math.round((RAIN_TOTAL_S + 0.3) * 1000)}ms linear forwards; }
   @keyframes sp-fade { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: none; } }
   .sp-fade { animation: sp-fade 250ms ease-out; }
   @media (prefers-reduced-motion: reduce) {
