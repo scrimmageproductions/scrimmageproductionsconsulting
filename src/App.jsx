@@ -16,6 +16,8 @@ import {
   MapPin,
   Maximize2,
   Menu,
+  Pause,
+  Play,
   Plus,
   X,
 } from 'lucide-react';
@@ -2124,8 +2126,12 @@ function ShotFrame({ slides, index, device, label, onExpand, className = '', are
             height={s[device].h}
             loading="lazy"
             decoding="async"
-            className={`absolute inset-0 h-full w-full origin-top object-cover object-top transition-[opacity,transform] duration-500 ease-out motion-reduce:transition-none ${
-              i === index ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
+            // 350ms crossfade; the incoming shot also slides in from 8px right. The outgoing one only fades,
+            // then jumps back to +8px once invisible, ready for its next entrance.
+            className={`absolute inset-0 h-full w-full object-cover object-top motion-reduce:transition-none ${
+              i === index
+                ? 'translate-x-0 opacity-100 [transition:opacity_350ms_ease-out,transform_350ms_cubic-bezier(0.2,0.8,0.2,1)]'
+                : 'translate-x-2 opacity-0 [transition:opacity_350ms_ease-out,transform_0s_350ms]'
             }`}
           />
         ))}
@@ -2225,14 +2231,192 @@ function Lightbox({ slides, index, device, onIndex, onClose }) {
   );
 }
 
+// Pixel-rain entrance for the showcase frames. Measures every <figure> in `panelRef` and builds targets on
+// their borders, caption rules and a sparse interior grid; pixels fall from up to RAIN_ABOVE px above the
+// panel, accelerating like rain, and lock onto their targets with a white flash. The canvas extends above
+// the panel to give them room, never takes pointer events, and the parent unmounts it when done.
+const RAIN_ABOVE = 260;
+const RAIN_FALL_S = 0.42;
+const RAIN_TOTAL_S = 0.9;
+
+function PixelRain({ panelRef }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const panel = panelRef.current;
+    if (!canvas || !panel) return undefined;
+    // Layout offsets, not client rects: the showcase is mid-way through its 0.98 -> 1 scale-in, and the
+    // pixels must land where the frames will be at full size.
+    const w = panel.offsetWidth;
+    const h = panel.offsetHeight + RAIN_ABOVE;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const pts = [];
+    const add = (x, y, size) => {
+      const ty = y + RAIN_ABOVE;
+      pts.push({
+        tx: x,
+        ty,
+        sx: x + (Math.random() - 0.5) * 8,
+        sy: Math.random() * RAIN_ABOVE * 0.9 - 30,
+        // A slight left-to-right sweep plus scatter; every pixel lands by about 0.82s.
+        delay: Math.random() * 0.32 + (x / w) * 0.08,
+        size,
+        col: Math.random() < 0.6 ? '#2563eb' : '#e2e8f0',
+      });
+    };
+    panel.querySelectorAll('figure').forEach((fig) => {
+      const r = { width: fig.offsetWidth, height: fig.offsetHeight };
+      const x0 = fig.offsetLeft; // the panel is the figures' offsetParent (position: relative)
+      const y0 = fig.offsetTop;
+      const cap = fig.querySelector('figcaption')?.offsetHeight ?? 0;
+      for (let x = 0; x <= r.width; x += 6) {
+        add(x0 + x, y0, 2);
+        add(x0 + x, y0 + r.height, 2);
+      }
+      for (let y = 6; y < r.height; y += 6) {
+        add(x0, y0 + y, 2);
+        add(x0 + r.width, y0 + y, 2);
+      }
+      for (let x = 8; x < r.width; x += 8) add(x0 + x, y0 + cap, 1.5);
+      for (let gy = cap + 40; gy < r.height - 10; gy += 44) {
+        for (let gx = 40; gx < r.width - 10; gx += 44) add(x0 + gx, y0 + gy, 1.5);
+      }
+    });
+
+    let raf = 0;
+    const t0 = performance.now();
+    const frame = (now) => {
+      const t = (now - t0) / 1000;
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < pts.length; i += 1) {
+        const p = pts[i];
+        const k = (t - p.delay) / RAIN_FALL_S;
+        if (k <= 0) continue;
+        if (k < 1) {
+          const e = k * k; // accelerate, like rain
+          const x = p.sx + (p.tx - p.sx) * e;
+          const y = p.sy + (p.ty - p.sy) * e;
+          const trail = 6 + k * 18;
+          ctx.globalAlpha = 0.18;
+          ctx.fillStyle = p.col;
+          ctx.fillRect(x - p.size / 2, y - trail, p.size, trail);
+          ctx.globalAlpha = 0.9;
+          ctx.fillRect(x - p.size / 2, y - p.size / 2, p.size, p.size);
+        } else {
+          // Locked: a 120ms white flash, then its own colour.
+          const since = t - p.delay - RAIN_FALL_S;
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = since < 0.12 ? '#ffffff' : p.col;
+          ctx.fillRect(p.tx - p.size / 2, p.ty - p.size / 2, p.size, p.size);
+        }
+      }
+      ctx.globalAlpha = 1;
+      if (t < RAIN_TOTAL_S + 0.3) raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [panelRef]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="sp-rain pointer-events-none absolute inset-x-0 bottom-0 z-20 w-full"
+      style={{ top: -RAIN_ABOVE, height: `calc(100% + ${RAIN_ABOVE}px)` }}
+    />
+  );
+}
+
+const SLIDE_MS = 3200;
+
 // Perkins proof of work: section tabs and arrows over a paired desktop + phone preview.
+// Entrance: hidden until 20% of it is on screen, then pixel rain assembles the frames while the
+// showcase fades and sharpens in (reduced motion: a plain fade). Autoplay: once in, slides advance every
+// 3.2s; the 2px bar on the active tab is the timer itself (its CSS animation ending advances the slide), so
+// pausing freezes bar and timer together. Hover or keyboard focus pauses; leaving resumes. Picking a tab,
+// an arrow or a swipe hands control to the visitor (resume with the play button). The lightbox pauses
+// while open. Off screen, a hidden tab, or reduced motion: no autoplay.
 function PerkinsShowcase() {
   const [index, setIndex] = useState(0);
   const [expanded, setExpanded] = useState(null); // null | 'desktop' | 'mobile'
+  const [reduced] = useState(prefersReducedMotion);
+  const [phase, setPhase] = useState('idle'); // idle (hidden) | rain | done
+  const [manual, setManual] = useState(false);
+  const [hover, setHover] = useState(false);
+  const [focusIn, setFocusIn] = useState(false);
+  const [inView, setInView] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const [cycle, setCycle] = useState(0);
+  const [announce, setAnnounce] = useState('');
+  const rootRef = useRef(null);
+  const panelRef = useRef(null);
   const tabRefs = useRef([]);
   const touchX = useRef(null);
   const count = PERKINS_SLIDES.length;
-  const go = (i) => setIndex((i + count) % count);
+
+  // Entrance, once.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || !('IntersectionObserver' in window)) {
+      setPhase('done');
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        io.disconnect();
+        setPhase(reduced ? 'done' : 'rain');
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [reduced]);
+
+  useEffect(() => {
+    if (phase !== 'rain') return undefined;
+    const t = setTimeout(() => setPhase('done'), (RAIN_TOTAL_S + 0.35) * 1000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Autoplay only runs while the showcase is on screen and the tab is visible.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || !('IntersectionObserver' in window)) return undefined;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.2 });
+    io.observe(el);
+    const onVis = () => setPageVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+
+  const autoplay = phase === 'done' && !reduced && !manual;
+  const playing = autoplay && !hover && !focusIn && !expanded && inView && pageVisible;
+
+  // Visitor-driven moves: take over from autoplay and announce the new section to screen readers.
+  const pick = (i) => {
+    const next = (i + count) % count;
+    setManual(true);
+    setIndex(next);
+    setAnnounce(`Showing ${PERKINS_SLIDES[next].label}, section ${next + 1} of ${count}`);
+  };
+  const advance = () => {
+    setIndex((i) => (i + 1) % count);
+    setCycle((c) => c + 1);
+  };
+  const togglePlay = () => {
+    setManual((m) => !m);
+    setCycle((c) => c + 1); // restart the bar from empty
+  };
 
   // Roving focus for the tab row: arrow keys, Home and End move between tabs.
   const onTabKey = (e) => {
@@ -2240,7 +2424,7 @@ function PerkinsShowcase() {
     if (!(e.key in map)) return;
     e.preventDefault();
     const next = (map[e.key] + count) % count;
-    setIndex(next);
+    pick(next);
     tabRefs.current[next]?.focus();
   };
 
@@ -2252,80 +2436,122 @@ function PerkinsShowcase() {
     if (touchX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchX.current;
     touchX.current = null;
-    if (Math.abs(dx) > 50) go(index + (dx < 0 ? 1 : -1));
+    if (Math.abs(dx) > 50) pick(index + (dx < 0 ? 1 : -1));
   };
 
   const slide = PERKINS_SLIDES[index];
+  const shown =
+    phase === 'idle'
+      ? 'opacity-0 scale-[0.98]'
+      : `opacity-100 scale-100 ${phase === 'rain' ? 'duration-[450ms] delay-[350ms]' : 'duration-300'}`;
 
   return (
-    <>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="tablist" aria-label="Perkins Lawn & Snow site sections" className="flex flex-wrap gap-1.5" onKeyDown={onTabKey}>
-          {PERKINS_SLIDES.map((s, i) => (
-            <button
-              key={s.key}
-              ref={(el) => {
-                tabRefs.current[i] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`perkins-tab-${s.key}`}
-              aria-selected={i === index}
-              aria-controls="perkins-panel"
-              tabIndex={i === index ? 0 : -1}
-              onClick={() => setIndex(i)}
-              className={`min-h-[36px] rounded-full border px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-200 ${FOCUS} ${
-                i === index
-                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-300'
-                  : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-white'
-              }`}>
-              {s.n} · {s.label}
-            </button>
-          ))}
+    <div
+      ref={rootRef}
+      onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(true)}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && setHover(false)}
+      onFocus={() => setFocusIn(true)}
+      onBlur={(e) => {
+        if (!rootRef.current?.contains(e.relatedTarget)) setFocusIn(false);
+      }}
+      className="relative">
+      <div className={`relative origin-top transition-[opacity,transform] ease-out motion-reduce:transform-none ${shown}`}>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="tablist" aria-label="Perkins Lawn & Snow site sections" className="flex flex-wrap gap-1.5" onKeyDown={onTabKey}>
+            {PERKINS_SLIDES.map((s, i) => (
+              <button
+                key={s.key}
+                ref={(el) => {
+                  tabRefs.current[i] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`perkins-tab-${s.key}`}
+                aria-selected={i === index}
+                aria-controls="perkins-panel"
+                tabIndex={i === index ? 0 : -1}
+                onClick={() => pick(i)}
+                className={`relative min-h-[36px] overflow-hidden rounded-full border px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-200 ${FOCUS} ${
+                  i === index
+                    ? 'border-blue-500/50 bg-blue-500/10 text-blue-300'
+                    : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-white'
+                }`}>
+                {s.n} · {s.label}
+                {/* Cadence bar: fills over 3.2s; when its animation ends, the next slide comes up. */}
+                {i === index && autoplay && (
+                  <span
+                    key={cycle}
+                    aria-hidden="true"
+                    onAnimationEnd={advance}
+                    className="sp-progress pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-[#2563eb]"
+                    style={{ animationDuration: `${SLIDE_MS}ms`, animationPlayState: playing ? 'running' : 'paused' }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <Mono className="mr-1 text-[11px] text-zinc-500" aria-hidden="true">
+              {slide.n} / {String(count).padStart(2, '0')}
+            </Mono>
+            {!reduced && (
+              <button
+                type="button"
+                onClick={togglePlay}
+                aria-label={manual ? 'Play slideshow' : 'Pause slideshow'}
+                className={`grid h-11 w-11 place-items-center border border-zinc-800 bg-[#09090b] text-zinc-400 hover:border-blue-500/40 hover:text-white ${PRESS}`}>
+                {manual ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              </button>
+            )}
+            <ArrowButton dir="prev" onClick={() => pick(index - 1)} label="Previous section" />
+            <ArrowButton dir="next" onClick={() => pick(index + 1)} label="Next section" />
+          </div>
         </div>
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <Mono className="mr-1 text-[11px] text-zinc-500" aria-hidden="true">
-            {slide.n} / {String(count).padStart(2, '0')}
-          </Mono>
-          <ArrowButton dir="prev" onClick={() => go(index - 1)} label="Previous section" />
-          <ArrowButton dir="next" onClick={() => go(index + 1)} label="Next section" />
+
+        <div
+          ref={panelRef}
+          id="perkins-panel"
+          role="tabpanel"
+          aria-labelledby={`perkins-tab-${slide.key}`}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          className="relative grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
+          <ShotFrame
+            slides={PERKINS_SLIDES}
+            index={index}
+            device="desktop"
+            label="Desktop // 1440px"
+            onExpand={() => setExpanded('desktop')}
+            areaClassName="aspect-[1440/900]"
+          />
+          {/* On large screens the phone frame stretches to the desktop frame's height and crops from the top. */}
+          <ShotFrame
+            slides={PERKINS_SLIDES}
+            index={index}
+            device="mobile"
+            label="Mobile // 390px"
+            onExpand={() => setExpanded('mobile')}
+            className="mx-auto w-full max-w-xs lg:max-w-none"
+            areaClassName="aspect-[390/844] lg:aspect-auto lg:flex-1"
+          />
         </div>
       </div>
 
-      <div
-        id="perkins-panel"
-        role="tabpanel"
-        aria-labelledby={`perkins-tab-${slide.key}`}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        className="grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
-        <ShotFrame
-          slides={PERKINS_SLIDES}
-          index={index}
-          device="desktop"
-          label="Desktop // 1440px"
-          onExpand={() => setExpanded('desktop')}
-          areaClassName="aspect-[1440/900]"
-        />
-        {/* On large screens the phone frame stretches to the desktop frame's height and crops from the top. */}
-        <ShotFrame
-          slides={PERKINS_SLIDES}
-          index={index}
-          device="mobile"
-          label="Mobile // 390px"
-          onExpand={() => setExpanded('mobile')}
-          className="mx-auto w-full max-w-xs lg:max-w-none"
-          areaClassName="aspect-[390/844] lg:aspect-auto lg:flex-1"
-        />
-      </div>
+      {/* Outside the fading wrapper, so the rain stays sharp while the frames come into focus beneath it. */}
+      {phase === 'rain' && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ top: panelRef.current?.offsetTop ?? 0 }}>
+          <PixelRain panelRef={panelRef} />
+        </div>
+      )}
+
       <p className="sr-only" aria-live="polite">
-        Showing {slide.label}, section {index + 1} of {count}
+        {announce}
       </p>
 
       {expanded && (
-        <Lightbox slides={PERKINS_SLIDES} index={index} device={expanded} onIndex={go} onClose={() => setExpanded(null)} />
+        <Lightbox slides={PERKINS_SLIDES} index={index} device={expanded} onIndex={(i) => setIndex((i + count) % count)} onClose={() => setExpanded(null)} />
       )}
-    </>
+    </div>
   );
 }
 
@@ -2443,9 +2669,7 @@ function WebServicesPage({ onContact, onHome }) {
             </a>
           </Reveal>
 
-          <Reveal>
-            <PerkinsShowcase />
-          </Reveal>
+          <PerkinsShowcase />
 
           <Reveal delay={100} className="mt-4">
             <FrameCard>
@@ -3099,6 +3323,11 @@ const GLOBAL_CSS = `
     background-repeat: no-repeat;
     animation: sp-bone 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   }
+  /* Showcase autoplay cadence bar (duration set inline) and the rain overlay's exit fade. */
+  @keyframes sp-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .sp-progress { transform-origin: left; animation-name: sp-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
+  @keyframes sp-rain-out { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+  .sp-rain { animation: sp-rain-out ${Math.round((RAIN_TOTAL_S + 0.3) * 1000)}ms linear forwards; }
   @keyframes sp-fade { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: none; } }
   .sp-fade { animation: sp-fade 250ms ease-out; }
   @media (prefers-reduced-motion: reduce) {
