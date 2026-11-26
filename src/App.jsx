@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   Check,
   ChevronDown,
   ChevronRight,
+  Copy,
   Loader2,
   Mail,
   MapPin,
@@ -30,6 +32,24 @@ const NAV_LINKS = [
   { id: 'services', label: 'Services' },
   { id: 'contact', label: 'Contact' },
 ];
+
+// Routes: the one-page home and the dedicated Website Services page. Plain history-API routing, no router
+// dependency. vercel.json rewrites /website-services to index.html so deep links load the app.
+const WEB_SERVICES_PATH = '/website-services';
+const WEB_SERVICE_NAME = 'Custom Web & Creative Solutions';
+const routeFromPath = (path) => (path.replace(/\/+$/, '') === WEB_SERVICES_PATH ? 'web' : 'home');
+const initialRoute = () => (typeof window === 'undefined' ? 'home' : routeFromPath(window.location.pathname));
+
+// Hamburger menu: the home sections, with the Website Services page slotted in before Contact.
+const MENU_LINKS = [
+  { id: 'about', label: 'About' },
+  { id: 'ecosystems', label: 'Ecosystems' },
+  { id: 'services', label: 'Services' },
+  { id: 'web', label: 'Website Services', page: true },
+  { id: 'contact', label: 'Contact' },
+];
+
+const PROJECT_TYPE_LINE = `Project type: ${WEB_SERVICE_NAME}`;
 
 const ALIASES = ['Young Scrimmage', 'Don Scrimmy John'];
 const HOME_BASE = 'Quad Cities, USA';
@@ -104,6 +124,31 @@ const SERVICES = [
     title: 'Custom Web & Creative Solutions',
     body: 'Bespoke digital architecture, clean interfaces, and custom creative solutions for your business or idea. This entire site is proof of work with high-speed performance, tailored styling, and zero generic template drag. If you can envision it, we can build it together.',
     tags: ['BESPOKE DESIGN', 'REACT 19', 'CUSTOM STACK', 'PROOF OF WORK'],
+    page: 'web',
+  },
+];
+
+const PERKINS_URL = 'https://perkinslawnandsnow.com';
+const PERKINS_TAGS = ['CUSTOM BUILD', 'MOBILE-FIRST', 'LEAD CAPTURE', 'LIVE SITE'];
+
+const WEB_BUILDS = [
+  {
+    n: '01',
+    title: 'Custom Business Websites',
+    body: 'Ground-up design and code tailored to local businesses, agencies, and founders.',
+    tags: ['BESPOKE DESIGN', 'FAST LOAD TIMES', 'ZERO TEMPLATES'],
+  },
+  {
+    n: '02',
+    title: 'Landing Pages & Lead Funnels',
+    body: 'Focused pages engineered to turn visitors into booked calls and paying customers.',
+    tags: ['CONVERSION FOCUSED', 'CUSTOM FORMS', 'SEO READY'],
+  },
+  {
+    n: '03',
+    title: 'Website Redesigns & Upgrades',
+    body: 'Replacing sluggish Wix, Squarespace, or WordPress templates with fast, modern interfaces.',
+    tags: ['UI OVERHAUL', 'SPEED UPGRADE', 'MOBILE UX'],
   },
 ];
 
@@ -651,16 +696,21 @@ const CORNERS = [
   'bottom-0 right-0 border-b border-r',
 ];
 
-function FrameCard({ children }) {
+function Brackets() {
+  return CORNERS.map((c) => (
+    <span
+      key={c}
+      aria-hidden="true"
+      className={`pointer-events-none absolute z-10 h-3 w-3 border-zinc-600 transition-colors duration-300 group-hover:border-blue-400 ${c}`}
+    />
+  ));
+}
+
+function FrameCard({ children, className = '' }) {
   return (
-    <article className="group relative flex h-full flex-col border border-zinc-800 bg-[#09090b] p-7 transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] sm:p-8">
-      {CORNERS.map((c) => (
-        <span
-          key={c}
-          aria-hidden="true"
-          className={`pointer-events-none absolute h-3 w-3 border-zinc-600 transition-colors duration-300 group-hover:border-blue-400 ${c}`}
-        />
-      ))}
+    <article
+      className={`group relative flex h-full flex-col border border-zinc-800 bg-[#09090b] p-7 transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] sm:p-8 ${className}`}>
+      <Brackets />
       {children}
     </article>
   );
@@ -711,11 +761,12 @@ function Chip({ children }) {
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black';
 const PRESS = `transition duration-200 active:scale-[0.98] ${FOCUS}`;
 
+const PRIMARY_CLS = `inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-[15px] font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${PRESS}`;
+const SECONDARY_CLS = `inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/15 px-5 py-2.5 text-[15px] font-semibold text-white hover:border-white/30 hover:bg-white/5 ${PRESS}`;
+
 function PrimaryButton({ children, className = '', ...rest }) {
   return (
-    <button
-      className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-[15px] font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${PRESS} ${className}`}
-      {...rest}>
+    <button className={`${PRIMARY_CLS} ${className}`} {...rest}>
       {children}
     </button>
   );
@@ -723,9 +774,7 @@ function PrimaryButton({ children, className = '', ...rest }) {
 
 function SecondaryButton({ children, className = '', ...rest }) {
   return (
-    <button
-      className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/15 px-5 py-2.5 text-[15px] font-semibold text-white hover:border-white/30 hover:bg-white/5 ${PRESS} ${className}`}
-      {...rest}>
+    <button className={`${SECONDARY_CLS} ${className}`} {...rest}>
       {children}
     </button>
   );
@@ -736,24 +785,36 @@ function SecondaryButton({ children, className = '', ...rest }) {
 /*  Navigation                                                         */
 /* ------------------------------------------------------------------ */
 
-function NavBar({ active, booting = false }) {
+// `current` is the highlighted menu entry: the section in view on the home page, or 'web' on the Website
+// Services page. `onNavigate(id)` scrolls to a home section (switching pages first if needed) or opens the
+// Website Services page when id is 'web'.
+function NavBar({ current, onNavigate, onHome, booting = false }) {
   const [open, setOpen] = useState(false);
+  const firstLinkRef = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
+    if (!open) return undefined;
+    document.body.style.overflow = 'hidden';
+    firstLinkRef.current?.focus({ preventScroll: true });
     const onKey = (e) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
-    if (open) window.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', onKey);
     };
   }, [open]);
 
+  // Close first so the scroll lock is released before the page moves.
   const go = (id) => {
     setOpen(false);
-    scrollToId(id);
+    document.body.style.overflow = '';
+    onNavigate(id);
   };
 
   return (
@@ -761,100 +822,98 @@ function NavBar({ active, booting = false }) {
       <header
         className={`sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl ${booting ? 'sp-boot-stamp' : ''}`}>
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Primary">
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              setOpen(false);
+              onHome();
+            }}
             className={`rounded font-mono text-[15px] font-semibold tracking-tight text-white ${FOCUS}`}
             aria-label={`${SITE_DOMAIN}, back to top`}>
             scrimmy<span className="text-blue-500">.xyz</span>
-          </button>
-
-          <ul className="hidden items-center gap-8 md:flex">
-            {NAV_LINKS.map((l) => (
-              <li key={l.id}>
-                <a
-                  href={`#${l.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go(l.id);
-                  }}
-                  aria-current={active === l.id ? 'true' : undefined}
-                  className={`rounded text-sm font-medium transition-colors duration-200 ${FOCUS} ${
-                    active === l.id ? 'text-white' : 'text-slate-400 hover:text-white'
-                  }`}>
-                  {l.label}
-                </a>
-              </li>
-            ))}
-          </ul>
+          </a>
 
           <div className="flex items-center gap-2">
-            <span className="hidden sm:block">
-              <PrimaryButton onClick={() => go('contact')} className="min-h-0 px-4 py-1.5 text-sm">
-                Get in Touch
-              </PrimaryButton>
-            </span>
+            <PrimaryButton onClick={() => go('contact')} className="min-h-0 px-4 py-1.5 text-sm">
+              Get in Touch
+            </PrimaryButton>
             <button
-              onClick={() => setOpen(true)}
-              className={`grid h-11 w-11 place-items-center rounded-full text-slate-300 hover:bg-white/5 md:hidden ${PRESS}`}
-              aria-label="Open menu"
+              ref={triggerRef}
+              onClick={() => setOpen((o) => !o)}
+              className={`grid h-11 w-11 place-items-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white ${PRESS}`}
+              aria-label={open ? 'Close menu' : 'Open menu'}
               aria-expanded={open}
-              aria-controls="mobile-menu">
-              <Menu className="h-5 w-5" />
+              aria-controls="site-menu">
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </nav>
       </header>
 
-      {/* Mobile drawer: kept outside the header, whose backdrop-filter would otherwise trap position:fixed */}
+      {/* Menu overlay: kept outside the header, whose backdrop-filter would otherwise trap position:fixed.
+          Sits under the 56px bar so the logo, Get in Touch and the X stay in reach. */}
       <div
-        className={`fixed inset-0 z-[60] md:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
-        aria-hidden={!open}>
+        className={`fixed inset-x-0 bottom-0 top-14 z-[60] ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        aria-hidden={!open}
+        inert={!open}>
         <div
           onClick={() => setOpen(false)}
-          className={`absolute inset-0 bg-black/70 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-black/60 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
         />
-        <aside
-          id="mobile-menu"
-          className={`absolute right-0 top-0 flex h-full w-[85%] max-w-sm flex-col border-l border-white/5 bg-[#0a0f1d] p-6 transition-transform duration-300 ease-out ${
-            open ? 'translate-x-0' : 'translate-x-full'
-          }`}>
-          <div className="mb-6 flex items-center justify-between">
-            <Mono className="text-blue-400">Menu</Mono>
-            <button
-              onClick={() => setOpen(false)}
-              className={`grid h-11 w-11 place-items-center rounded-full bg-white/5 text-slate-300 hover:bg-white/10 ${PRESS}`}
-              aria-label="Close menu"
-              tabIndex={open ? 0 : -1}>
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <ul className="divide-y divide-white/5">
-            {NAV_LINKS.map((l) => (
-              <li key={l.id}>
-                <a
-                  href={`#${l.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go(l.id);
-                  }}
-                  tabIndex={open ? 0 : -1}
-                  className={`flex min-h-[44px] w-full items-center justify-between py-4 text-lg font-semibold text-white transition-colors duration-200 hover:text-blue-400 ${FOCUS}`}>
-                  {l.label}
-                  <ChevronRight className="h-5 w-5 text-slate-600" />
-                </a>
-              </li>
+        <div className="relative mx-auto max-w-6xl px-4 pt-3 sm:px-6 lg:px-8">
+          <div
+            id="site-menu"
+            className={`relative ml-auto w-full border border-zinc-800 bg-black/95 p-3 backdrop-blur-md transition duration-200 ease-out sm:w-80 ${
+              open ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+            }`}>
+            {CORNERS.map((c) => (
+              <span key={c} aria-hidden="true" className={`pointer-events-none absolute h-3 w-3 border-blue-500/60 ${c}`} />
             ))}
-          </ul>
-          <PrimaryButton onClick={() => go('contact')} className="mt-auto w-full py-3" tabIndex={open ? 0 : -1}>
-            Get in Touch
-          </PrimaryButton>
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            tabIndex={open ? 0 : -1}
-            className="mt-4 text-center text-sm text-slate-400 transition-colors duration-200 hover:text-white">
-            {CONTACT_EMAIL}
-          </a>
-        </aside>
+            <Mono className="block px-3 pb-2 pt-1 text-[10px] text-zinc-500">// Navigate</Mono>
+            <ul className="divide-y divide-zinc-800/80 border-y border-zinc-800/80">
+              {MENU_LINKS.map((l, i) => {
+                const isCurrent = current === l.id;
+                return (
+                  <li key={l.id}>
+                    <a
+                      ref={i === 0 ? firstLinkRef : undefined}
+                      href={l.page ? WEB_SERVICES_PATH : `/#${l.id}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        go(l.id);
+                      }}
+                      aria-current={isCurrent ? (l.page ? 'page' : 'true') : undefined}
+                      className={`group/link flex min-h-[48px] items-center gap-4 px-3 py-3 transition-colors duration-150 hover:bg-white/[0.03] ${FOCUS} ${
+                        isCurrent ? 'text-white' : 'text-slate-300 hover:text-white'
+                      }`}>
+                      <span className={`font-mono text-[11px] ${isCurrent ? 'text-blue-400' : 'text-zinc-600'}`}>
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="flex-1 text-base font-semibold">{l.label}</span>
+                      {l.page ? (
+                        <span className="rounded-sm border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-blue-300">
+                          Page
+                        </span>
+                      ) : (
+                        <ChevronRight
+                          className={`h-4 w-4 transition-transform duration-150 group-hover/link:translate-x-0.5 ${
+                            isCurrent ? 'text-blue-400' : 'text-zinc-600'
+                          }`}
+                        />
+                      )}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className={`mt-2 flex min-h-[44px] items-center gap-2 rounded px-3 font-mono text-xs text-slate-400 transition-colors duration-150 hover:text-white ${FOCUS}`}>
+              <Mail className="h-3.5 w-3.5 text-blue-500" /> {CONTACT_EMAIL}
+            </a>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -1291,7 +1350,7 @@ function Ecosystems() {
 /*  Services                                                           */
 /* ------------------------------------------------------------------ */
 
-function Services() {
+function Services({ onOpenWeb }) {
   return (
     <section id="services" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -1305,6 +1364,17 @@ function Services() {
               <FrameCard>
                 <h3 className="text-xl font-bold text-white">{s.title}</h3>
                 <p className="mb-6 mt-3 text-sm leading-relaxed text-zinc-400">{s.body}</p>
+                {s.page && (
+                  <a
+                    href={WEB_SERVICES_PATH}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onOpenWeb();
+                    }}
+                    className={`mb-6 inline-flex items-center gap-1.5 self-start rounded font-mono text-xs uppercase tracking-[0.18em] text-blue-400 transition-colors duration-150 hover:text-blue-300 ${FOCUS}`}>
+                    Explore Website Services <ArrowRight className="h-3.5 w-3.5" />
+                  </a>
+                )}
                 <div className="mt-auto flex flex-wrap gap-1.5 border-t border-zinc-800/60 pt-6">
                   {s.tags.map((t) => (
                     <Chip key={t}>{t}</Chip>
@@ -1360,11 +1430,21 @@ function LedgerField({ id, label, error, className = '', children }) {
 
 const LEDGER_INPUT = 'mt-2 w-full bg-transparent text-base text-white placeholder:text-slate-600 outline-none';
 
-function Contact() {
+// `preset` ({ line, n }) arrives when a Website Services CTA sends the visitor here: the project type is
+// written into the top of the message (once), ready for them to add details.
+function Contact({ preset }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
+
+  useEffect(() => {
+    if (!preset) return;
+    setStatus((s) => (s === 'loading' ? s : 'idle'));
+    setForm((f) =>
+      f.message.includes(preset.line) ? f : { ...f, message: `${preset.line}\n\n${f.message}` },
+    );
+  }, [preset]);
 
   const set = (key, value) => {
     // Editing again clears the last success or failure notice.
@@ -1520,6 +1600,277 @@ function Contact() {
         </Reveal>
       </div>
     </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Website Services page                                              */
+/* ------------------------------------------------------------------ */
+
+// Screenshot in a hairline frame with corner brackets and a mono title bar.
+function ShotFrame({ src, alt, label, width, height, className = '', imgClassName = '', fill = false }) {
+  return (
+    <figure
+      className={`group relative flex flex-col border border-zinc-800 bg-[#09090b] transition duration-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(37,99,235,0.08)] ${className}`}>
+      <Brackets />
+      <figcaption className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2.5 font-mono text-[11px] uppercase tracking-wider text-zinc-500">
+        <span className="flex items-center gap-1.5" aria-hidden="true">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-700" />
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-700" />
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+        </span>
+        <span className="truncate">{label}</span>
+      </figcaption>
+      <div className={`relative overflow-hidden bg-black ${imgClassName}`}>
+        <img
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          decoding="async"
+          className={`h-full w-full object-cover object-top ${fill ? 'lg:absolute lg:inset-0' : ''}`}
+        />
+      </div>
+    </figure>
+  );
+}
+
+function CopyEmail() {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return undefined;
+    const t = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(CONTACT_EMAIL);
+      setCopied(true);
+    } catch {
+      // Clipboard blocked (insecure context or permissions): fall back to the mail client.
+      window.location.href = `mailto:${CONTACT_EMAIL}`;
+    }
+  };
+
+  return (
+    <span className="inline-flex min-h-[44px] items-stretch overflow-hidden rounded-full border border-white/15">
+      <a
+        href={`mailto:${CONTACT_EMAIL}`}
+        className={`inline-flex items-center gap-2 rounded-l-full py-2.5 pl-5 pr-3 text-[15px] font-semibold text-white transition duration-200 hover:bg-white/5 ${FOCUS}`}>
+        <Mail className="h-4 w-4 text-blue-400" />
+        {CONTACT_EMAIL}
+      </a>
+      <button
+        type="button"
+        onClick={copy}
+        className={`grid w-11 place-items-center rounded-r-full border-l border-white/15 text-slate-300 transition duration-200 hover:bg-white/5 hover:text-white ${FOCUS}`}
+        aria-label={copied ? 'Email address copied' : 'Copy email address'}>
+        {copied ? <Check className="h-4 w-4 text-blue-400" /> : <Copy className="h-4 w-4" />}
+      </button>
+      <span className="sr-only" aria-live="polite">
+        {copied ? 'Copied to clipboard' : ''}
+      </span>
+    </span>
+  );
+}
+
+function WebServicesPage({ onContact, onHome }) {
+  return (
+    <>
+      {/* Hero */}
+      <section className="relative overflow-hidden px-4 pb-20 pt-10 sm:px-6 sm:pb-28 sm:pt-14 lg:px-8" aria-labelledby="web-hero">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(37,99,235,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.07)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_30%_40%,black_20%,transparent_70%)]"
+        />
+        <div className="relative mx-auto max-w-6xl">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              onHome();
+            }}
+            className={`inline-flex items-center gap-1.5 rounded font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 transition-colors duration-150 hover:text-white ${FOCUS}`}>
+            <ArrowLeft className="h-3.5 w-3.5" /> {SITE_DOMAIN}
+          </a>
+
+          <Reveal className="mt-14 sm:mt-20">
+            <p className="flex items-center gap-2.5">
+              <span className="relative flex h-2 w-2">
+                <span className="sp-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+              </span>
+              <Mono className="text-blue-400">Custom Web &amp; Creative Solutions</Mono>
+            </p>
+            <h1 id="web-hero" className="mt-6 max-w-4xl text-balance text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+              Bespoke Websites. Built From Scratch<span className="text-blue-500">.</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl">
+              High-speed, custom-engineered websites tailored to your business—zero bloated templates, slow page
+              builders, or recurring platform drag.
+            </p>
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <PrimaryButton onClick={onContact} className="px-6 py-3">
+                Start Your Build <ArrowRight className="h-4 w-4" />
+              </PrimaryButton>
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=Website%20Build%20Inquiry`}
+                className={`${SECONDARY_CLS} px-6 py-3`}>
+                <Mail className="h-4 w-4 text-blue-400" /> Email {CONTACT_EMAIL} for Pricing
+              </a>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Featured proof of work */}
+      <section className="px-4 py-20 sm:px-6 sm:py-28 lg:px-8" aria-labelledby="proof-of-work">
+        <div className="mx-auto max-w-6xl">
+          <Reveal className="mb-14">
+            <BlueprintRule />
+            <Mono className="mt-9 block text-blue-400">Featured Proof of Work</Mono>
+            <h2 id="proof-of-work" className="mt-4 max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">
+              Perkins Lawn &amp; Snow<span className="text-blue-500">.</span>
+            </h2>
+            <a
+              href={PERKINS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`mt-4 inline-flex items-center gap-1 rounded font-mono text-sm text-blue-400 transition-colors duration-150 hover:text-blue-300 ${FOCUS}`}>
+              perkinslawnandsnow.com <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          </Reveal>
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
+            <Reveal>
+              <ShotFrame
+                src="/work/perkins-desktop.webp"
+                alt="Perkins Lawn & Snow homepage on desktop: hero photo of the work truck and mower with the Perkins logo, tagline and Get in Touch button."
+                label="Desktop // 1440px"
+                width={1440}
+                height={900}
+                imgClassName="aspect-[1440/900]"
+              />
+            </Reveal>
+            <Reveal delay={100} className="mx-auto w-full max-w-xs lg:max-w-none">
+              {/* On desktop the phone shot fills the row height set by the desktop shot, cropped from the top. */}
+              <ShotFrame
+                src="/work/perkins-mobile.webp"
+                alt="Perkins Lawn & Snow homepage on a phone: compact header with Services and Contact, truck photo, and the quote call to action."
+                label="Mobile // 390px"
+                width={780}
+                height={1688}
+                className="h-full"
+                fill
+                imgClassName="aspect-[390/844] lg:aspect-auto lg:flex-1"
+              />
+            </Reveal>
+          </div>
+
+          <Reveal delay={150} className="mt-4">
+            <FrameCard>
+              <dl className="grid gap-8 md:grid-cols-[1fr_2fr_auto] md:items-start md:gap-10">
+                <div>
+                  <dt className="font-mono text-xs uppercase tracking-[0.18em] text-blue-400">Client</dt>
+                  <dd className="mt-3 text-xl font-bold text-white">Perkins Lawn &amp; Snow</dd>
+                </div>
+                <div>
+                  <dt className="font-mono text-xs uppercase tracking-[0.18em] text-blue-400">What We Built</dt>
+                  <dd className="mt-3 text-[15px] leading-relaxed text-slate-400">
+                    Complete brand website, clear service breakdowns, mobile-first layout, and direct customer
+                    quote/lead capture.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="sr-only">Live site</dt>
+                  <dd>
+                    <a
+                      href={PERKINS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${SECONDARY_CLS} w-full md:w-auto`}>
+                      Visit Live Site <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                      <span className="sr-only">(opens in a new tab)</span>
+                    </a>
+                  </dd>
+                </div>
+              </dl>
+              <div className="mt-8 flex flex-wrap gap-1.5 border-t border-zinc-800/60 pt-6">
+                {PERKINS_TAGS.map((t) => (
+                  <Chip key={t}>{t}</Chip>
+                ))}
+              </div>
+            </FrameCard>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* What we build */}
+      <section className="px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <SectionHeader
+            title="What We Build."
+            sub="Hand-coded from the first line, scoped to what your business actually needs to win customers online."
+          />
+          <div className="grid gap-4 lg:grid-cols-3">
+            {WEB_BUILDS.map((b, i) => (
+              <Reveal key={b.n} delay={i * 100} className="h-full">
+                <FrameCard>
+                  <span className="font-mono text-xs text-blue-400">{b.n} //</span>
+                  <h3 className="mt-4 text-xl font-bold text-white">{b.title}</h3>
+                  <p className="mb-6 mt-3 text-sm leading-relaxed text-zinc-400">{b.body}</p>
+                  <div className="mt-auto flex flex-wrap gap-1.5 border-t border-zinc-800/60 pt-6">
+                    {b.tags.map((t) => (
+                      <Chip key={t}>{t}</Chip>
+                    ))}
+                  </div>
+                </FrameCard>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing & contact callout */}
+      <section className="px-4 pb-24 pt-4 sm:px-6 sm:pb-32 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <div className="relative overflow-hidden border border-zinc-800 bg-[#0a0a0a] px-6 py-12 sm:px-12 sm:py-16">
+              {CORNERS.map((c) => (
+                <span key={c} aria-hidden="true" className={`pointer-events-none absolute h-4 w-4 border-blue-500/70 ${c}`} />
+              ))}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl"
+              />
+              <Mono className="relative text-blue-400">Pricing // Quote</Mono>
+              <h2 className="relative mt-4 max-w-3xl text-balance text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                Custom-Scoped Pricing. Reach Out for a Quote<span className="text-blue-500">.</span>
+              </h2>
+              <p className="relative mt-5 max-w-2xl text-lg leading-relaxed text-slate-400">
+                Every site is scoped around your exact pages, features, and goals—no bloated agency retainers. Contact{' '}
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className={`rounded text-blue-400 transition-colors duration-150 hover:text-blue-300 ${FOCUS}`}>
+                  {CONTACT_EMAIL}
+                </a>{' '}
+                for pricing or send your project details through the main contact form.
+              </p>
+              <div className="relative mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <PrimaryButton onClick={onContact} className="px-6 py-3">
+                  Go to Contact Form <ArrowRight className="h-4 w-4" />
+                </PrimaryButton>
+                <CopyEmail />
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -1717,8 +2068,13 @@ const GLOBAL_CSS = `
 `;
 
 export default function App() {
+  const [route, setRoute] = useState(initialRoute);
   const [active, setActive] = useState('');
-  const [booting, setBooting] = useState(shouldBoot);
+  // The boot sequence belongs to the home hero, so a deep link to Website Services skips it.
+  const [booting, setBooting] = useState(() => initialRoute() === 'home' && shouldBoot());
+  // Section to scroll to once the home page has rendered (after switching from Website Services).
+  const [pendingScroll, setPendingScroll] = useState(null);
+  const [contactPreset, setContactPreset] = useState(null);
 
   // Mark the boot as seen for this session, then drop the boot classes once it has finished.
   useEffect(() => {
@@ -1732,8 +2088,23 @@ export default function App() {
     return () => clearTimeout(t);
   }, [booting]);
 
-  // Highlight the nav link for the section in view.
+  // Back/forward between the two pages.
   useEffect(() => {
+    const onPop = () => {
+      setBooting(false);
+      setRoute(routeFromPath(window.location.pathname));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  useEffect(() => {
+    document.title = route === 'web' ? `Website Services // ${SITE_DOMAIN}` : 'SCRIMMY // Don Scrimmy John';
+  }, [route]);
+
+  // Highlight the menu entry for the section in view (home page only).
+  useEffect(() => {
+    if (route !== 'home') return undefined;
     const els = NAV_LINKS.map((l) => document.getElementById(l.id)).filter(Boolean);
     const io = new IntersectionObserver(
       (entries) => {
@@ -1744,19 +2115,77 @@ export default function App() {
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [route]);
+
+  // Runs after the home page has mounted, so the target section exists.
+  useEffect(() => {
+    if (route !== 'home' || !pendingScroll) return undefined;
+    const raf = requestAnimationFrame(() => {
+      scrollToId(pendingScroll);
+      setPendingScroll(null);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [route, pendingScroll]);
+
+  const jumpTop = () => window.scrollTo({ top: 0, behavior: 'instant' });
+
+  const showWeb = () => {
+    if (route !== 'web') {
+      window.history.pushState(null, '', WEB_SERVICES_PATH);
+      setBooting(false);
+      setRoute('web');
+    }
+    jumpTop();
+  };
+
+  const showSection = (id) => {
+    if (route === 'home') {
+      scrollToId(id);
+      return;
+    }
+    window.history.pushState(null, '', '/');
+    setActive('');
+    setRoute('home');
+    jumpTop();
+    setPendingScroll(id);
+  };
+
+  const goHome = () => {
+    if (route === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.history.pushState(null, '', '/');
+    setActive('');
+    setRoute('home');
+    jumpTop();
+  };
+
+  // Website Services CTAs: open the home contact form with the project type written in.
+  const contactForWeb = () => {
+    setContactPreset((p) => ({ line: PROJECT_TYPE_LINE, n: (p?.n ?? 0) + 1 }));
+    showSection('contact');
+  };
+
+  const onNavigate = (id) => (id === 'web' ? showWeb() : showSection(id));
 
   return (
     <div className="relative min-h-screen bg-black font-sans text-slate-400 antialiased selection:bg-blue-600/40 selection:text-white">
       <style>{GLOBAL_CSS}</style>
-      <NavBar active={active} booting={booting} />
-      <main>
-        <Hero booting={booting} />
-        <About />
-        <Ecosystems />
-        <Services />
-        <Contact />
-      </main>
+      <NavBar current={route === 'web' ? 'web' : active} onNavigate={onNavigate} onHome={goHome} booting={booting} />
+      {route === 'web' ? (
+        <main>
+          <WebServicesPage onContact={contactForWeb} onHome={goHome} />
+        </main>
+      ) : (
+        <main>
+          <Hero booting={booting} />
+          <About />
+          <Ecosystems />
+          <Services onOpenWeb={showWeb} />
+          <Contact preset={contactPreset} />
+        </main>
+      )}
       <Footer />
     </div>
   );
